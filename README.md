@@ -59,3 +59,11 @@ To ensure we can track progress effectively, it's essential to link your code ch
 
 Go back to the specific issue (e.g., `APPLE-16`) in Jira. You should now see a "Development" panel showing the linked branch, commits, and pull request (if created). This confirms the integration is working! 
 By consistently following these steps, we ensure all code changes are traceable back to their original tasks in Jira.
+
+Jira detects the link automatically because:
+
+Scanning: Jira continuously scans the linked GitHub repository (Pawsure-Repo) for new activity (commits, branches, pull requests).
+
+Pattern Recognition: It specifically looks for text in branch names, commit messages, and pull request titles that matches the pattern of your project's issue keys. In your case, it looks for APPLE- followed by numbers (e.g., APPLE-16, APPLE-19).
+
+Matching: When it finds a piece of text that matches this pattern (like APPLE-16 in a commit message), it knows which specific issue in your Jira project to link that code activity to.
