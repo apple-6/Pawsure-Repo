@@ -13,7 +13,7 @@ import { ActivityLogModule } from './activity-log/activity-log.module';
 import { HealthRecordModule } from './health-record/health-record.module';
 import { ReviewModule } from './review/review.module';
 import { NotificationModule } from './notification/notification.module';
-import { AuthModule } from './auth/auth.module';
+
 
 @Module({
   imports: [
@@ -44,7 +44,7 @@ import { AuthModule } from './auth/auth.module';
     HealthRecordModule,
     ReviewModule,
     NotificationModule,
-    AuthModule, // Include your AI module
+
     // Add other feature modules here later (e.g., PetsModule, UsersModule)
   ],
   controllers: [AppController],
