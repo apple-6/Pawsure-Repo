@@ -8,7 +8,7 @@ To ensure we can track progress effectively, it's essential to link your code ch
 
 #### 1. Get the Jira Issue Key
 
-* Go to our Jira project board or backlog: [`https://apple-6.atlassian.net/jira/software/projects/APPLE/boards/1/backlog`](https://apple-6.atlassian.net/jira/software/projects/APPLE/boards/1/backlog) (Replace with your actual Jira board URL if different).
+* Go to our Jira project board or backlog: [`https://apple-6.atlassian.net/jira/software/projects/APPLE/boards/1/backlog`](https://apple-6.atlassian.net/jira/software/projects/APPLE/boards/1/backlog).
 * Find the task or story you are working on (e.g., "Setup: Backend - Create NestJS + PostgreSQL boilerplate").
 * Note down its unique key (e.g., `APPLE-16`). 
 #### 2. Create a New Branch in GitHub Desktop
