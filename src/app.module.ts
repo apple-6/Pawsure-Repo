@@ -4,6 +4,16 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config'; // Import ConfigModule and ConfigService
 import { TypeOrmModule } from '@nestjs/typeorm'; // Import TypeOrmModule
 import { AiModule } from './ai/ai.module'; // Import your existing AI module
+import { UserModule } from './user/user.module';
+import { PetModule } from './pet/pet.module';
+import { SitterModule } from './sitter/sitter.module';
+import { BookingModule } from './booking/booking.module';
+import { PaymentModule } from './payment/payment.module';
+import { ActivityLogModule } from './activity-log/activity-log.module';
+import { HealthRecordModule } from './health-record/health-record.module';
+import { ReviewModule } from './review/review.module';
+import { NotificationModule } from './notification/notification.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -24,7 +34,17 @@ import { AiModule } from './ai/ai.module'; // Import your existing AI module
         }
       }),
     }),
-    AiModule, // Include your AI module
+    AiModule,
+    UserModule,
+    PetModule,
+    SitterModule,
+    BookingModule,
+    PaymentModule,
+    ActivityLogModule,
+    HealthRecordModule,
+    ReviewModule,
+    NotificationModule,
+    AuthModule, // Include your AI module
     // Add other feature modules here later (e.g., PetsModule, UsersModule)
   ],
   controllers: [AppController],
