@@ -13,6 +13,9 @@ import { ActivityLogModule } from './activity-log/activity-log.module';
 import { HealthRecordModule } from './health-record/health-record.module';
 import { ReviewModule } from './review/review.module';
 import { NotificationModule } from './notification/notification.module';
+import { PostsModule } from './posts/posts.module';
+import { CommentsModule } from './comments/comments.module';
+import { LikesModule } from './likes/likes.module';
 
 @Module({
   imports: [
@@ -45,6 +48,9 @@ import { NotificationModule } from './notification/notification.module';
     HealthRecordModule,
     ReviewModule,
     NotificationModule,
+    PostsModule,
+    CommentsModule,
+    LikesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
