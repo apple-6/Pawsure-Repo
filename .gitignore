@@ -1,5 +1,7 @@
 # compiled output
 /dist
+/pawsure_backend/dist
+/pawsure_backend/node_modules
 /node_modules
 /build
 
