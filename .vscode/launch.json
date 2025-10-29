@@ -1,0 +1,38 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    
+    // --- FLUTTER APP LAUNCHERS ---
+    {
+      "name": "Flutter: Run on Windows",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "${workspaceFolder}/pawsure_app",
+      "deviceId": "windows",
+      "args": ["--dart-define=API_BASE_URL=http://localhost:3000"]
+    },
+    {
+      "name": "Flutter: Run on Chrome",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "${workspaceFolder}/pawsure_app",
+      "deviceId": "chrome",
+      "args": ["--dart-define=API_BASE_URL=http://localhost:3000"]
+    },
+    {
+      "name": "Flutter: Run on Emulator",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "${workspaceFolder}/pawsure_app"
+    },
+    
+    // --- BACKEND SERVER LAUNCHER ---
+    {
+      "name": "NestJS: Run Backend",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run start:dev",
+      "cwd": "${workspaceFolder}/pawsure_backend"
+    }
+  ]
+}

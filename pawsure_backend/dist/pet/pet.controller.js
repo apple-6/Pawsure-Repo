@@ -8,28 +8,28 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __param = (this && this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PetService = void 0;
+exports.PetController = void 0;
 const common_1 = require("@nestjs/common");
-const typeorm_1 = require("@nestjs/typeorm");
-const typeorm_2 = require("typeorm");
-const pet_entity_1 = require("./pet.entity");
-let PetService = class PetService {
-    petRepository;
-    constructor(petRepository) {
-        this.petRepository = petRepository;
+const pet_service_1 = require("./pet.service");
+let PetController = class PetController {
+    petService;
+    constructor(petService) {
+        this.petService = petService;
     }
-    async findAll() {
-        return this.petRepository.find();
+    findAll() {
+        return this.petService.findAll();
     }
 };
-exports.PetService = PetService;
-exports.PetService = PetService = __decorate([
-    (0, common_1.Injectable)(),
-    __param(0, (0, typeorm_1.InjectRepository)(pet_entity_1.Pet)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
-], PetService);
-//# sourceMappingURL=pet.service.js.map
+exports.PetController = PetController;
+__decorate([
+    (0, common_1.Get)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], PetController.prototype, "findAll", null);
+exports.PetController = PetController = __decorate([
+    (0, common_1.Controller)('pets'),
+    __metadata("design:paramtypes", [pet_service_1.PetService])
+], PetController);
+//# sourceMappingURL=pet.controller.js.map
