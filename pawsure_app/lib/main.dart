@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
+import 'screens/auth/onboarding_screen.dart';
 
 void main() {
   runApp(const PawsureApp());
@@ -17,9 +18,8 @@ class PawsureApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      // Start the app on the Login screen so auth UI pops up first.
-      // Change back to `MainNavigation()` later after integrating auth.
-      home: const LoginScreen(),
+      // Start the app on the Onboarding screen so auth/onboarding appears first.
+      home: const OnboardingScreen(),
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),

@@ -59,8 +59,9 @@ flutter:
 
   # Add image assets for auth screens. Place your hero image at:
   #   pawsure_app/assets/images/auth_hero.jpg
+  # Register the whole images folder so you can drop your picture(s) here.
   assets:
-    - assets/images/auth_hero.jpg
+    - assets/images/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

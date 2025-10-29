@@ -30,10 +30,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           SizedBox(
             height: size.height,
             width: size.width,
-            child: Image.asset(
-              'assets/images/auth_hero.jpg',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/images/dog_auth.png', fit: BoxFit.cover),
           ),
           Align(
             alignment: Alignment.bottomCenter,
