@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'add_health_record_screen.dart';
 
 class HealthScreen extends StatelessWidget {
   const HealthScreen({super.key});
@@ -24,6 +25,26 @@ class HealthScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          // TODO: replace with a real petId you have in DB
+          final created = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AddHealthRecordScreen(petId: 1),
+            ),
+          );
+          if (created == true) {
+            // Optional: refresh your list later (APPLE-57), for now show feedback
+            // ignore: use_build_context_synchronously
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Health record added')),
+            );
+          }
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Add Record'),
       ),
     );
   }
