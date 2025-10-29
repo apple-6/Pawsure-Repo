@@ -30,8 +30,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           SizedBox(
             height: size.height,
             width: size.width,
-            child: Image.network(
-              'https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=800&q=60',
+            child: Image.asset(
+              'assets/images/auth_hero.jpg',
               fit: BoxFit.cover,
             ),
           ),
@@ -46,7 +46,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   topRight: Radius.circular(24),
                 ),
                 boxShadow: [
-                  BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 8,
+                    offset: Offset(0, -2),
+                  ),
                 ],
               ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -70,7 +74,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const Text(
                       'Create Account',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     const Text(
@@ -111,13 +118,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ElevatedButton(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Register pressed (UI only)')),
+                          const SnackBar(
+                            content: Text('Register pressed (UI only)'),
+                          ),
                         );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4CAF50),
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: const Text('Get Started'),
                     ),
