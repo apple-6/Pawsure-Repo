@@ -11,6 +11,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToMany,
+  JoinColumn, // Added for clarity on foreign key
 } from 'typeorm';
 
 @Entity('pets')
@@ -20,6 +21,11 @@ export class Pet {
 
   @Column() // 'STRING name'
   name: string;
+
+  // --- ADDITIONS FOR THE USER STORY (PHOTO URL) ---
+  @Column({ nullable: true }) // 'STRING photoUrl' - New column for the pet's photo URL
+  photoUrl: string;
+  // --------------------------------------------------
 
   @Column() // 'STRING species'
   species: string;
@@ -55,7 +61,13 @@ export class Pet {
   updated_at: Date;
 
   // --- Relationships ---
+
+  // Explicit foreign key column for the owner
+  @Column() // 'INT ownerId FK' - Explicit column for the foreign key
+  ownerId: number; 
+
   @ManyToOne(() => User, (user) => user.pets) // 'INT user_id FK'
+  @JoinColumn({ name: 'ownerId' }) // Tells TypeORM to use the 'ownerId' column as the foreign key
   owner: User;
 
   @OneToMany(() => Booking, (booking) => booking.pet)

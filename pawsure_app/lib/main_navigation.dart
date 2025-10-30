@@ -21,7 +21,10 @@ class _MainNavigationState extends State<MainNavigation> {
     const HealthScreen(),
     const ActivityScreen(),
     const CommunityScreen(),
-    const ProfileScreen(),
+    const ProfileScreen(
+      userName: 'Guest User', // Use a default or fetched name
+      userRole: 'Pet Owner',
+    ), // Use a default or fetched role),
   ];
 
   @override
