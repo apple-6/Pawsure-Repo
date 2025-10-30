@@ -17,6 +17,8 @@ let HealthRecord = class HealthRecord {
     record_type;
     record_date;
     description;
+    clinic;
+    nextDueDate;
     created_at;
     updated_at;
     pet;
@@ -38,6 +40,14 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'text' }),
     __metadata("design:type", String)
 ], HealthRecord.prototype, "description", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], HealthRecord.prototype, "clinic", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'date', nullable: true }),
+    __metadata("design:type", String)
+], HealthRecord.prototype, "nextDueDate", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)

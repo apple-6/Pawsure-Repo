@@ -20,24 +20,36 @@ var HealthRecordType;
     HealthRecordType["NOTE"] = "Note";
 })(HealthRecordType || (exports.HealthRecordType = HealthRecordType = {}));
 class CreateHealthRecordDto {
-    recordType;
-    date;
-    notes;
+    record_type;
+    record_date;
+    description;
+    clinic;
+    nextDueDate;
 }
 exports.CreateHealthRecordDto = CreateHealthRecordDto;
 __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsEnum)(HealthRecordType),
     __metadata("design:type", String)
-], CreateHealthRecordDto.prototype, "recordType", void 0);
+], CreateHealthRecordDto.prototype, "record_type", void 0);
 __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsDateString)(),
     __metadata("design:type", String)
-], CreateHealthRecordDto.prototype, "date", void 0);
+], CreateHealthRecordDto.prototype, "record_date", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
-], CreateHealthRecordDto.prototype, "notes", void 0);
+], CreateHealthRecordDto.prototype, "description", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateHealthRecordDto.prototype, "clinic", void 0);
+__decorate([
+    (0, class_validator_1.IsDateString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateHealthRecordDto.prototype, "nextDueDate", void 0);
 //# sourceMappingURL=create-health-record.dto.js.map

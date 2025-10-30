@@ -1,143 +1,142 @@
 import 'package:flutter/material.dart';
-import 'package:pawsure_app/models/health_record_model.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/services/api_service.dart';
-import 'add_health_record_screen.dart';
+import 'tabs/profile_tab.dart';
+import 'tabs/records_tab.dart';
+import 'tabs/calendar_tab.dart';
+import 'tabs/ai_scan_tab.dart';
 
 class HealthScreen extends StatefulWidget {
   const HealthScreen({super.key});
-
   @override
   State<HealthScreen> createState() => _HealthScreenState();
 }
 
-class _HealthScreenState extends State<HealthScreen> {
+class _HealthScreenState extends State<HealthScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   final ApiService _apiService = ApiService();
   List<Pet> _pets = [];
   Pet? _selectedPet;
-  List<HealthRecord> _healthRecords = [];
   bool _isLoadingPets = true;
-  bool _isLoadingRecords = false;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 4, vsync: this);
     _fetchPets();
   }
 
   Future<void> _fetchPets() async {
     try {
       final pets = await _apiService.getPets();
+      if (!mounted) return;
       setState(() {
         _pets = pets;
-        if (_pets.isNotEmpty) {
-          _selectedPet = _pets.first;
-          _fetchHealthRecords(_selectedPet!.id);
-        }
+        if (_pets.isNotEmpty) _selectedPet = _pets.first;
         _isLoadingPets = false;
       });
     } catch (e) {
-      setState(() => _isLoadingPets = false);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to load pets: $e')));
+      setState(() => _isLoadingPets = false);
     }
   }
 
-  Future<void> _fetchHealthRecords(int petId) async {
-    setState(() => _isLoadingRecords = true);
-    try {
-      final records = await _apiService.getHealthRecords(petId);
-      setState(() {
-        _healthRecords = records;
-        _isLoadingRecords = false;
-      });
-    } catch (e) {
-      setState(() => _isLoadingRecords = false);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load health records: $e')),
-      );
-    }
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pet Health'),
-        backgroundColor: Colors.green[100],
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: _isLoadingPets
+            ? const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : DropdownButtonHideUnderline(
+                child: DropdownButton<Pet>(
+                  isExpanded: false,
+                  value: _selectedPet,
+                  icon: const Icon(Icons.expand_more),
+                  hint: const Text('Select Pet'),
+                  style: Theme.of(context).textTheme.titleMedium,
+                  onChanged: (Pet? newPet) {
+                    setState(() => _selectedPet = newPet);
+                  },
+                  items: _pets
+                      .map(
+                        (pet) =>
+                            DropdownMenuItem(value: pet, child: Text(pet.name)),
+                      )
+                      .toList(),
+                ),
+              ),
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Share with Vet feature coming soon!'),
+                ),
+              );
+            },
+            icon: const Icon(Icons.share_outlined, size: 20),
+            label: const Text('Share with Vet'),
+            style: TextButton.styleFrom(foregroundColor: Colors.black),
+          ),
+        ],
+        automaticallyImplyLeading: true,
+        toolbarHeight: 64,
       ),
-      body: _isLoadingPets
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F6F9),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicator: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                labelColor: Colors.black,
+                unselectedLabelColor: Colors.grey,
+                tabs: const [
+                  Tab(text: 'Profile'),
+                  Tab(text: 'Records'),
+                  Tab(text: 'Calendar'),
+                  Tab(text: 'AI Scan'),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: DropdownButtonFormField<Pet>(
-                    value: _selectedPet,
-                    items: _pets
-                        .map(
-                          (pet) => DropdownMenuItem(
-                            value: pet,
-                            child: Text(pet.name),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (Pet? newValue) {
-                      setState(() {
-                        _selectedPet = newValue;
-                        if (_selectedPet != null) {
-                          _fetchHealthRecords(_selectedPet!.id);
-                        }
-                      });
-                    },
-                    decoration: const InputDecoration(
-                      labelText: 'Select Pet',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: _isLoadingRecords
-                      ? const Center(child: CircularProgressIndicator())
-                      : _healthRecords.isEmpty
-                      ? const Center(child: Text('No health records found.'))
-                      : ListView.builder(
-                          itemCount: _healthRecords.length,
-                          itemBuilder: (context, index) {
-                            final record = _healthRecords[index];
-                            return ListTile(
-                              title: Text(record.record_type),
-                              subtitle: Text(record.description),
-                              trailing: Text(record.record_date),
-                            );
-                          },
-                        ),
-                ),
+                ProfileTab(),
+                _selectedPet == null
+                    ? const Center(child: Text('Please select a pet.'))
+                    : RecordsTab(petId: _selectedPet!.id),
+                CalendarTab(),
+                AIScanTab(),
               ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          if (_selectedPet == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Please select a pet first!')),
-            );
-            return;
-          }
-          final created = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AddHealthRecordScreen(petId: _selectedPet!.id),
-            ),
-          );
-          if (created == true && _selectedPet != null) {
-            _fetchHealthRecords(_selectedPet!.id);
-          }
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Record'),
+          ),
+        ],
       ),
     );
   }

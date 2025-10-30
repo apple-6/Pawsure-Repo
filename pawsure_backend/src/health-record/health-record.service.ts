@@ -21,10 +21,12 @@ export class HealthRecordService {
     }
 
     const record = this.healthRecordRepository.create({
-      record_type: dto.recordType,
-      record_date: new Date(dto.date).toISOString().slice(0, 10),
-      description: dto.notes ?? '',
+      record_type: dto.record_type,
+      record_date: new Date(dto.record_date).toISOString().slice(0, 10),
+      description: dto.description ?? '',
       pet,
+      clinic: dto.clinic,
+      nextDueDate: dto.nextDueDate,
     });
 
     return this.healthRecordRepository.save(record);

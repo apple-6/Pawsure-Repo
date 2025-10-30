@@ -38,11 +38,15 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
   HealthRecordType? _selectedType;
   DateTime? _selectedDate;
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _clinicController = TextEditingController();
+  final TextEditingController _nextDueDateController = TextEditingController();
   bool _submitting = false;
 
   @override
   void dispose() {
     _notesController.dispose();
+    _clinicController.dispose();
+    _nextDueDateController.dispose();
     super.dispose();
   }
 
@@ -63,6 +67,23 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
     }
   }
 
+  Future<void> _pickNextDueDate() async {
+    final DateTime now = DateTime.now();
+    final DateTime first = DateTime(now.year - 1);
+    final DateTime last = DateTime(now.year + 6);
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.tryParse(_nextDueDateController.text) ?? now,
+      firstDate: first,
+      lastDate: last,
+    );
+    if (picked != null) {
+      setState(() {
+        _nextDueDateController.text = picked.toIso8601String().split('T')[0];
+      });
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
@@ -76,6 +97,12 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
         'notes': _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
+        'clinic': _clinicController.text.trim().isEmpty
+            ? null
+            : _clinicController.text.trim(),
+        'nextDueDate': _nextDueDateController.text.trim().isEmpty
+            ? null
+            : _nextDueDateController.text.trim(),
       };
       final response = await http.post(
         uri,
@@ -120,7 +147,7 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DropdownButtonFormField<HealthRecordType>(
-                  value: _selectedType,
+                  initialValue: _selectedType,
                   decoration: const InputDecoration(
                     labelText: 'Record Type',
                     border: OutlineInputBorder(),
@@ -173,6 +200,38 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                     const SizedBox(width: 12),
                     ElevatedButton(
                       onPressed: _pickDate,
+                      child: const Text('Pick'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _clinicController,
+                  decoration: const InputDecoration(
+                    labelText: 'Clinic/Provider (Optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: _pickNextDueDate,
+                        child: IgnorePointer(
+                          child: TextFormField(
+                            controller: _nextDueDateController,
+                            decoration: const InputDecoration(
+                              labelText: 'Next Due Date (Optional)',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: _pickNextDueDate,
                       child: const Text('Pick'),
                     ),
                   ],

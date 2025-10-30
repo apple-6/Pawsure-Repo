@@ -6,7 +6,9 @@ export declare enum HealthRecordType {
     NOTE = "Note"
 }
 export declare class CreateHealthRecordDto {
-    recordType: HealthRecordType;
-    date: string;
-    notes?: string;
+    record_type: HealthRecordType;
+    record_date: string;
+    description?: string;
+    clinic?: string;
+    nextDueDate?: string;
 }

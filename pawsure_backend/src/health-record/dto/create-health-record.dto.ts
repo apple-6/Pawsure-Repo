@@ -11,15 +11,23 @@ export enum HealthRecordType {
 export class CreateHealthRecordDto {
   @IsNotEmpty()
   @IsEnum(HealthRecordType)
-  recordType: HealthRecordType;
+  record_type: HealthRecordType;
 
   @IsNotEmpty()
   @IsDateString()
-  date: string;
+  record_date: string;
 
   @IsString()
   @IsOptional()
-  notes?: string;
+  description?: string;
+
+  @IsString()
+  @IsOptional()
+  clinic?: string;
+
+  @IsDateString()
+  @IsOptional()
+  nextDueDate?: string;
 }
 
 
