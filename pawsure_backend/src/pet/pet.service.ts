@@ -30,4 +30,8 @@ export class PetService {
       // Save the new pet to the database (Supabase via TypeORM)
       return this.petRepository.save(newPet);
     }
+
+    async findPetsByOwner(ownerId: number): Promise<Pet[]> {
+      return this.petRepository.find({ where: { ownerId } });
+    }
 }

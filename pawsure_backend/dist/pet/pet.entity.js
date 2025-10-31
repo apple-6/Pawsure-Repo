@@ -18,6 +18,7 @@ const typeorm_1 = require("typeorm");
 let Pet = class Pet {
     id;
     name;
+    photoUrl;
     species;
     breed;
     dob;
@@ -29,6 +30,7 @@ let Pet = class Pet {
     streak;
     created_at;
     updated_at;
+    ownerId;
     owner;
     bookings;
     activityLogs;
@@ -44,7 +46,11 @@ __decorate([
     __metadata("design:type", String)
 ], Pet.prototype, "name", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Pet.prototype, "photoUrl", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
 ], Pet.prototype, "species", void 0);
 __decorate([
@@ -52,7 +58,7 @@ __decorate([
     __metadata("design:type", String)
 ], Pet.prototype, "breed", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'date' }),
+    (0, typeorm_1.Column)({ type: 'date', nullable: true }),
     __metadata("design:type", String)
 ], Pet.prototype, "dob", void 0);
 __decorate([
@@ -88,7 +94,12 @@ __decorate([
     __metadata("design:type", Date)
 ], Pet.prototype, "updated_at", void 0);
 __decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", Number)
+], Pet.prototype, "ownerId", void 0);
+__decorate([
     (0, typeorm_1.ManyToOne)(() => user_entity_1.User, (user) => user.pets),
+    (0, typeorm_1.JoinColumn)({ name: 'ownerId' }),
     __metadata("design:type", user_entity_1.User)
 ], Pet.prototype, "owner", void 0);
 __decorate([

@@ -7,7 +7,10 @@ import {
     UseInterceptors, 
     UploadedFile, 
     Request,
-    UseGuards // Assuming you have an authentication guard
+    UseGuards, // Assuming you have an authentication guard
+    Get,
+    Param,
+    Query
   } from '@nestjs/common';
   import { FileInterceptor } from '@nestjs/platform-express'; // Make sure this package is installed
   import { PetService } from './pet.service';
@@ -42,5 +45,16 @@ import {
   
       // 3. **Create Pet Profile**
       return this.petService.createPet(createPetDto);
+    }
+
+    @Get('owner/:ownerId')
+    async getPetsByOwnerParam(@Param('ownerId') ownerId: string) {
+      return this.petService.findPetsByOwner(Number(ownerId));
+    }
+
+    @Get()
+    async getPetsByOwnerQuery(@Query('ownerId') ownerId?: string) {
+      if (!ownerId) return [];
+      return this.petService.findPetsByOwner(Number(ownerId));
     }
   }

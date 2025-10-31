@@ -27,13 +27,13 @@ export class Pet {
   photoUrl: string;
   // --------------------------------------------------
 
-  @Column() // 'STRING species'
+  @Column({ nullable: true }) // 'STRING species'
   species: string;
 
   @Column() // 'STRING breed'
   breed: string;
 
-  @Column({ type: 'date' }) // 'DATE dob'
+  @Column({ type: 'date', nullable: true }) // 'DATE dob'
   dob: string;
 
   @Column({ type: 'float', nullable: true }) // 'FLOAT weight'

@@ -5,6 +5,7 @@ import { User } from 'src/user/user.entity';
 export declare class Pet {
     id: number;
     name: string;
+    photoUrl: string;
     species: string;
     breed: string;
     dob: string;
@@ -16,6 +17,7 @@ export declare class Pet {
     streak: number;
     created_at: Date;
     updated_at: Date;
+    ownerId: number;
     owner: User;
     bookings: Booking[];
     activityLogs: ActivityLog[];
