@@ -16,6 +16,8 @@ import { NotificationModule } from './notification/notification.module';
 import { PostsModule } from './posts/posts.module';
 import { CommentsModule } from './comments/comments.module';
 import { LikesModule } from './likes/likes.module';
+import { RoleModule } from './role/role.module';
+
 
 @Module({
   imports: [
@@ -23,6 +25,7 @@ import { LikesModule } from './likes/likes.module';
       isGlobal: true,      // Make config available globally
       envFilePath: '.env', // Specify the .env file
     }),
+    
     TypeOrmModule.forRootAsync({ // Configure TypeOrm asynchronously
       imports: [ConfigModule],   // Import ConfigModule here
       inject: [ConfigService],   // Inject ConfigService to read env vars
@@ -51,6 +54,8 @@ import { LikesModule } from './likes/likes.module';
     PostsModule,
     CommentsModule,
     LikesModule,
+
+    RoleModule
   ],
   controllers: [AppController],
   providers: [AppService],

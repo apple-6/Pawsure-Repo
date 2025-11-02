@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
-import 'main_navigation.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/auth/register_screen.dart';
+import 'screens/auth/onboarding_screen.dart';
+import 'screens/auth/role_selection.dart';
 
 void main() {
+  debugPrint('[DEBUG] PawsureApp: Starting main()');
   runApp(const PawsureApp());
 }
 
@@ -10,13 +14,22 @@ class PawsureApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint(
+      '[DEBUG] PawsureApp: building MaterialApp with OnboardingScreen',
+    );
     return MaterialApp(
       title: 'Pawsure - Pet Care Companion',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const MainNavigation(),
+      // Start the app on the Onboarding screen so auth/onboarding appears first.
+      home: const OnboardingScreen(),
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/role-selection': (context) => RoleSelectionScreen(),
+      },
       debugShowCheckedModeBanner: false,
     );
   }
