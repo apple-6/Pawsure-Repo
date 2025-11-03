@@ -195,46 +195,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: Text(
-                                index == _pages.length - 1
-                                    ? 'Get Started'
-                                    : 'Next',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              child: Stack(
+                                children: [
+                                  Center(
+                                    child: Text(
+                                      index == _pages.length - 1
+                                          ? 'Get Started'
+                                          : 'Next',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: 16,
+                                    top: 0,
+                                    bottom: 0,
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.chevron_right,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-
-                          const SizedBox(height: 8),
-
-                          // show login link only on last page
-                          if (index == _pages.length - 1)
-                            TextButton(
-                              onPressed: () =>
-                                  Navigator.pushNamed(context, '/login'),
-                              child: RichText(
-                                text: const TextSpan(
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                  children: [
-                                    TextSpan(
-                                      text: 'Already have an account? ',
-                                      style: TextStyle(color: Colors.black),
-                                    ),
-                                    TextSpan(
-                                      text: 'Login',
-                                      style: TextStyle(
-                                        color: Color(0xFF4CAF50), // Green color
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                     ],
