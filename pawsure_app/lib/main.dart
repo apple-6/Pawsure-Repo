@@ -23,9 +23,7 @@ class PawsureApp extends StatelessWidget {
       ),
       // Start the app on the Onboarding screen so auth/onboarding appears first.
       home: const OnboardingScreen(),
-      routes: {
-        '/role-selection': (context) => RoleSelectionScreen(),
-      },
+      routes: {'/role-selection': (context) => RoleSelectionScreen()},
       debugShowCheckedModeBanner: false,
     );
   }

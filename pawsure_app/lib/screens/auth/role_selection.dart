@@ -29,7 +29,8 @@ class RoleSelectionScreen extends StatelessWidget {
                       builder: (ctx) => AlertDialog(
                         title: const Text('Registration disabled'),
                         content: const Text(
-                            'Registration is currently disabled. Please check back later.'),
+                          'Registration is currently disabled. Please check back later.',
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(ctx).pop(),
@@ -51,7 +52,8 @@ class RoleSelectionScreen extends StatelessWidget {
                       builder: (ctx) => AlertDialog(
                         title: const Text('Registration disabled'),
                         content: const Text(
-                            'Registration is currently disabled. Please check back later.'),
+                          'Registration is currently disabled. Please check back later.',
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(ctx).pop(),
