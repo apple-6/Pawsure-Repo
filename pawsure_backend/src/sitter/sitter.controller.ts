@@ -1,29 +1,71 @@
-// src/sitter/sitter.controller.ts
-
 import {
   Controller,
+  Get,
   Post,
   Body,
-  ValidationPipe,
+  Patch,
+  Param,
+  Delete,
   UseGuards,
+  Request,
+  Query,
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus,
+  ParseFloatPipe,
 } from '@nestjs/common';
 import { SitterService } from './sitter.service';
+import { CreateSitterDto } from './dto/create-sitter.dto';
+import { UpdateSitterDto } from './dto/update-sitter.dto';
 import { SitterSetupDto } from './dto/sitter-setup.dto';
-import { AuthGuard } from '@nestjs/passport'; // 1. Import the AuthGuard
-import { GetUser } from 'src/auth/decorators/get-user.decorator'; // 2. Import our custom decorator
-import { User } from 'src/user/user.entity';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@Controller('sitter')
-@UseGuards(AuthGuard('jwt')) // 3. PROTECT all routes in this controller
+@Controller('sitters')
 export class SitterController {
   constructor(private readonly sitterService: SitterService) {}
 
-  @Post('setup') // Creates the POST /sitter/setup endpoint
-  setupProfile(
-    @Body(ValidationPipe) setupDto: SitterSetupDto,
-    @GetUser() user: User, // 4. Get the logged-in user from the token
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  async create(@Body() createSitterDto: CreateSitterDto, @Request() req) {
+    return await this.sitterService.create(createSitterDto, req.user.id);
+  }
+
+  @Get()
+  async findAll(@Query('minRating', ParseFloatPipe) minRating?: number) {
+    return await this.sitterService.findAll(minRating);
+  }
+
+  @Get('search')
+  async searchByAvailability(@Query('date') date: string) {
+    return await this.sitterService.searchByAvailability(date);
+  }
+
+  @Get('my-profile')
+  @UseGuards(JwtAuthGuard)
+  async getMyProfile(@Request() req) {
+    return await this.sitterService.findByUserId(req.user.id);
+  }
+
+  @Get(':id')
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return await this.sitterService.findOne(id);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateSitterDto: UpdateSitterDto,
+    @Request() req,
   ) {
-    // Pass the user's ID and the form data to the service
-    return this.sitterService.setupProfile(user.id, setupDto);
+    return await this.sitterService.update(id, updateSitterDto, req.user.id);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    await this.sitterService.remove(id, req.user.id);
   }
 }

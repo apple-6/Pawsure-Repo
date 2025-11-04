@@ -1,85 +1,67 @@
-// src/sitter/sitter.entity.ts
-import { Booking } from 'src/booking/booking.entity';
-import { Review } from 'src/review/review.entity';
-import { User } from 'src/user/user.entity';
 import {
   Entity,
-  Column,
   PrimaryGeneratedColumn,
+  Column,
+  OneToOne,
+  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToOne,
   JoinColumn,
-  OneToMany,
 } from 'typeorm';
-
-export enum SitterStatus {
-  PENDING = 'pending', // Waiting for admin verification
-  VERIFIED = 'verified',
-  REJECTED = 'rejected',
-}
+import { User } from '../user/user.entity';
+import { Booking } from '../booking/booking.entity';
+import { Review } from '../review/review.entity';
 
 @Entity('sitters')
 export class Sitter {
-  @PrimaryGeneratedColumn() // 'INT sitter_id PK'
+  @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ nullable: true })
-  address: string;
-
-  @Column({ nullable: true })
-  phoneNumber: string;
-
-  @Column({ nullable: true })
-  houseType: string;
-
-  @Column({ nullable: true })
-  hasGarden: boolean;
-
-  @Column({ nullable: true })
-  hasOtherPets: boolean;
-
-  @Column({ nullable: true }) // URL of the uploaded ID
-  idDocumentUrl: string;
-
-  @Column({
-    type: 'enum',
-    enum: SitterStatus,
-    default: SitterStatus.PENDING,
-  })
-  status: SitterStatus;
-
-  // --- Step 4: Experience & Rates ---
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true }) // NEW
-  ratePerNight: number;
-
-  @Column({ type: 'text', nullable: true }) // 'TEXT bio'
+  @Column({ type: 'text', nullable: true })
   bio: string;
 
-  @Column({ type: 'text', nullable: true }) // 'TEXT experience'
+  @Column({ type: 'text', nullable: true })
   experience: string;
 
-  @Column({ type: 'simple-array', nullable: true }) // 'STRING photo_gallery'
-  photo_gallery: string[]; // simple-array is good for a list of URLs
+  @Column({ type: 'text', nullable: true })
+  photo_gallery: string;
 
-  @Column({ type: 'float', default: 0 }) // 'FLOAT rating'
+  @Column({ type: 'double precision', default: 0 })
   rating: number;
 
-  @Column({ default: 0 }) // 'INT reviews_count'
+  @Column({ type: 'int', default: 0 })
   reviews_count: number;
 
-  @Column({ type: 'date', array: true, nullable: true }) // 'DATE[] available_dates'
+  @Column({ type: 'simple-array', nullable: true })
   available_dates: string[];
 
-  @CreateDateColumn() // 'TIMESTAMP created_at'
-  created_at: Date;
+  // Additional fields for setupProfile
+  @Column({ type: 'text', nullable: true })
+  address: string;
 
-  @UpdateDateColumn() // 'TIMESTAMP updated_at'
-  updated_at: Date;
+  @Column({ type: 'varchar', nullable: true })
+  phoneNumber: string;
 
-  // --- Relationships ---
-  @OneToOne(() => User, (user) => user.sitterProfile) // 'INT user_id FK'
-  @JoinColumn() // This side holds the 'user_id' foreign key
+  @Column({ type: 'varchar', nullable: true })
+  houseType: string;
+
+  @Column({ type: 'boolean', default: false })
+  hasGarden: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  hasOtherPets: boolean;
+
+  @Column({ type: 'varchar', nullable: true })
+  idDocumentUrl: string;
+
+  @Column({ type: 'double precision', nullable: true })
+  ratePerNight: number;
+
+  @Column({ unique: true, nullable: true })
+  userId: number;
+
+  @OneToOne(() => User, (user) => user.sitterProfile, { nullable: true })
+  @JoinColumn({ name: 'userId' })
   user: User;
 
   @OneToMany(() => Booking, (booking) => booking.sitter)
@@ -87,4 +69,10 @@ export class Sitter {
 
   @OneToMany(() => Review, (review) => review.sitter)
   reviews: Review[];
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
 }
