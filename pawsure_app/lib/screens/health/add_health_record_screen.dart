@@ -1,12 +1,6 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-
-const String apiBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:3000',
-);
+import 'package:get/get.dart';
+import 'package:pawsure_app/controllers/health_controller.dart';
 
 enum HealthRecordType { vaccination, vetVisit, medication, allergy, note }
 
@@ -26,14 +20,16 @@ String healthRecordTypeToBackend(HealthRecordType type) {
 }
 
 class AddHealthRecordScreen extends StatefulWidget {
-  final int petId;
-  const AddHealthRecordScreen({super.key, required this.petId});
+  const AddHealthRecordScreen({super.key});
 
   @override
   State<AddHealthRecordScreen> createState() => _AddHealthRecordScreenState();
 }
 
 class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
+  // Find the controller
+  final HealthController controller = Get.find<HealthController>();
+
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   HealthRecordType? _selectedType;
   DateTime? _selectedDate;
@@ -88,49 +84,45 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
-    setState(() => _submitting = true);
-    try {
-      final uri = Uri.parse('$apiBaseUrl/pets/${widget.petId}/health-records');
-      final payload = {
-        'recordType': healthRecordTypeToBackend(_selectedType!),
-        'date': _selectedDate!.toIso8601String(),
-        'notes': _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
-        'clinic': _clinicController.text.trim().isEmpty
-            ? null
-            : _clinicController.text.trim(),
-        'nextDueDate': _nextDueDateController.text.trim().isEmpty
-            ? null
-            : _nextDueDateController.text.trim(),
-      };
-      final response = await http.post(
-        uri,
-        headers: const {'Content-Type': 'application/json; charset=UTF-8'},
-        body: jsonEncode(payload),
+    // Check if pet is selected
+    if (controller.selectedPet.value == null) {
+      Get.snackbar(
+        'Error',
+        'No pet selected. Please select a pet first.',
+        snackPosition: SnackPosition.BOTTOM,
       );
+      return;
+    }
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Health record added')));
-        Navigator.pop(context, true);
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed: ${response.statusCode} ${response.body}'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
-    } finally {
-      if (mounted) setState(() => _submitting = false);
+    setState(() => _submitting = true);
+
+    // Get petId from controller
+    final petId = controller.selectedPet.value!.id;
+
+    // Build payload mapping frontend keys to backend keys
+    final payload = {
+      'record_type': healthRecordTypeToBackend(_selectedType!),
+      'record_date': _selectedDate!.toIso8601String(),
+      'description': _notesController.text.trim().isEmpty
+          ? null
+          : _notesController.text.trim(),
+      'clinic': _clinicController.text.trim().isEmpty
+          ? null
+          : _clinicController.text.trim(),
+      'nextDueDate': _nextDueDateController.text.trim().isEmpty
+          ? null
+          : _nextDueDateController.text.trim(),
+    };
+
+    // Call the controller to submit the data
+    // Get.back() and snackbar are handled inside the controller
+    await controller.addNewHealthRecord(payload, petId);
+
+    // Reset submitting state if widget is still mounted
+    // (On success, controller calls Get.back() so widget will be disposed)
+    // (On error, controller shows snackbar but doesn't throw, so we reset here)
+    if (mounted) {
+      setState(() => _submitting = false);
     }
   }
 

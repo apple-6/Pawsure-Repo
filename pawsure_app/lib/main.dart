@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'main_navigation.dart';
 
 void main() {
@@ -29,7 +30,7 @@ class PawsureApp extends StatelessWidget {
       ),
       useMaterial3: true,
     );
-    return MaterialApp(
+    return GetMaterialApp(
       title: 'Pawsure - Pet Care Companion',
       theme: theme,
       home: const MainNavigation(),

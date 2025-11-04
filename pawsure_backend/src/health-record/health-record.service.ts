@@ -29,7 +29,15 @@ export class HealthRecordService {
       nextDueDate: dto.nextDueDate,
     });
 
-    return this.healthRecordRepository.save(record);
+    const savedRecord = await this.healthRecordRepository.save(record);
+    // Reload without relations to avoid circular reference in response
+    const reloadedRecord = await this.healthRecordRepository.findOne({
+      where: { id: savedRecord.id },
+    });
+    if (!reloadedRecord) {
+      throw new NotFoundException('Failed to reload saved health record');
+    }
+    return reloadedRecord;
   }
 
   async findAllForPet(petId: number): Promise<HealthRecord[]> {
@@ -40,7 +48,7 @@ export class HealthRecordService {
     return this.healthRecordRepository.find({
       where: { pet: { id: petId } },
       order: { record_date: 'DESC' },
-      relations: ['pet'],
+      // Removed relations: ['pet'] to avoid circular reference serialization issues
     });
   }
 }

@@ -38,7 +38,14 @@ let HealthRecordService = class HealthRecordService {
             clinic: dto.clinic,
             nextDueDate: dto.nextDueDate,
         });
-        return this.healthRecordRepository.save(record);
+        const savedRecord = await this.healthRecordRepository.save(record);
+        const reloadedRecord = await this.healthRecordRepository.findOne({
+            where: { id: savedRecord.id },
+        });
+        if (!reloadedRecord) {
+            throw new common_1.NotFoundException('Failed to reload saved health record');
+        }
+        return reloadedRecord;
     }
     async findAllForPet(petId) {
         const pet = await this.petRepository.findOne({ where: { id: petId } });
@@ -48,7 +55,6 @@ let HealthRecordService = class HealthRecordService {
         return this.healthRecordRepository.find({
             where: { pet: { id: petId } },
             order: { record_date: 'DESC' },
-            relations: ['pet'],
         });
     }
 };

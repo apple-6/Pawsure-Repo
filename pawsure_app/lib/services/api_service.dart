@@ -31,6 +31,21 @@ class ApiService {
           .map((e) => HealthRecord.fromJson(e as Map<String, dynamic>))
           .toList();
     }
-    throw Exception('Failed to load health records (${response.statusCode})');
+    // Provide more detailed error information
+    final errorBody = response.body;
+    throw Exception(
+      'Failed to load health records (${response.statusCode}): $errorBody',
+    );
+  }
+
+  Future<void> addHealthRecord(int petId, Map<String, dynamic> payload) async {
+    final response = await http.post(
+      Uri.parse('$apiBaseUrl/pets/$petId/health-records'),
+      headers: const {'Content-Type': 'application/json; charset=UTF-8'},
+      body: jsonEncode(payload),
+    );
+    if (response.statusCode != 201 && response.statusCode != 200) {
+      throw Exception('Failed to add health record (${response.statusCode})');
+    }
   }
 }

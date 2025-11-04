@@ -44,7 +44,7 @@ __decorate([
     __metadata("design:type", String)
 ], Pet.prototype, "name", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
 ], Pet.prototype, "species", void 0);
 __decorate([
@@ -52,7 +52,7 @@ __decorate([
     __metadata("design:type", String)
 ], Pet.prototype, "breed", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'date' }),
+    (0, typeorm_1.Column)({ type: 'date', nullable: true }),
     __metadata("design:type", String)
 ], Pet.prototype, "dob", void 0);
 __decorate([

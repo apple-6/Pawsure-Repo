@@ -1,113 +1,80 @@
 import 'package:flutter/material.dart';
-import 'package:pawsure_app/models/health_record_model.dart';
-import 'package:pawsure_app/services/api_service.dart';
+import 'package:get/get.dart';
+import 'package:pawsure_app/controllers/health_controller.dart';
 import 'package:pawsure_app/screens/health/add_health_record_screen.dart';
 import 'package:pawsure_app/widgets/health/filter_chip_row.dart';
 import 'package:pawsure_app/widgets/health/health_record_card.dart';
 
-class RecordsTab extends StatefulWidget {
-  final int petId;
-  const RecordsTab({super.key, required this.petId});
-
-  @override
-  State<RecordsTab> createState() => _RecordsTabState();
-}
-
-class _RecordsTabState extends State<RecordsTab> {
-  final ApiService _apiService = ApiService();
-  List<HealthRecord> _healthRecords = [];
-  bool _isLoadingRecords = false;
-  String _selectedFilter = 'All';
-  List<HealthRecord> _filteredRecords = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchHealthRecords(widget.petId);
-  }
-
-  @override
-  void didUpdateWidget(covariant RecordsTab oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.petId != oldWidget.petId) {
-      _fetchHealthRecords(widget.petId);
-    }
-  }
-
-  void _updateFilteredRecords() {
-    if (_selectedFilter == 'All') {
-      _filteredRecords = _healthRecords;
-    } else {
-      _filteredRecords = _healthRecords
-          .where((record) => record.recordType == _selectedFilter)
-          .toList();
-    }
-  }
-
-  Future<void> _fetchHealthRecords(int petId) async {
-    setState(() => _isLoadingRecords = true);
-    try {
-      final records = await _apiService.getHealthRecords(petId);
-      if (!mounted) return;
-      setState(() {
-        _healthRecords = records;
-        _updateFilteredRecords();
-        _isLoadingRecords = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoadingRecords = false);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load health records: $e')),
-      );
-    }
-  }
+class RecordsTab extends StatelessWidget {
+  const RecordsTab({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
+    // Find the controller
+    final HealthController controller = Get.find<HealthController>();
+
+    // Wrap the body in Obx() for reactivity
+    return Obx(() {
+      if (controller.isLoadingPets.value) {
+        // Show a loading spinner if the initial pet is still loading
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (controller.selectedPet.value == null) {
+        // This is the "No Pets" empty state
+        return const Center(child: Text('Please select a pet.'));
+      }
+
+      // This is the main view when a pet is selected
+      return Stack(
         children: [
-          FilterChipRow(
-            selectedFilter: _selectedFilter,
-            onFilterSelected: (newFilter) {
-              setState(() {
-                _selectedFilter = newFilter;
-                _updateFilteredRecords();
-              });
-            },
+          Column(
+            children: [
+              FilterChipRow(
+                selectedFilter: controller.selectedFilter.value,
+                onFilterSelected: (newFilter) {
+                  controller.setFilter(newFilter);
+                },
+              ),
+              Expanded(
+                child: controller.isLoadingRecords.value
+                    ? const Center(child: CircularProgressIndicator())
+                    : controller.filteredRecords.isEmpty
+                    ? const Center(child: Text('No health records found.'))
+                    : ListView.builder(
+                        itemCount: controller.filteredRecords.length,
+                        itemBuilder: (context, index) {
+                          final record = controller.filteredRecords[index];
+                          return HealthRecordCard(record: record);
+                        },
+                      ),
+              ),
+            ],
           ),
-          Expanded(
-            child: _isLoadingRecords
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredRecords.isEmpty
-                ? const Center(child: Text('No health records found.'))
-                : ListView.builder(
-                    itemCount: _filteredRecords.length,
-                    itemBuilder: (context, index) {
-                      final record = _filteredRecords[index];
-                      return HealthRecordCard(record: record);
-                    },
-                  ),
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: FloatingActionButton.extended(
+              onPressed: () async {
+                // Update FAB logic
+                if (controller.selectedPet.value != null) {
+                  // Use Get.to() for navigation
+                  await Get.to(() => const AddHealthRecordScreen());
+                  // No need to pass petId, AddHealthRecordScreen will find it.
+                  // No need to check for 'created == true', the controller handles the refresh.
+                } else {
+                  Get.snackbar(
+                    'No Pet Selected',
+                    'Please select a pet first.',
+                    snackPosition: SnackPosition.BOTTOM,
+                  );
+                }
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add Record'),
+            ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final created = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AddHealthRecordScreen(petId: widget.petId),
-            ),
-          );
-          if (created == true) {
-            _fetchHealthRecords(widget.petId);
-          }
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Record'),
-      ),
-    );
+      );
+    });
   }
 }
