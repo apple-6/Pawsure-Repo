@@ -128,4 +128,53 @@ class AuthService {
       throw Exception(message);
     }
   }
+
+  /// --- SITTER SETUP FUNCTION ---
+  /// Submits the 4-step sitter setup form.
+  Future<void> submitSitterSetup(Map<String, dynamic> setupData) async {
+    // 1. Get the stored token
+    final token = await getToken();
+    if (token == null) {
+      throw Exception('Not authenticated. Please log in.');
+    }
+
+    final uri = Uri.parse('$_baseUrl/sitter/setup');
+    // ignore: avoid_print
+    print('AuthService.submitSitterSetup -> POST $uri');
+    http.Response resp;
+
+    try {
+      resp = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token', // 2. Send the token
+            },
+            body: json.encode(setupData), // 3. Send the form data
+          )
+          .timeout(const Duration(seconds: 10));
+    } on SocketException catch (e) {
+      throw Exception('Network error: ${e.message}');
+    } on TimeoutException {
+      throw Exception('Request timed out');
+    }
+
+    // ignore: avoid_print
+    print('AuthService.submitSitterSetup <- ${resp.statusCode} ${resp.body}');
+
+    // 4. Check for success
+    if (resp.statusCode == 201) {
+      // Success!
+      return;
+    } else {
+      // Handle errors
+      String message = 'Setup failed: ${resp.statusCode}';
+      try {
+        final Map<String, dynamic> err = jsonDecode(resp.body);
+        if (err.containsKey('message')) message = err['message'].toString();
+      } catch (_) {}
+      throw Exception(message);
+    }
+  }
 }
