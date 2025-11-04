@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+// main_navigation.dart is available but onboarding should appear first
+// import 'main_navigation.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/onboarding_screen.dart';
@@ -18,7 +20,7 @@ class PawsureApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      // Start the app on the Onboarding screen so auth/onboarding appears first.
+      // Start with onboarding -> login/register flow
       home: const OnboardingScreen(),
       routes: {
         '/login': (context) => const LoginScreen(),

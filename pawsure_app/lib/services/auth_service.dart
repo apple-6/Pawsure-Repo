@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
+import 'dart:io';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -23,11 +24,20 @@ class AuthService {
     // Debug: print the request target
     // ignore: avoid_print
     print('AuthService.login -> POST $uri');
-    final resp = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
+    http.Response resp;
+    try {
+      resp = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email, 'password': password}),
+          )
+          .timeout(const Duration(seconds: 10));
+    } on SocketException catch (e) {
+      throw Exception('Network error: ${e.message}');
+    } on TimeoutException {
+      throw Exception('Request timed out');
+    }
     // Debug: print status and body for troubleshooting
     // ignore: avoid_print
     print('AuthService.login <- ${resp.statusCode} ${resp.body}');
@@ -76,11 +86,24 @@ class AuthService {
     final uri = Uri.parse('$_baseUrl/auth/register');
     // ignore: avoid_print
     print('AuthService.register -> POST $uri');
-    final resp = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'name': name, 'email': email, 'password': password}),
-    );
+    http.Response resp;
+    try {
+      resp = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'name': name,
+              'email': email,
+              'password': password,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+    } on SocketException catch (e) {
+      throw Exception('Network error: ${e.message}');
+    } on TimeoutException {
+      throw Exception('Request timed out');
+    }
     // ignore: avoid_print
     print('AuthService.register <- ${resp.statusCode} ${resp.body}');
 

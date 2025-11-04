@@ -34,10 +34,11 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  http: ^1.1.0  # Fixed: moved to correct indentation
-  shared_preferences: ^2.2.2  # Fixed: moved to correct indentation
-  flutter_secure_storage: ^9.0.0  # Add this for your auth_service
+  http: ^1.1.0
+  shared_preferences: ^2.2.2
+  flutter_secure_storage: ^9.0.0
 
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -59,12 +60,6 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
-
-  # Add image assets for auth screens. Place your hero image at:
-  #   pawsure_app/assets/images/auth_hero.jpg
-  # Register the whole images folder so you can drop your picture(s) here.
-  assets:
-    - assets/images/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

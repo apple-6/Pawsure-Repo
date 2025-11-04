@@ -69,3 +69,5 @@ pawsure-app-*.json
 .env.local
 .env.development
 .env.production
+# Ignore built artifacts
+pawsure_backend/dist/
