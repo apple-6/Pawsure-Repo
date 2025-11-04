@@ -11,6 +11,10 @@ export class CreatePetDto {
   @IsNotEmpty()
   breed: string;
 
+  @IsString()
+  @IsNotEmpty()
+  species: string;
+
   // This will store the owner's ID, which will likely come from the authenticated user.
   // We'll pass it from the controller, but include it in the DTO for the service layer.
   @IsNotEmpty()
@@ -19,6 +23,7 @@ export class CreatePetDto {
   // The file path or URL will be added by the controller after the file upload.
   @IsString()
   @IsOptional()
+  dob: Date;
   @IsUrl() // Assuming the service stores a URL (e.g., Supabase storage URL)
   photoUrl?: string; 
 }

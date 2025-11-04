@@ -20,18 +20,20 @@ export class PetService {
       
       // Create a new Pet entity instance
       const newPet = this.petRepository.create({
-        name,
-        breed,
+        name: createPetDto.name,
+        breed: createPetDto.breed,
+        species: createPetDto.species, // 🟢 CRITICAL: Must be here!
+        dob: createPetDto.dob ? new Date(createPetDto.dob) : undefined,
         photoUrl, 
         // Assuming a relation where 'owner' is a User entity with 'id'
         owner: { id: ownerId }, 
       });
 
       // Save the new pet to the database (Supabase via TypeORM)
-      return this.petRepository.save(newPet);
+      return await this.petRepository.save(newPet);
     }
 
     async findPetsByOwner(ownerId: number): Promise<Pet[]> {
-      return this.petRepository.find({ where: { ownerId } });
+      return await this.petRepository.find({ where: { owner: { id: ownerId } } });
     }
 }

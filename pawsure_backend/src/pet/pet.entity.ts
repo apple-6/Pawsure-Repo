@@ -34,7 +34,7 @@ export class Pet {
   breed: string;
 
   @Column({ type: 'date', nullable: true }) // 'DATE dob'
-  dob: string;
+  dob: Date;
 
   @Column({ type: 'float', nullable: true }) // 'FLOAT weight'
   weight: number;

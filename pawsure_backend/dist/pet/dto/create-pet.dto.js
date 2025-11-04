@@ -14,7 +14,9 @@ const class_validator_1 = require("class-validator");
 class CreatePetDto {
     name;
     breed;
+    species;
     ownerId;
+    dob;
     photoUrl;
 }
 exports.CreatePetDto = CreatePetDto;
@@ -29,12 +31,20 @@ __decorate([
     __metadata("design:type", String)
 ], CreatePetDto.prototype, "breed", void 0);
 __decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreatePetDto.prototype, "species", void 0);
+__decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", Number)
 ], CreatePetDto.prototype, "ownerId", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Date)
+], CreatePetDto.prototype, "dob", void 0);
+__decorate([
     (0, class_validator_1.IsUrl)(),
     __metadata("design:type", String)
 ], CreatePetDto.prototype, "photoUrl", void 0);

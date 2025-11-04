@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+const String _apiBaseUrl = 'http://localhost:3000';
 
 // Enum to manage the selected animal type
 enum AnimalType { dog, cat }
@@ -43,6 +47,10 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
     );
+
+    // SAFETY CHECK: Ensure widget is still mounted after async call
+    if (!mounted) return;
+
     if (picked != null) {
       setState(() {
         // Format the date as mm/dd/yyyy
@@ -52,14 +60,83 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     }
   }
 
-  void _createProfile() {
-    if (_formKey.currentState!.validate()) {
-      // Logic to save the new pet's profile
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Creating Pet Profile...')));
-      // You would typically send data to a database here
-      // After success, navigate back or to the next screen
+  Future<void> _createProfile() async {
+    if (!_formKey.currentState!.validate()) {
+      return; // Exit if the form is not valid
+    }
+
+    // 1. Gather the data
+    final String petName = _nameController.text;
+    final String petBreed =
+        _selectedBreed ?? ''; // Use selected breed, default to empty
+
+    // 2. Build the JSON body
+    // 2. Build the JSON body
+    final Map<String, dynamic> petData = {
+      'name': petName,
+      'breed': petBreed,
+
+      if (_selectedAnimalType != null) 'species': _selectedAnimalType!.name,
+
+      if (_dobController.text.isNotEmpty) 'dob': _dobController.text,
+
+      // owner is inferred server-side (currently defaults to 1)
+    };
+
+    // Use context BEFORE the async gap
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Attempting to create Pet Profile...')),
+    );
+
+    try {
+      // 3. Send the POST request
+      final response = await http.post(
+        Uri.parse('$_apiBaseUrl/pets'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(petData), // Encode the map to a JSON string
+      );
+
+      // 🛑 CRITICAL SAFETY CHECK: Stop execution if the widget is not mounted.
+      if (!mounted) return;
+
+      // 4. Handle the response
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        // Success!
+        final createdPet = jsonDecode(response.body);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Success! Pet ${createdPet['name']} created.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Navigate back and pass true to indicate a refresh is needed.
+        Navigator.of(context).pop(true);
+      } else {
+        // Failure
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to create pet. Status: ${response.statusCode}.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Catch network or decoding errors
+      // 🛑 SAFETY CHECK: Check mounted again inside catch block
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Network Error: Could not reach the server ($e).'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -73,6 +150,17 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
         : [];
 
     return Scaffold(
+      appBar: AppBar(
+        // Added AppBar for better screen structure
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text("New Pet Profile"),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
+      ),
       body: SafeArea(
         child: Stack(
           children: [
@@ -330,7 +418,7 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
               width: isSelected ? 2.5 : 1.0,
             ),
             borderRadius: BorderRadius.circular(10),
-            color: isSelected ? Colors.green.withOpacity(0.05) : Colors.white,
+            color: isSelected ? Colors.green.withAlpha(13) : Colors.white,
           ),
           child: Column(
             children: [
@@ -366,7 +454,7 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
           vertical: 15,
         ),
       ),
-      value: _selectedBreed,
+      initialValue: _selectedBreed,
       items: breeds.map((String breed) {
         return DropdownMenuItem<String>(value: breed, child: Text(breed));
       }).toList(),

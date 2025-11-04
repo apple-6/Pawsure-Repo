@@ -25,7 +25,7 @@ class MyPetsScreen extends StatefulWidget {
 
 class _MyPetsScreenState extends State<MyPetsScreen> {
   // 2. Initial Pet Data (State)
-  List<Pet> _pets = [
+  final List<Pet> _pets = [
     Pet(
       id: '1',
       name: 'Buddy',

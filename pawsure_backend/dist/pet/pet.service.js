@@ -25,15 +25,17 @@ let PetService = class PetService {
     async createPet(createPetDto) {
         const { name, breed, photoUrl, ownerId } = createPetDto;
         const newPet = this.petRepository.create({
-            name,
-            breed,
+            name: createPetDto.name,
+            breed: createPetDto.breed,
+            species: createPetDto.species,
+            dob: createPetDto.dob ? new Date(createPetDto.dob) : undefined,
             photoUrl,
             owner: { id: ownerId },
         });
-        return this.petRepository.save(newPet);
+        return await this.petRepository.save(newPet);
     }
     async findPetsByOwner(ownerId) {
-        return this.petRepository.find({ where: { ownerId } });
+        return await this.petRepository.find({ where: { owner: { id: ownerId } } });
     }
 };
 exports.PetService = PetService;

@@ -8,7 +8,7 @@ export declare class Pet {
     photoUrl: string;
     species: string;
     breed: string;
-    dob: string;
+    dob: Date;
     weight: number;
     allergies: string;
     vaccination_dates: string[];
