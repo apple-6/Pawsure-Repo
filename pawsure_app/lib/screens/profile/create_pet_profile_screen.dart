@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io'; // ⬅️ ADDED: Required for File access (e.g., displaying the image)
+import 'package:image_picker/image_picker.dart'; // ⬅️ ADDED: Required for photo picking logic
 
 const String _apiBaseUrl = 'http://localhost:3000';
 
@@ -22,6 +24,10 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
   final TextEditingController _dobController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
+  // 📸 IMAGE PICKER STATE
+  XFile? _pickedFile; // Holds the selected image file
+  final ImagePicker _picker = ImagePicker(); // Instance of the image picker
+
   // Placeholder for breed options
   final List<String> _dogBreeds = [
     'Golden Retriever',
@@ -39,7 +45,7 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     super.dispose();
   }
 
-  // Helper method to display the date picker
+  // 🗓️ ADDED: Helper method to display the date picker
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -60,80 +66,113 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     }
   }
 
+  // 📸 ADDED: Image Picking Logic
+  Future<void> _pickImage(ImageSource source) async {
+    final XFile? file = await _picker.pickImage(source: source);
+
+    if (!mounted) return;
+
+    if (file != null) {
+      setState(() {
+        _pickedFile = file;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Image selected: ${file.name}')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Image selection cancelled.')),
+      );
+    }
+  }
+
+  // 💾 YOUR EXISTING (and now unified) _createProfile function
   Future<void> _createProfile() async {
     if (!_formKey.currentState!.validate()) {
       return; // Exit if the form is not valid
     }
 
-    // 1. Gather the data
-    final String petName = _nameController.text;
-    final String petBreed =
-        _selectedBreed ?? ''; // Use selected breed, default to empty
+    // 1. Setup the Multipart Request (This replaces the old JSON POST)
+    final uri = Uri.parse('$_apiBaseUrl/pets');
+    final request = http.MultipartRequest('POST', uri);
 
-    // 2. Build the JSON body
-    // 2. Build the JSON body
-    final Map<String, dynamic> petData = {
-      'name': petName,
-      'breed': petBreed,
+    // 2. Add all text fields
+    request.fields['name'] = _nameController.text;
+    request.fields['breed'] = _selectedBreed ?? '';
 
-      if (_selectedAnimalType != null) 'species': _selectedAnimalType!.name,
+    if (_selectedAnimalType != null) {
+      request.fields['species'] = _selectedAnimalType!.name;
+    }
+    if (_dobController.text.isNotEmpty) {
+      request.fields['dob'] = _dobController.text;
+    }
 
-      if (_dobController.text.isNotEmpty) 'dob': _dobController.text,
+    // 3. Conditionally Add the Photo File
+    if (_pickedFile != null) {
+      try {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'photo', // ⬅️ CRITICAL: This MUST match the field name your NestJS backend expects
+            _pickedFile!.path,
+            filename: _pickedFile!.name,
+          ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Preparing photo for upload...')),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error reading photo file: $e. Sending text profile only.',
+            ),
+          ),
+        );
+      }
+    }
 
-      // owner is inferred server-side (currently defaults to 1)
-    };
-
-    // Use context BEFORE the async gap
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Attempting to create Pet Profile...')),
     );
 
+    // 4. Send the Request and Handle Response
     try {
-      // 3. Send the POST request
-      final response = await http.post(
-        Uri.parse('$_apiBaseUrl/pets'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: jsonEncode(petData), // Encode the map to a JSON string
-      );
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
-      // 🛑 CRITICAL SAFETY CHECK: Stop execution if the widget is not mounted.
       if (!mounted) return;
 
-      // 4. Handle the response
       if (response.statusCode == 201 || response.statusCode == 200) {
-        // Success!
         final createdPet = jsonDecode(response.body);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Success! Pet ${createdPet['name']} created.'),
+            content: Text(
+              'Success! Profile for ${createdPet['name']} created.',
+            ),
             backgroundColor: Colors.green,
           ),
         );
-
-        // Navigate back and pass true to indicate a refresh is needed.
+        // Navigate back and signal a refresh
         Navigator.of(context).pop(true);
       } else {
         // Failure
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Failed to create pet. Status: ${response.statusCode}.',
+              'Failed to create pet. Status: ${response.statusCode}. Body: ${response.body}',
             ),
             backgroundColor: Colors.red,
           ),
         );
       }
     } catch (e) {
-      // Catch network or decoding errors
-      // 🛑 SAFETY CHECK: Check mounted again inside catch block
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Network Error: Could not reach the server ($e).'),
+          content: Text('Network Error during unified upload: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -209,7 +248,9 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
                     const SizedBox(height: 30),
 
                     // Photo Upload Area
-                    _buildPhotoUploadArea(context),
+                    _buildPhotoUploadArea(
+                      context,
+                    ), // ⬅️ This method uses _pickedFile state
                     const SizedBox(height: 30),
 
                     // Pet's Name Input
@@ -301,7 +342,28 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
 
   // --- Widget Builders ---
 
+  // 📸 UPDATED: To handle displaying the picked image
   Widget _buildPhotoUploadArea(BuildContext context) {
+    // Determine the content based on whether an image has been selected
+    Widget imageContent;
+
+    if (_pickedFile != null) {
+      // Display the selected image from the File path
+      imageContent = ClipOval(
+        child: Image.file(
+          File(_pickedFile!.path),
+          fit: BoxFit.cover,
+          width: 120,
+          height: 120,
+        ),
+      );
+    } else {
+      // Display the default upload icon
+      imageContent = const Center(
+        child: Icon(Icons.upload, size: 40, color: Colors.grey),
+      );
+    }
+
     return Column(
       children: [
         Container(
@@ -311,16 +373,15 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
             shape: BoxShape.circle,
             border: Border.all(color: Colors.grey.shade300),
           ),
-          child: const Center(
-            child: Icon(Icons.upload, size: 40, color: Colors.grey),
-          ),
+          child: imageContent, // Use the determined content
         ),
         const SizedBox(height: 15),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextButton.icon(
-              onPressed: () {},
+              // ⬅️ FIX: Connect to camera
+              onPressed: () => _pickImage(ImageSource.camera),
               icon: const Icon(Icons.camera_alt, color: Colors.grey, size: 16),
               label: const Text(
                 'Take Photo',
@@ -329,7 +390,8 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
             ),
             const Text(' | ', style: TextStyle(color: Colors.grey)),
             TextButton.icon(
-              onPressed: () {},
+              // ⬅️ FIX: Connect to gallery
+              onPressed: () => _pickImage(ImageSource.gallery),
               icon: const Icon(Icons.image, color: Colors.green, size: 16),
               label: const Text(
                 'Choose from Library',
@@ -341,6 +403,8 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
       ],
     );
   }
+
+  // ... (Rest of the widget builders are unchanged)
 
   Widget _buildTextFormField({
     required TextEditingController controller,
