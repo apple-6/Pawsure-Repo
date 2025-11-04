@@ -16,6 +16,7 @@ import { NotificationModule } from './notification/notification.module';
 import { PostsModule } from './posts/posts.module';
 import { CommentsModule } from './comments/comments.module';
 import { LikesModule } from './likes/likes.module';
+import { RoleModule } from './role/role.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
@@ -24,6 +25,7 @@ import { AuthModule } from './auth/auth.module';
       isGlobal: true,      // Make config available globally
       envFilePath: '.env', // Specify the .env file
     }),
+    
     TypeOrmModule.forRootAsync({ // Configure TypeOrm asynchronously
       imports: [ConfigModule],   // Import ConfigModule here
       inject: [ConfigService],   // Inject ConfigService to read env vars
@@ -37,9 +39,8 @@ import { AuthModule } from './auth/auth.module';
         }
       }),
     }),
-    AiModule, // Include your AI module
-    // Add other feature modules here later (e.g., PetsModule, UsersModule)
-    AiModule,
+  AiModule, // Include your AI module
+  // Add other feature modules here later (e.g., PetsModule, UsersModule)
     UserModule,
     PetModule,
     SitterModule,
@@ -52,7 +53,8 @@ import { AuthModule } from './auth/auth.module';
     PostsModule,
     CommentsModule,
     LikesModule,
-    AuthModule,
+  RoleModule,
+  AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
