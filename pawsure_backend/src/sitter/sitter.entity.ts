@@ -3,13 +3,55 @@ import { Booking } from 'src/booking/booking.entity';
 import { Review } from 'src/review/review.entity';
 import { User } from 'src/user/user.entity';
 import {
-  Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn, OneToMany
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToOne,
+  JoinColumn,
+  OneToMany,
 } from 'typeorm';
+
+export enum SitterStatus {
+  PENDING = 'pending', // Waiting for admin verification
+  VERIFIED = 'verified',
+  REJECTED = 'rejected',
+}
 
 @Entity('sitters')
 export class Sitter {
   @PrimaryGeneratedColumn() // 'INT sitter_id PK'
   id: number;
+
+  @Column({ nullable: true })
+  address: string;
+
+  @Column({ nullable: true })
+  phoneNumber: string;
+
+  @Column({ nullable: true })
+  houseType: string;
+
+  @Column({ nullable: true })
+  hasGarden: boolean;
+
+  @Column({ nullable: true })
+  hasOtherPets: boolean;
+
+  @Column({ nullable: true }) // URL of the uploaded ID
+  idDocumentUrl: string;
+
+  @Column({
+    type: 'enum',
+    enum: SitterStatus,
+    default: SitterStatus.PENDING,
+  })
+  status: SitterStatus;
+
+  // --- Step 4: Experience & Rates ---
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true }) // NEW
+  ratePerNight: number;
 
   @Column({ type: 'text', nullable: true }) // 'TEXT bio'
   bio: string;

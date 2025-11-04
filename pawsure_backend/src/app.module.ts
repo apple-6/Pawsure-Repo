@@ -17,7 +17,7 @@ import { PostsModule } from './posts/posts.module';
 import { CommentsModule } from './comments/comments.module';
 import { LikesModule } from './likes/likes.module';
 import { RoleModule } from './role/role.module';
-
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -39,9 +39,8 @@ import { RoleModule } from './role/role.module';
         }
       }),
     }),
-    AiModule, // Include your AI module
-    // Add other feature modules here later (e.g., PetsModule, UsersModule)
-    AiModule,
+  AiModule, // Include your AI module
+  // Add other feature modules here later (e.g., PetsModule, UsersModule)
     UserModule,
     PetModule,
     SitterModule,
@@ -54,8 +53,8 @@ import { RoleModule } from './role/role.module';
     PostsModule,
     CommentsModule,
     LikesModule,
-
-    RoleModule
+  RoleModule,
+  AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
