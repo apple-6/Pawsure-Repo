@@ -23,11 +23,20 @@ class RoleSelectionScreen extends StatelessWidget {
                   title: "I'm a Pet Owner",
                   subtitle: "Track, care, and connect for\nyour pets.",
                   onTap: () {
-                    // Navigate to login and pass selected role
-                    Navigator.pushNamed(
-                      context,
-                      '/login',
-                      arguments: {'role': 'owner'},
+                    // Registration screen removed — inform the user instead
+                    showDialog<void>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Registration disabled'),
+                        content: const Text(
+                            'Registration is currently disabled. Please check back later.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -36,11 +45,20 @@ class RoleSelectionScreen extends StatelessWidget {
                   title: "I'm a Pet Sitter",
                   subtitle: "Offer safe, loving care for\nothers' pets.",
                   onTap: () {
-                    // Navigate to login and pass selected role
-                    Navigator.pushNamed(
-                      context,
-                      '/login',
-                      arguments: {'role': 'sitter'},
+                    // Registration screen removed — inform the user instead
+                    showDialog<void>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Registration disabled'),
+                        content: const Text(
+                            'Registration is currently disabled. Please check back later.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),
