@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import '../../main_navigation.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -148,8 +150,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               if (index == 0)
                                 Image.asset(
                                   'assets/images/pawsureLogoBgRM.png',
-                                  width: 140,
-                                  height: 140,
+                                  width: 180,
+                                  height: 180,
                                   fit: BoxFit.contain,
                                   errorBuilder: (context, error, stackTrace) {
                                     return const SizedBox.shrink();
@@ -226,6 +228,42 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
 
                           const SizedBox(height: 8),
+                          // Show login link only on the final page
+                          if (index == _pages.length - 1)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: RichText(
+                                text: TextSpan(
+                                  style: const TextStyle(color: Colors.black87),
+                                  children: [
+                                    const TextSpan(
+                                      text: 'Already have an account? ',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: 'Login',
+                                      style: const TextStyle(
+                                        color: Color(0xFF4CAF50),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                      recognizer: TapGestureRecognizer()
+                                        ..onTap = () {
+                                          // Navigate to the main app navigation instead of the removed login screen
+                                          Navigator.of(context).pushReplacement(
+                                            MaterialPageRoute(
+                                              builder: (_) => const MainNavigation(),
+                                            ),
+                                          );
+                                        },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ],

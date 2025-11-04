@@ -50,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Colors.black12,
                     blurRadius: 8,
                     offset: Offset(0, -2),
-                  )
+                  ),
                 ],
               ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -74,7 +74,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     const Text(
                       'Hey! Welcome',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     const Text(
@@ -107,7 +110,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () {
                         // placeholder: add auth logic later
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Login pressed (UI only)')),
+                          const SnackBar(
+                            content: Text('Login pressed (UI only)'),
+                          ),
                         );
                       },
                       style: ElevatedButton.styleFrom(
