@@ -67,3 +67,6 @@ pawsure-app-*.json
 .env.local
 .env.development
 .env.production
+
+my_conflicts.txt
+output.txt
