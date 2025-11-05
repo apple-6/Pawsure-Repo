@@ -1,6 +1,6 @@
 // lib/screens/sitter_setup/steps/step3_verification.dart
 
-import 'packagepackage:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 class Step3Verification extends StatelessWidget {
   final GlobalKey<FormState> formKey;
