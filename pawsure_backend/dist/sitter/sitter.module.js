@@ -11,14 +11,22 @@ const common_1 = require("@nestjs/common");
 const sitter_service_1 = require("./sitter.service");
 const typeorm_1 = require("@nestjs/typeorm");
 const sitter_entity_1 = require("./sitter.entity");
+const sitter_controller_1 = require("./sitter.controller");
+const user_module_1 = require("../user/user.module");
+const auth_module_1 = require("../auth/auth.module");
 let SitterModule = class SitterModule {
 };
 exports.SitterModule = SitterModule;
 exports.SitterModule = SitterModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([sitter_entity_1.Sitter])],
+        imports: [
+            typeorm_1.TypeOrmModule.forFeature([sitter_entity_1.Sitter]),
+            user_module_1.UserModule,
+            auth_module_1.AuthModule,
+        ],
+        controllers: [sitter_controller_1.SitterController],
         providers: [sitter_service_1.SitterService],
-        exports: [sitter_service_1.SitterService]
+        exports: [sitter_service_1.SitterService],
     })
 ], SitterModule);
 //# sourceMappingURL=sitter.module.js.map

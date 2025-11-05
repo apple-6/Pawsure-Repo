@@ -1,5 +1,7 @@
 # compiled output
 /dist
+/pawsure_backend/dist
+/pawsure_backend/node_modules
 /node_modules
 /build
 
@@ -67,7 +69,9 @@ pawsure-app-*.json
 .env.local
 .env.development
 .env.production
-
+# Ignore built artifacts
+pawsure_backend/dist/
+/pawsure_backend/node_modules
 my_conflicts.txt
 output.txt
-/node_modules
+

@@ -23,7 +23,7 @@ class CalendarTab extends StatelessWidget {
             focusedDay: DateTime.now(),
             calendarFormat: CalendarFormat.month,
             headerVisible: true,
-            onDaySelected: (_, __) {},
+            onDaySelected: (selectedDay, focusedDay) {},
           ),
           const SizedBox(height: 20),
           Card(

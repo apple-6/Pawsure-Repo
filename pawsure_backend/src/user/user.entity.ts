@@ -4,6 +4,9 @@ import { Notification } from 'src/notification/notification.entity';
 import { Pet } from 'src/pet/pet.entity';
 import { Review } from 'src/review/review.entity';
 import { Sitter } from 'src/sitter/sitter.entity';
+import { Post } from 'src/posts/posts.entity';
+import { Comment } from 'src/comments/comments.entity';
+import { Like } from 'src/likes/likes.entity';
 import {
   Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany, OneToOne
 } from 'typeorm';
@@ -49,4 +52,13 @@ export class User {
 
   @OneToMany(() => Notification, (notification) => notification.user)
   notifications: Notification[];
+
+  @OneToMany(() => Post, (post) => post.user)
+  posts: Post[];
+
+  @OneToMany(() => Comment, (comment) => comment.user)
+  comments: Comment[];
+
+  @OneToMany(() => Like, (like) => like.user)
+  likes: Like[];
 }

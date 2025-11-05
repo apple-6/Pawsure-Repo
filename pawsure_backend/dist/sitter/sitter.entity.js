@@ -9,13 +9,27 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Sitter = void 0;
+exports.Sitter = exports.SitterStatus = void 0;
 const booking_entity_1 = require("../booking/booking.entity");
 const review_entity_1 = require("../review/review.entity");
 const user_entity_1 = require("../user/user.entity");
 const typeorm_1 = require("typeorm");
+var SitterStatus;
+(function (SitterStatus) {
+    SitterStatus["PENDING"] = "pending";
+    SitterStatus["VERIFIED"] = "verified";
+    SitterStatus["REJECTED"] = "rejected";
+})(SitterStatus || (exports.SitterStatus = SitterStatus = {}));
 let Sitter = class Sitter {
     id;
+    address;
+    phoneNumber;
+    houseType;
+    hasGarden;
+    hasOtherPets;
+    idDocumentUrl;
+    status;
+    ratePerNight;
     bio;
     experience;
     photo_gallery;
@@ -33,6 +47,42 @@ __decorate([
     (0, typeorm_1.PrimaryGeneratedColumn)(),
     __metadata("design:type", Number)
 ], Sitter.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Sitter.prototype, "address", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Sitter.prototype, "phoneNumber", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Sitter.prototype, "houseType", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Boolean)
+], Sitter.prototype, "hasGarden", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Boolean)
+], Sitter.prototype, "hasOtherPets", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Sitter.prototype, "idDocumentUrl", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        type: 'enum',
+        enum: SitterStatus,
+        default: SitterStatus.PENDING,
+    }),
+    __metadata("design:type", String)
+], Sitter.prototype, "status", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'decimal', precision: 10, scale: 2, nullable: true }),
+    __metadata("design:type", Number)
+], Sitter.prototype, "ratePerNight", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'text', nullable: true }),
     __metadata("design:type", String)

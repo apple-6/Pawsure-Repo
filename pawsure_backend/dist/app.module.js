@@ -22,6 +22,11 @@ const activity_log_module_1 = require("./activity-log/activity-log.module");
 const health_record_module_1 = require("./health-record/health-record.module");
 const review_module_1 = require("./review/review.module");
 const notification_module_1 = require("./notification/notification.module");
+const posts_module_1 = require("./posts/posts.module");
+const comments_module_1 = require("./comments/comments.module");
+const likes_module_1 = require("./likes/likes.module");
+const role_module_1 = require("./role/role.module");
+const auth_module_1 = require("./auth/auth.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -46,7 +51,6 @@ exports.AppModule = AppModule = __decorate([
                 }),
             }),
             ai_module_1.AiModule,
-            ai_module_1.AiModule,
             user_module_1.UserModule,
             pet_module_1.PetModule,
             sitter_module_1.SitterModule,
@@ -56,6 +60,11 @@ exports.AppModule = AppModule = __decorate([
             health_record_module_1.HealthRecordModule,
             review_module_1.ReviewModule,
             notification_module_1.NotificationModule,
+            posts_module_1.PostsModule,
+            comments_module_1.CommentsModule,
+            likes_module_1.LikesModule,
+            role_module_1.RoleModule,
+            auth_module_1.AuthModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

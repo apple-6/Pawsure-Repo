@@ -3,6 +3,9 @@ import { Notification } from 'src/notification/notification.entity';
 import { Pet } from 'src/pet/pet.entity';
 import { Review } from 'src/review/review.entity';
 import { Sitter } from 'src/sitter/sitter.entity';
+import { Post } from 'src/posts/posts.entity';
+import { Comment } from 'src/comments/comments.entity';
+import { Like } from 'src/likes/likes.entity';
 export declare class User {
     id: number;
     name: string;
@@ -17,4 +20,7 @@ export declare class User {
     bookings: Booking[];
     reviews: Review[];
     notifications: Notification[];
+    posts: Post[];
+    comments: Comment[];
+    likes: Like[];
 }

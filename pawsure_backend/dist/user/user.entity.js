@@ -15,6 +15,9 @@ const notification_entity_1 = require("../notification/notification.entity");
 const pet_entity_1 = require("../pet/pet.entity");
 const review_entity_1 = require("../review/review.entity");
 const sitter_entity_1 = require("../sitter/sitter.entity");
+const posts_entity_1 = require("../posts/posts.entity");
+const comments_entity_1 = require("../comments/comments.entity");
+const likes_entity_1 = require("../likes/likes.entity");
 const typeorm_1 = require("typeorm");
 let User = class User {
     id;
@@ -30,6 +33,9 @@ let User = class User {
     bookings;
     reviews;
     notifications;
+    posts;
+    comments;
+    likes;
 };
 exports.User = User;
 __decorate([
@@ -84,6 +90,18 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => notification_entity_1.Notification, (notification) => notification.user),
     __metadata("design:type", Array)
 ], User.prototype, "notifications", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => posts_entity_1.Post, (post) => post.user),
+    __metadata("design:type", Array)
+], User.prototype, "posts", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => comments_entity_1.Comment, (comment) => comment.user),
+    __metadata("design:type", Array)
+], User.prototype, "comments", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => likes_entity_1.Like, (like) => like.user),
+    __metadata("design:type", Array)
+], User.prototype, "likes", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)('users')
 ], User);

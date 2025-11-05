@@ -1,5 +1,6 @@
 {
   "version": "0.2.0",
+  "extensionDependencies": ["Dart-Code.dart-code", "Dart-Code.flutter"],
   "configurations": [
     
     // --- FLUTTER APP LAUNCHERS ---
@@ -8,7 +9,7 @@
       "request": "launch",
       "type": "dart",
       "cwd": "${workspaceFolder}/pawsure_app",
-      "deviceId": "windows",
+      "program": "lib/main.dart",
       "args": ["--dart-define=API_BASE_URL=http://localhost:3000"]
     },
     {
@@ -16,23 +17,26 @@
       "request": "launch",
       "type": "dart",
       "cwd": "${workspaceFolder}/pawsure_app",
-      "deviceId": "chrome",
+      "program": "lib/main.dart",
       "args": ["--dart-define=API_BASE_URL=http://localhost:3000"]
     },
     {
       "name": "Flutter: Run on Emulator",
       "request": "launch",
       "type": "dart",
-      "cwd": "${workspaceFolder}/pawsure_app"
+      "cwd": "${workspaceFolder}/pawsure_app",
+      "program": "lib/main.dart"
     },
     
     // --- BACKEND SERVER LAUNCHER ---
     {
       "name": "NestJS: Run Backend",
-      "type": "node-terminal",
+      "type": "node",
       "request": "launch",
-      "command": "npm run start:dev",
-      "cwd": "${workspaceFolder}/pawsure_backend"
+      "runtimeExecutable": "npm",
+      "args": ["run", "start:dev"],
+      "cwd": "${workspaceFolder}/pawsure_backend",
+      "console": "integratedTerminal"
     }
   ]
 }

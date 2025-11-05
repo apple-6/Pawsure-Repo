@@ -13,6 +13,11 @@ import { ActivityLogModule } from './activity-log/activity-log.module';
 import { HealthRecordModule } from './health-record/health-record.module';
 import { ReviewModule } from './review/review.module';
 import { NotificationModule } from './notification/notification.module';
+import { PostsModule } from './posts/posts.module';
+import { CommentsModule } from './comments/comments.module';
+import { LikesModule } from './likes/likes.module';
+import { RoleModule } from './role/role.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -20,6 +25,7 @@ import { NotificationModule } from './notification/notification.module';
       isGlobal: true,      // Make config available globally
       envFilePath: '.env', // Specify the .env file
     }),
+    
     TypeOrmModule.forRootAsync({ // Configure TypeOrm asynchronously
       imports: [ConfigModule],   // Import ConfigModule here
       inject: [ConfigService],   // Inject ConfigService to read env vars
@@ -33,9 +39,8 @@ import { NotificationModule } from './notification/notification.module';
         }
       }),
     }),
-    AiModule, // Include your AI module
-    // Add other feature modules here later (e.g., PetsModule, UsersModule)
-    AiModule,
+  AiModule, // Include your AI module
+  // Add other feature modules here later (e.g., PetsModule, UsersModule)
     UserModule,
     PetModule,
     SitterModule,
@@ -45,6 +50,11 @@ import { NotificationModule } from './notification/notification.module';
     HealthRecordModule,
     ReviewModule,
     NotificationModule,
+    PostsModule,
+    CommentsModule,
+    LikesModule,
+  RoleModule,
+  AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
