@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:pawsure_app/controllers/health_controller.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/health/health_screen.dart';
 import 'screens/activity/activity_screen.dart';
@@ -15,10 +17,20 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
 
-  // List of screens to display
-  final List<Widget> _screens = [
+  // Initialize controller once when state is created
+  @override
+  void initState() {
+    super.initState();
+    // Initialize HealthController if not already registered
+    if (!Get.isRegistered<HealthController>()) {
+      Get.put(HealthController());
+    }
+  }
+
+  // List of screens to display - cached to avoid recreating widgets
+  List<Widget> get _screens => [
     const HomeScreen(),
-    const HealthScreen(),
+    const HealthScreen(), // Controller is already registered in initState
     const ActivityScreen(),
     const CommunityScreen(),
     const ProfileScreen(),
@@ -30,14 +42,15 @@ class _MainNavigationState extends State<MainNavigation> {
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
+        backgroundColor: const Color(0xFF22c55e),
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
             _currentIndex = index;
           });
         },
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white70,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(

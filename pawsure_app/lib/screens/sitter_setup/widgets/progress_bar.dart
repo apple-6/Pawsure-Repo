@@ -8,8 +8,7 @@ class SitterProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color activeColor = Theme.of(context).primaryColor; // Your app's main color
-    final Color inactiveColor = Colors.grey.shade300;
+  // Colors are derived where used to avoid unused_local_variable lint
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
