@@ -17,7 +17,6 @@ import {
 import { SitterService } from './sitter.service';
 import { CreateSitterDto } from './dto/create-sitter.dto';
 import { UpdateSitterDto } from './dto/update-sitter.dto';
-import { SitterSetupDto } from './dto/sitter-setup.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('sitters')
@@ -25,13 +24,6 @@ export class SitterController {
   constructor(private readonly sitterService: SitterService) {}
 
   @Post('setup')
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.CREATED)
-  async setupProfile(@Body() setupDto: SitterSetupDto, @Request() req) {
-    return await this.sitterService.setupProfile(req.user.id, setupDto);
-  }
-
-  @Post()
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() createSitterDto: CreateSitterDto, @Request() req) {

@@ -7,6 +7,7 @@ import {
     CreateDateColumn,
     UpdateDateColumn,
     JoinColumn,
+    DeleteDateColumn,
 } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Booking } from '../booking/booking.entity';
@@ -15,9 +16,9 @@ import { Review } from '../review/review.entity';
 // NOTE: Define SitterStatus or import it from your enum file
 // Temporary definition if you don't have a dedicated enum file:
 export enum SitterStatus {
-    PENDING = 'PENDING',
-    APPROVED = 'APPROVED',
-    REJECTED = 'REJECTED',
+    PENDING = 'pending',
+    APPROVED = 'approved',
+    REJECTED = 'rejected',
 }
 
 @Entity('sitters')
@@ -88,4 +89,11 @@ export class Sitter {
 
     @UpdateDateColumn()
     updated_at: Date;
+
+    @DeleteDateColumn({ 
+        type: 'timestamp', 
+        nullable: true, 
+        name: 'deleted_at' 
+    })
+    deleted_at: Date;
 }

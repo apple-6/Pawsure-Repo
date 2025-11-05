@@ -5,11 +5,11 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { Sitter } from './sitter.entity';
 import { CreateSitterDto } from './dto/create-sitter.dto';
 import { UpdateSitterDto } from './dto/update-sitter.dto';
-import { SitterSetupDto } from './dto/sitter-setup.dto';
+import { User } from '../user/user.entity';
 import { UserService } from '../user/user.service';
 
 @Injectable()
@@ -18,45 +18,11 @@ export class SitterService {
     @InjectRepository(Sitter)
     private readonly sitterRepository: Repository<Sitter>,
     private readonly userService: UserService,
+
+    // 2. Inject the User Repository
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
   ) {}
-
-  /**
-   * Creates or updates a Sitter's setup profile.
-   */
-  async setupProfile(userId: number, setupDto: SitterSetupDto) {
-    // 1. Find the user
-    const user = await this.userService.findById(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    // 2. Find their existing sitter profile, or create a new one
-    let sitterProfile = await this.sitterRepository.findOne({
-      where: { userId },
-    });
-
-    if (!sitterProfile) {
-      sitterProfile = this.sitterRepository.create({ userId });
-    }
-
-    // 3. Map all data from the DTO to the entity
-    sitterProfile.address = setupDto.address;
-    sitterProfile.phoneNumber = setupDto.phoneNumber;
-    sitterProfile.houseType = setupDto.houseType;
-    sitterProfile.hasGarden = setupDto.hasGarden;
-    sitterProfile.hasOtherPets = setupDto.hasOtherPets;
-    sitterProfile.idDocumentUrl = setupDto.idDocumentUrl;
-    sitterProfile.bio = setupDto.bio;
-    sitterProfile.ratePerNight = setupDto.ratePerNight;
-
-    // 4. Save the sitter profile
-    await this.sitterRepository.save(sitterProfile);
-
-    // 5. Update the user's role to 'sitter'
-    await this.userService.updateUserRole(user.id, 'sitter');
-
-    return sitterProfile;
-  }
 
   async create(createSitterDto: CreateSitterDto, userId: number): Promise<Sitter> {
     // Check if user exists
@@ -92,6 +58,7 @@ export class SitterService {
     const query = this.sitterRepository
       .createQueryBuilder('sitter')
       .leftJoinAndSelect('sitter.user', 'user')
+      .where('sitter.deleted_at IS NULL')
       .orderBy('sitter.rating', 'DESC');
 
     if (minRating) {
@@ -104,6 +71,7 @@ export class SitterService {
   async findOne(id: number): Promise<Sitter> {
     const sitter = await this.sitterRepository.findOne({
       where: { id },
+      withDeleted: false,
       relations: ['user', 'reviews', 'bookings'],
     });
 
@@ -116,7 +84,8 @@ export class SitterService {
 
   async findByUserId(userId: number): Promise<Sitter | null> {
     return await this.sitterRepository.findOne({
-      where: { userId },
+      where: { userId, deleted_at: IsNull() },
+      
       relations: ['user'],
     });
   }
@@ -133,8 +102,38 @@ export class SitterService {
       throw new ForbiddenException('You can only update your own sitter profile');
     }
 
+    if (updateSitterDto.phoneNumber) {
+        // Find the user entity directly
+        const user = await this.userRepository.findOne({ where: { id: userId } });
+        
+        if (user) {
+            user.phone_number = updateSitterDto.phoneNumber;
+            // Save the updated user entity separately
+            await this.userRepository.save(user); 
+        }
+        
+        // CRITICAL: Remove the redundant phoneNumber field from the DTO
+        // so it doesn't get assigned to the Sitter entity
+        delete updateSitterDto.phoneNumber; 
+
+    }
+
     Object.assign(sitter, updateSitterDto);
-    return await this.sitterRepository.save(sitter);
+    await this.sitterRepository.save(sitter);
+
+    // 3. Get a FRESH Sitter object to ensure the related 'user' data is up-to-date
+    // The previous findOne call might have stale user data, so we explicitly find it again
+    const freshSitter = await this.sitterRepository.findOne({
+        where: { id },
+        relations: ['user', 'reviews', 'bookings'],
+    });
+
+    // Add this null check:
+    if (!freshSitter) {
+        throw new NotFoundException(`Sitter profile with ID ${id} not found after update.`);
+    }
+
+    return freshSitter;
   }
 
   async remove(id: number, userId: number): Promise<void> {
