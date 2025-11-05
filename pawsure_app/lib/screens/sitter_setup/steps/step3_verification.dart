@@ -21,9 +21,21 @@ class Step3Verification extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Step 3: Verification',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
+            decoration: InputDecoration(
+              labelText: 'Verification',
+              filled: true,
+              fillColor: Colors.grey[100], // Light grey background
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10.0),
+                borderSide: BorderSide.none, // No border when inactive
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10.0),
+                borderSide: BorderSide(
+                  color: Theme.of(context).primaryColor, // Color when you click it
+                ),
+              ),
+            ),
             
             // --- File Upload Placeholder ---
             // File upload is complex. For now, we use a simple text field.
@@ -38,7 +50,21 @@ class Step3Verification extends StatelessWidget {
             const SizedBox(height: 10),
 
             TextFormField(
-              decoration: const InputDecoration(labelText: 'Document URL'),
+              decoration: InputDecoration(
+                labelText: 'Document URL',
+                filled: true,
+                fillColor: Colors.grey[100], // Light grey background
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide.none, // No border when inactive
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).primaryColor, // Color when you click it
+                  ),
+                ),
+              ),
               initialValue: formData['idDocumentUrl'],
               keyboardType: TextInputType.url,
               validator: (value) {

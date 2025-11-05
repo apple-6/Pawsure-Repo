@@ -26,7 +26,21 @@ class Step1BasicInfo extends StatelessWidget {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             TextFormField(
-              decoration: const InputDecoration(labelText: 'Full Address'),
+              decoration: InputDecoration(
+                labelText: 'Full Address',
+                filled: true,
+                fillColor: Colors.grey[100], // Light grey background
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide.none, // No border when inactive
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).primaryColor, // Color when you click it
+                  ),
+                ),
+              ),
               initialValue: formData['address'],
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Address is required';
@@ -37,7 +51,21 @@ class Step1BasicInfo extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             TextFormField(
-              decoration: const InputDecoration(labelText: 'Phone Number'),
+              decoration: InputDecoration(
+                  labelText: 'Phone Number',
+                  filled: true,
+                  fillColor: Colors.grey[100], // Light grey background
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: BorderSide.none, // No border when inactive
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: BorderSide(
+                      color: Theme.of(context).primaryColor, // Color when you click it
+                    ),
+                  ),
+                ),
               initialValue: formData['phoneNumber'],
               keyboardType: TextInputType.phone,
               validator: (value) {
