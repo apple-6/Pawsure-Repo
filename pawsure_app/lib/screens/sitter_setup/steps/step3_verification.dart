@@ -36,7 +36,7 @@ class Step3Verification extends StatelessWidget {
                 ),
               ),
             ),
-            
+          ],
             // --- File Upload Placeholder ---
             // File upload is complex. For now, we use a simple text field.
             // In a real app, you'd use a package like 'image_picker'
