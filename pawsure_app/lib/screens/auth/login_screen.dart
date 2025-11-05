@@ -34,24 +34,6 @@ class _LoginScreenState extends State<LoginScreen> {
             width: size.width,
             child: Image.asset('assets/images/dog_auth.png', fit: BoxFit.cover),
           ),
-<<<<<<< HEAD
-          // Bottom rounded sheet
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              height: size.height * 0.45,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 8,
-                    offset: Offset(0, -2),
-=======
 
           // placed inside the Stack
           // Positioned(
@@ -92,7 +74,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: 56,
                     height: 56,
                     fit: BoxFit.contain,
->>>>>>> origin/main
                   ),
                 ],
               ),
@@ -141,24 +122,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-<<<<<<< HEAD
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Hey! Welcome',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Smart care for every paw.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
-                    ),
-=======
->>>>>>> origin/main
                     const SizedBox(height: 18),
                     // Email field
                     TextField(
@@ -183,29 +146,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextField(
                       controller: _passwordController,
                       obscureText: true,
-<<<<<<< HEAD
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    ElevatedButton(
-                      onPressed: () {
-                        // placeholder: add auth logic later
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Login pressed (UI only)'),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4CAF50),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-=======
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: Padding(
@@ -225,7 +165,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         fillColor: Colors.grey[100],
                         contentPadding: const EdgeInsets.symmetric(
                           vertical: 14,
->>>>>>> origin/main
                         ),
                       ),
                     ),

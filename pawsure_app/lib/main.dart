@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/auth/onboarding_screen.dart';
 import 'screens/auth/role_selection.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/auth/register_screen.dart';
 
 void main() {
   debugPrint('[DEBUG] PawsureApp: Starting main()');
@@ -25,11 +23,7 @@ class PawsureApp extends StatelessWidget {
       ),
       // Start the app on the Onboarding screen so auth/onboarding appears first.
       home: const OnboardingScreen(),
-      routes: {
-        '/role-selection': (context) => const RoleSelectionScreen(),
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
-      },
+      routes: {'/role-selection': (context) => RoleSelectionScreen()},
       debugShowCheckedModeBanner: false,
     );
   }

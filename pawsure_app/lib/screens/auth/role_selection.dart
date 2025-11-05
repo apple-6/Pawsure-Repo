@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:pawsure_app/screens/sitter_setup/sitter_setup_screen.dart';
+
+import 'package:pawsure_app/main_navigation.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -46,21 +49,11 @@ class RoleSelectionScreen extends StatelessWidget {
                   title: "I'm a Pet Sitter",
                   subtitle: "Offer safe, loving care for\nothers' pets.",
                   onTap: () {
-                    // Registration screen removed — inform the user instead
-                    showDialog<void>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Registration disabled'),
-                        content: const Text(
-                          'Registration is currently disabled. Please check back later.',
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SitterSetupScreen(),
                         ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(),
-                            child: const Text('OK'),
-                          ),
-                        ],
-                      ),
                     );
                   },
                 ),

@@ -1,6 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import '../../main_navigation.dart';
+import 'package:pawsure_app/screens/auth/login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -12,11 +12,16 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _controller = PageController();
   int _page = 0;
+  late TapGestureRecognizer _loginTap;
 
   @override
   void initState() {
     super.initState();
     debugPrint('[DEBUG] OnboardingScreen: initState called');
+    _loginTap = TapGestureRecognizer()
+      ..onTap = () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const LoginScreen()));
   }
 
   final List<Map<String, String>> _pages = [
@@ -29,7 +34,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'title': 'All-in-One Pet Health Hub',
       'subtitle':
           'Track vaccines, appointments, and sterilization info — all in one place.',
-      'image': 'assets/images/second_backgroundpage.jpg',
+      // file in assets is a PNG (second_backgroundpage.png)
+      'image': 'assets/images/second_backgroundpage.png',
     },
     {
       'title': 'Smarter Care with AI',
@@ -59,6 +65,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   void dispose() {
+    _loginTap.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -150,8 +157,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               if (index == 0)
                                 Image.asset(
                                   'assets/images/pawsureLogoBgRM.png',
-                                  width: 180,
-                                  height: 180,
+                                  width: 140,
+                                  height: 140,
                                   fit: BoxFit.contain,
                                   errorBuilder: (context, error, stackTrace) {
                                     return const SizedBox.shrink();
@@ -228,18 +235,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
 
                           const SizedBox(height: 8),
-                          // Show login link only on the final page
+                          // On the last page show the login prompt below the button
                           if (index == _pages.length - 1)
                             Padding(
                               padding: const EdgeInsets.only(top: 8.0),
                               child: RichText(
+                                textAlign: TextAlign.center,
                                 text: TextSpan(
-                                  style: const TextStyle(color: Colors.black87),
                                   children: [
                                     const TextSpan(
                                       text: 'Already have an account? ',
                                       style: TextStyle(
-                                        fontSize: 13,
+                                        color: Colors.black,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -248,17 +255,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                       style: const TextStyle(
                                         color: Color(0xFF4CAF50),
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 13,
                                       ),
-                                      recognizer: TapGestureRecognizer()
-                                        ..onTap = () {
-                                          // Navigate to the main app navigation instead of the removed login screen
-                                          Navigator.of(context).pushReplacement(
-                                            MaterialPageRoute(
-                                              builder: (_) => const MainNavigation(),
-                                            ),
-                                          );
-                                        },
+                                      recognizer: _loginTap,
                                     ),
                                   ],
                                 ),
