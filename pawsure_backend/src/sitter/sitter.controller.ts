@@ -24,6 +24,13 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 export class SitterController {
   constructor(private readonly sitterService: SitterService) {}
 
+  @Post('setup')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  async setupProfile(@Body() setupDto: SitterSetupDto, @Request() req) {
+    return await this.sitterService.setupProfile(req.user.id, setupDto);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
