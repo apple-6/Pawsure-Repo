@@ -22,12 +22,19 @@ class Step1BasicInfo extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Step 1: Basic Info',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
+            const Text(
+              'Basic Information',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Address',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
             TextFormField(
               decoration: InputDecoration(
-                labelText: 'Full Address',
+                hintText: 'Your address',
                 filled: true,
                 fillColor: Colors.grey[100], // Light grey background
                 border: OutlineInputBorder(
@@ -40,6 +47,7 @@ class Step1BasicInfo extends StatelessWidget {
                     color: Theme.of(context).primaryColor, // Color when you click it
                   ),
                 ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
               ),
               initialValue: formData['address'],
               validator: (value) {
@@ -50,9 +58,14 @@ class Step1BasicInfo extends StatelessWidget {
               onSaved: (value) => formData['address'] = value, 
             ),
             const SizedBox(height: 16),
+            const Text(
+              'Phone Number',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
             TextFormField(
               decoration: InputDecoration(
-                  labelText: 'Phone Number',
+                  hintText: '+60 12-345 6789',
                   filled: true,
                   fillColor: Colors.grey[100], // Light grey background
                   border: OutlineInputBorder(
@@ -65,6 +78,7 @@ class Step1BasicInfo extends StatelessWidget {
                       color: Theme.of(context).primaryColor, // Color when you click it
                     ),
                   ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
                 ),
               initialValue: formData['phoneNumber'],
               keyboardType: TextInputType.phone,
