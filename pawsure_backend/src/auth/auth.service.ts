@@ -1,13 +1,11 @@
-// src/auth/auth.service.ts
-
 import {
   Injectable,
   ConflictException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
-import { RegisterUserDto } from './dto/register-user.dto'; // <-- This path is now correct
-import { LoginUserDto } from './dto/login-user.dto'; // <-- This path is now correct
+import { RegisterUserDto } from './dto/register-user.dto';
+import { LoginUserDto } from './dto/login-user.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
@@ -20,22 +18,39 @@ export class AuthService {
 
   // --- REGISTER FUNCTION ---
   async register(registerUserDto: RegisterUserDto) {
-    const existingUser = await this.userService.findByEmail(
-      registerUserDto.email,
-    );
-    if (existingUser) {
-      throw new ConflictException('Email already in use');
+    const { email, phone_number, password, name } = registerUserDto;
+
+    // --- CHANGED: Conflict Checking ---
+    // 1. Check if email is already in use (if provided)
+    if (email) {
+      const existingUser = await this.userService.findByEmail(email);
+      if (existingUser) {
+        throw new ConflictException('Email already in use');
+      }
     }
+
+    // 2. Check if phone number is in use (if provided)
+    // NOTE: This assumes 'findByPhone' exists in UserService
+    if (phone_number) {
+      const existingUser = await this.userService.findByPhone(phone_number);
+      if (existingUser) {
+        throw new ConflictException('Phone number already in use');
+      }
+    }
+
     const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(
-      registerUserDto.password,
-      saltRounds,
-    );
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // --- CHANGED: User Creation ---
+    // Pass the new phone_number field to your create service
+    // NOTE: This assumes 'create' in UserService accepts this
     const newUser = await this.userService.create({
-      name: registerUserDto.name,
-      email: registerUserDto.email,
+      name: name,
+      email: email,
+      phone_number: phone_number, // <-- ADDED
       passwordHash: hashedPassword,
     });
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...result } = newUser;
     return result;
@@ -43,22 +58,35 @@ export class AuthService {
 
   // --- LOGIN FUNCTION ---
   async login(loginUserDto: LoginUserDto) {
-    const user = await this.userService.findByEmail(loginUserDto.email);
+    // --- CHANGED: Use 'identifier' from DTO ---
+    // NOTE: This assumes 'findOneByIdentifier' exists in UserService
+    const user = await this.userService.findOneByIdentifier(
+      loginUserDto.identifier, // <-- CHANGED from loginUserDto.email
+    );
+
     if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
+      // --- CHANGED: Generic error message ---
+      throw new UnauthorizedException('Invalid credentials');
     }
+
     const isPasswordMatching = await bcrypt.compare(
       loginUserDto.password,
       user.passwordHash,
     );
+
     if (!isPasswordMatching) {
-      throw new UnauthorizedException('Invalid email or password');
+      // --- CHANGED: Generic error message ---
+      throw new UnauthorizedException('Invalid credentials');
     }
+
+    // --- CHANGED: More complete JWT payload ---
     const payload = {
-      email: user.email,
-      sub: user.id,
+      sub: user.id, // 'sub' (subject) is the standard for user ID
+      email: user.email, // Can be null, which is fine
+      phone_number: user.phone_number, // Can be null, which is fine
       role: user.role,
     };
+
     return {
       access_token: this.jwtService.sign(payload),
     };
