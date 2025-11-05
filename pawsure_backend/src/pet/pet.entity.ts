@@ -21,7 +21,7 @@ export class Pet {
   @Column()
   name: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true }) // 'STRING species'
   species: string;
 
   @Column()

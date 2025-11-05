@@ -71,3 +71,4 @@ pawsure-app-*.json
 .env.production
 # Ignore built artifacts
 pawsure_backend/dist/
+my_conflicts.txt
