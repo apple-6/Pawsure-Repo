@@ -70,3 +70,4 @@ pawsure-app-*.json
 
 my_conflicts.txt
 output.txt
+/node_modules
