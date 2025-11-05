@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'dart:io'; // ⬅️ ADDED: Required for File access (e.g., displaying the image)
 import 'package:image_picker/image_picker.dart'; // ⬅️ ADDED: Required for photo picking logic
 
-const String _apiBaseUrl = 'http://localhost:3000';
+const String _apiBaseUrl = 'http://10.0.2.2:3000';
 
 // Enum to manage the selected animal type
 enum AnimalType { dog, cat }
