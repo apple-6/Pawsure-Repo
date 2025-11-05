@@ -17,15 +17,12 @@ class Step2Environment extends StatefulWidget {
 }
 
 class _Step2EnvironmentState extends State<Step2Environment> {
-  // Store the list of house types
-  final List<String> _houseTypes = ['Apartment', 'House', 'Condo'];
-  late String _selectedHouseType;
+  late String _houseTypeText;
 
   @override
   void initState() {
     super.initState();
-    // Set the initial value for the dropdown
-    _selectedHouseType = widget.formData['houseType'] ?? 'Apartment';
+    _houseTypeText = widget.formData['houseType'] ?? 'Apartment';
   }
 
   @override
@@ -37,56 +34,125 @@ class _Step2EnvironmentState extends State<Step2Environment> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Step 2: Your Environment',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-
-            // --- House Type Dropdown ---
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'House Type'),
-              value: _selectedHouseType,
-              items: _houseTypes.map((String type) {
-                return DropdownMenuItem<String>(
-                  value: type,
-                  child: Text(type),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedHouseType = newValue!;
-                });
-              },
-              // Save the value to the map
-              onSaved: (value) => widget.formData['houseType'] = value,
-              validator: (value) =>
-                  value == null ? 'Please select a house type' : null,
+            const Text(
+              'Your Environment',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 16),
 
-            // --- Has Garden Checkbox ---
-            CheckboxListTile(
-              title: const Text('I have a garden/yard'),
-              value: widget.formData['hasGarden'],
-              onChanged: (bool? value) {
-                setState(() {
-                  // Save the value to the map immediately
-                  widget.formData['hasGarden'] = value ?? false;
-                });
-              },
+            const Text('House Type',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            TextFormField(
+              decoration: InputDecoration(
+                hintText: 'e.g., Apartment, House, Condo',
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+              ),
+              initialValue: _houseTypeText,
+              onChanged: (v) => _houseTypeText = v,
+              validator: (v) => (v == null || v.isEmpty)
+                  ? 'Please enter a house type'
+                  : null,
+              onSaved: (v) => widget.formData['houseType'] = v,
+            ),
+            const SizedBox(height: 16),
+
+            const Text('Do you have a garden?',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _ChoiceButton(
+                    label: 'Yes',
+                    selected: widget.formData['hasGarden'] == true,
+                    onTap: () {
+                      setState(() => widget.formData['hasGarden'] = true);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ChoiceButton(
+                    label: 'No',
+                    selected: widget.formData['hasGarden'] == false,
+                    onTap: () {
+                      setState(() => widget.formData['hasGarden'] = false);
+                    },
+                  ),
+                ),
+              ],
             ),
 
-            // --- Has Other Pets Checkbox ---
-            CheckboxListTile(
-              title: const Text('I have other pets'),
-              value: widget.formData['hasOtherPets'],
-              onChanged: (bool? value) {
-                setState(() {
-                  // Save the value to the map immediately
-                  widget.formData['hasOtherPets'] = value ?? false;
-                });
-              },
+            const SizedBox(height: 16),
+            const Text('Do you have other pets at home?',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _ChoiceButton(
+                    label: 'Yes',
+                    selected: widget.formData['hasOtherPets'] == true,
+                    onTap: () {
+                      setState(() => widget.formData['hasOtherPets'] = true);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ChoiceButton(
+                    label: 'No',
+                    selected: widget.formData['hasOtherPets'] == false,
+                    onTap: () {
+                      setState(() => widget.formData['hasOtherPets'] = false);
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChoiceButton extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _ChoiceButton({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF1CCA5B) : Colors.grey[100],
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );

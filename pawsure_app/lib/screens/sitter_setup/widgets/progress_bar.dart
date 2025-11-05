@@ -8,84 +8,42 @@ class SitterProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color activeColor = Theme.of(context).primaryColor; // Your app's main color
-    final Color inactiveColor = Colors.grey.shade300;
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
       child: Row(
         children: [
-          _StepDot(
-            label: 'Basic',
-            isActive: currentStep >= 0,
-          ),
-          _StepConnector(isActive: currentStep >= 1),
-          _StepDot(
-            label: 'Environment',
-            isActive: currentStep >= 1,
-          ),
-          _StepConnector(isActive: currentStep >= 2),
-          _StepDot(
-            label: 'Verification',
-            isActive: currentStep >= 2,
-          ),
-          _StepConnector(isActive: currentStep >= 3),
-          _StepDot(
-            label: 'Rates',
-            isActive: currentStep >= 3,
-          ),
+          // We create 4 steps and pass 'isActive' to each one
+          _ProgressBarStep(isActive: currentStep == 0),
+          const SizedBox(width: 8), // Gap between bars
+          _ProgressBarStep(isActive: currentStep == 1),
+          const SizedBox(width: 8), // Gap between bars
+          _ProgressBarStep(isActive: currentStep == 2),
+          const SizedBox(width: 8), // Gap between bars
+          _ProgressBarStep(isActive: currentStep == 3),
         ],
       ),
     );
   }
 }
 
-// --- NEW HELPER WIDGETS ---
-// (These replace the old _StepIcon)
-
-class _StepDot extends StatelessWidget {
-  final String label;
+// This is a helper widget for each bar in the progress bar
+class _ProgressBarStep extends StatelessWidget {
   final bool isActive;
-
-  const _StepDot({
-    required this.label,
-    required this.isActive,
-  });
+  const _ProgressBarStep({required this.isActive});
 
   @override
   Widget build(BuildContext context) {
-    final Color color =
-        isActive ? Theme.of(context).primaryColor : Colors.grey.shade300;
-    
-    // Align the text under the dot
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 12,
-          backgroundColor: color,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
-        ),
-      ],
-    );
-  }
-}
-
-class _StepConnector extends StatelessWidget {
-  final bool isActive;
-  const _StepConnector({required this.isActive});
-
-  @override
-  Widget build(BuildContext context) {
-    // This is the line between the dots
+    // Each bar is an Expanded widget so it takes up equal space
     return Expanded(
       child: Container(
-        height: 2,
-        margin: const EdgeInsets.symmetric(horizontal: 4.0), // Add some margin
-        color: isActive ? Theme.of(context).primaryColor : Colors.grey.shade300,
+        height: 6.0, // Height of the bar
+        decoration: BoxDecoration(
+          // Set the color based on the 'isActive' state
+          color: isActive
+              ? const Color(0xFF1CCA5B) // Your app's green color
+              : Colors.grey.shade300,  // Light grey for inactive
+          borderRadius: BorderRadius.circular(10), // Rounded corners
+        ),
       ),
     );
   }
