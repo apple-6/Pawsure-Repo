@@ -28,9 +28,6 @@ export class Sitter {
   address: string;
 
   @Column({ nullable: true })
-  phoneNumber: string;
-
-  @Column({ nullable: true })
   houseType: string;
 
   @Column({ nullable: true })

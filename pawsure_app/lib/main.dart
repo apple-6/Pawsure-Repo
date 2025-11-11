@@ -18,7 +18,7 @@ class PawsureApp extends StatelessWidget {
     return MaterialApp(
       title: 'Pawsure - Pet Care Companion',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1CCA5)),
         useMaterial3: true,
       ),
       // Start the app on the Onboarding screen so auth/onboarding appears first.
