@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'main_navigation.dart';
 import 'screens/auth/onboarding_screen.dart';
 import 'screens/auth/role_selection.dart';
 
@@ -13,8 +12,7 @@ class PawsureApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint(
-        '[DEBUG] PawsureApp: building MaterialApp with MainNavigation (main UI)');
+    debugPrint('[DEBUG] PawsureApp: building MaterialApp (main UI)');
     final theme = ThemeData(
       colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       useMaterial3: true,
@@ -22,10 +20,7 @@ class PawsureApp extends StatelessWidget {
 
     return MaterialApp(
       title: 'Pawsure - Pet Care Companion',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1CCA5)),
-        useMaterial3: true,
-      ),
+      theme: theme,
       // Start the app on the Onboarding screen so auth/onboarding appears first.
       home: const OnboardingScreen(),
       routes: {'/role-selection': (context) => RoleSelectionScreen()},
