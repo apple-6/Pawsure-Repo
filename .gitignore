@@ -108,3 +108,11 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # Git Metadata
 # Ignore files related to merge conflicts that Git generates
 my_conflicts.txt
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+# Ignore built artifacts
+pawsure_backend/dist/
+
