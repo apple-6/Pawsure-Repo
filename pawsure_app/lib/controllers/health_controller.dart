@@ -69,11 +69,7 @@ class HealthController extends GetxController
             fetchedPets.first; // This will trigger the 'ever' worker
       }
     } catch (e) {
-      Get.snackbar(
-        'Error Loading Pets',
-        e.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      debugPrint('Error loading pets: $e');
     } finally {
       isLoadingPets.value = false;
     }
@@ -88,12 +84,6 @@ class HealthController extends GetxController
     } catch (e) {
       // Log detailed error for debugging
       debugPrint('Error fetching health records: $e');
-      Get.snackbar(
-        'Error Loading Records',
-        'Failed to load health records. Please check your connection and try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 4),
-      );
       // Clear records on error
       healthRecords.clear();
       filteredRecords.clear();

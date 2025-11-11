@@ -10,6 +10,7 @@
       "type": "dart",
       "cwd": "${workspaceFolder}/pawsure_app",
       "program": "lib/main.dart",
+      "deviceId": "windows",
       "args": ["--dart-define=API_BASE_URL=http://localhost:3000"]
     },
     {

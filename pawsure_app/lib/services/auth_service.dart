@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import './storage_service.dart';
 
 class AuthService {
   // Determine base URL depending on platform so emulator can reach host machine.
@@ -17,7 +17,8 @@ class AuthService {
     return 'http://localhost:3000';
   }
 
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  // Use file-based storage implementation
+  final StorageService _storage = FileStorageService();
 
   Future<String> login(String email, String password) async {
     final uri = Uri.parse('$_baseUrl/auth/login');
