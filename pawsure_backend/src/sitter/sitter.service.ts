@@ -11,6 +11,8 @@ import { CreateSitterDto } from './dto/create-sitter.dto';
 import { UpdateSitterDto } from './dto/update-sitter.dto';
 import { User } from '../user/user.entity';
 import { UserService } from '../user/user.service';
+import { FileService } from '../file/file.service';
+import { Express } from 'express';
 
 @Injectable()
 export class SitterService {
@@ -18,13 +20,13 @@ export class SitterService {
     @InjectRepository(Sitter)
     private readonly sitterRepository: Repository<Sitter>,
     private readonly userService: UserService,
-
+    private readonly fileService: FileService,
     // 2. Inject the User Repository
     @InjectRepository(User)
     private userRepository: Repository<User>,
   ) {}
 
-  async create(createSitterDto: CreateSitterDto, userId: number): Promise<Sitter> {
+  async create(createSitterDto: CreateSitterDto, userId: number, file?: Express.Multer.File): Promise<Sitter> {
     // Check if user exists
     const user = await this.userService.findById(userId);
     if (!user) {
@@ -40,10 +42,44 @@ export class SitterService {
       throw new ConflictException('User already has a sitter profile');
     }
 
+    // --- 1. Extract and Update User Data (Phone Number) ---
+    // If phone number is provided, update the User entity
+    if (createSitterDto.phoneNumber) {
+        // Retrieve the full User entity from the database
+        const userToUpdate = await this.userRepository.findOne({ where: { id: userId } });
+        
+        if (userToUpdate) {
+            // Update the User's phone_number property
+            userToUpdate.phone_number = createSitterDto.phoneNumber;
+            // Save the updated User entity to the 'users' table
+            await this.userRepository.save(userToUpdate); 
+        }
+
+        // CRITICAL: Remove the property from the DTO!
+        // This prevents TypeORM from throwing an error when mapping to the Sitter entity.
+        delete createSitterDto.phoneNumber; 
+    }
+    
+    // NOTE: If you were handling a file upload that provides idDocumentUrl, 
+    // the logic for the file upload/URL assignment would also go here.
+    // --- 2. Handle ID Document File Upload ---
+    let idDocumentUrl: string | undefined;
+    if (file) {
+        // Call the service to upload the file buffer and get the public URL (e.g., from S3)
+        //idDocumentUrl = 'PLACEHOLDER_ID_DOCUMENT_URL_';
+        idDocumentUrl = await this.fileService.uploadPublicFile(
+            file.buffer, 
+            file.originalname, 
+            'sitter-id-documents' // Optional: path/folder
+        );
+        // Clean up the DTO (just in case)
+        delete createSitterDto.idDocumentUrl; 
+    }
     // Create sitter profile
     const sitter = this.sitterRepository.create({
       ...createSitterDto,
       userId,
+      idDocumentUrl: idDocumentUrl,
     });
 
     const savedSitter = await this.sitterRepository.save(sitter);

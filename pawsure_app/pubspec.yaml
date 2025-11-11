@@ -38,6 +38,11 @@ dependencies:
   google_fonts: ^5.0.0
   flutter_secure_storage: ^9.2.4
 
+  # To pick files from the device
+  file_picker: ^10.3.3 
+  # To handle multi-part HTTP requests
+  http: ^1.6.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
