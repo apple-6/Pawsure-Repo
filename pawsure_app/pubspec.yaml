@@ -41,6 +41,7 @@ dependencies:
   # Google Fonts makes it easy to use modern fonts matching the design.
   google_fonts: ^5.0.0
   flutter_secure_storage: ^9.2.4
+  lucide_icons: ^0.257.0
   
 dev_dependencies:
   flutter_test:
