@@ -124,23 +124,62 @@ class _SitterSetupScreenState extends State<SitterSetupScreen> {
     }
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
+    // This now returns the Scaffold with all the new UI elements
     return Scaffold(
-      appBar: AppBar(title: const Text('Become a Sitter')),
+      appBar: AppBar(
+        title: const Text('Become a Sitter'),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.black, // Makes the back arrow black
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // --- 1. THE PROGRESS BAR ---
+                // --- 1. GREEN PAW ICON ---
+                const CircleAvatar(
+                  radius: 40,
+                  backgroundColor: Color(0xFF1CCA5B), // Your app's green color
+                  child: Icon(
+                    Icons.pets, // Paw icon
+                    size: 40,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // --- 2. TITLE: Become a PawSure Sitter! ---
+                Text(
+                  'Become a PawSure Sitter!',
+                  style: TextStyle(
+                    fontSize: 24, // A bit smaller to fit
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // --- 3. SUBTITLE: Step X of 4 ---
+                Text(
+                  'Step ${_currentStep + 1} of 4', // Dynamically updates
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 24), // Spacing
+
+                // --- 4. THE PROGRESS BAR ---
                 SitterProgressBar(currentStep: _currentStep),
 
-                // --- 2. THE FORM PAGES ---
+                // --- 5. THE FORM PAGES ---
                 Expanded(
                   child: PageView(
                     controller: _pageController,
-                    // Prevent user from swiping
-                    physics: const NeverScrollableScrollPhysics(), 
+                    physics: const NeverScrollableScrollPhysics(),
                     children: [
                       Step1BasicInfo(formKey: _step1Key, formData: _formData),
                       Step2Environment(formKey: _step2Key, formData: _formData),
@@ -150,25 +189,82 @@ class _SitterSetupScreenState extends State<SitterSetupScreen> {
                   ),
                 ),
 
-                // --- 3. THE BUTTONS ---
+                // --- 6. THE BUTTONS (with styling) ---
                 Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Show "Previous" button only after step 1
-                      if (_currentStep > 0)
-                        TextButton(
-                          onPressed: _prevStep,
-                          child: const Text('Previous'),
+                  child: _currentStep == 0
+                      ? SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: _nextStep,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1CCA5B),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.max,
+                              children: const [
+                                Text('Next', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                SizedBox(width: 8),
+                                Icon(Icons.arrow_forward_ios, size: 16),
+                              ],
+                            ),
+                          ),
+                        )
+                      : Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _prevStep,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.grey[800],
+                                  side: BorderSide(color: Colors.grey.shade300),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  minimumSize: const Size.fromHeight(50),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                ),
+                                child: const Text('< Back',
+                                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _nextStep,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF1CCA5B),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                  minimumSize: const Size.fromHeight(50),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.max,
+                                  children: [
+                                    Text(
+                                      _currentStep == 3 ? 'Complete Setup' : 'Next',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Icon(Icons.arrow_forward_ios, size: 16),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      // "Next" or "Submit" button
-                      ElevatedButton(
-                        onPressed: _nextStep,
-                        child: Text(_currentStep == 3 ? 'Submit' : 'Next'),
-                      ),
-                    ],
-                  ),
                 ),
               ],
             ),

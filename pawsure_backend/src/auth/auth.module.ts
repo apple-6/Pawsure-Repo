@@ -18,7 +18,7 @@ import { JwtStrategy } from './jwt.strategy';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'), // Reads from .env
+        secret: configService.get<string>('JWT_SECRET') || 'fallback-secret-key-12345',
         signOptions: {
           expiresIn: '1d', // Token will expire in 1 day
         },

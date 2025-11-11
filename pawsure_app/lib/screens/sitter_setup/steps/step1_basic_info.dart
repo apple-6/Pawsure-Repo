@@ -22,11 +22,33 @@ class Step1BasicInfo extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Step 1: Basic Info',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
+            const Text(
+              'Basic Information',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Address',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
             TextFormField(
-              decoration: const InputDecoration(labelText: 'Full Address'),
+              decoration: InputDecoration(
+                hintText: 'Your address',
+                filled: true,
+                fillColor: Colors.grey[100], // Light grey background
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide.none, // No border when inactive
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).primaryColor, // Color when you click it
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+              ),
               initialValue: formData['address'],
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Address is required';
@@ -36,8 +58,28 @@ class Step1BasicInfo extends StatelessWidget {
               onSaved: (value) => formData['address'] = value, 
             ),
             const SizedBox(height: 16),
+            const Text(
+              'Phone Number',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
             TextFormField(
-              decoration: const InputDecoration(labelText: 'Phone Number'),
+              decoration: InputDecoration(
+                  hintText: '+60 12-345 6789',
+                  filled: true,
+                  fillColor: Colors.grey[100], // Light grey background
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: BorderSide.none, // No border when inactive
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: BorderSide(
+                      color: Theme.of(context).primaryColor, // Color when you click it
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                ),
               initialValue: formData['phoneNumber'],
               keyboardType: TextInputType.phone,
               validator: (value) {

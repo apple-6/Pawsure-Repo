@@ -1,10 +1,10 @@
 // src/auth/dto/login-user.dto.ts
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class LoginUserDto {
-  @IsEmail()
+  @IsString() // <-- It's just a string (could be email or phone)
   @IsNotEmpty()
-  email: string;
+  identifier: string; // <-- Renamed from 'email'
 
   @IsString()
   @IsNotEmpty()
