@@ -29,7 +29,7 @@ export class UserService {
    * Finds a user by EITHER email OR phone number.
    * Used for the login process.
    */
-  async findOneByIdentifier(identifier: string): Promise<User | undefined> {
+  async findOneByIdentifier(identifier: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: [
         { email: identifier }, 

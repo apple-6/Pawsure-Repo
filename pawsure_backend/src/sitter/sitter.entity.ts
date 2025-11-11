@@ -1,87 +1,99 @@
-// src/sitter/sitter.entity.ts
-import { Booking } from 'src/booking/booking.entity';
-import { Review } from 'src/review/review.entity';
-import { User } from 'src/user/user.entity';
 import {
-  Entity,
-  Column,
-  PrimaryGeneratedColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToOne,
-  JoinColumn,
-  OneToMany,
+    Entity,
+    PrimaryGeneratedColumn,
+    Column,
+    OneToOne,
+    OneToMany,
+    CreateDateColumn,
+    UpdateDateColumn,
+    JoinColumn,
+    DeleteDateColumn,
 } from 'typeorm';
+import { User } from '../user/user.entity';
+import { Booking } from '../booking/booking.entity';
+import { Review } from '../review/review.entity';
 
+// NOTE: Define SitterStatus or import it from your enum file
+// Temporary definition if you don't have a dedicated enum file:
 export enum SitterStatus {
-  PENDING = 'pending', // Waiting for admin verification
-  VERIFIED = 'verified',
-  REJECTED = 'rejected',
+    PENDING = 'pending',
+    APPROVED = 'approved',
+    REJECTED = 'rejected',
 }
 
 @Entity('sitters')
 export class Sitter {
-  @PrimaryGeneratedColumn() // 'INT sitter_id PK'
-  id: number;
+    @PrimaryGeneratedColumn()
+    id: number;
 
-  @Column({ nullable: true })
-  address: string;
+    @Column({ type: 'text', nullable: true })
+    bio: string;
 
-  @Column({ nullable: true })
-  houseType: string;
+    @Column({ type: 'text', nullable: true })
+    experience: string;
 
-  @Column({ nullable: true })
-  hasGarden: boolean;
+    @Column({ type: 'text', nullable: true })
+    photo_gallery: string;
 
-  @Column({ nullable: true })
-  hasOtherPets: boolean;
+    @Column({ type: 'double precision', default: 0 })
+    rating: number;
 
-  @Column({ nullable: true }) // URL of the uploaded ID
-  idDocumentUrl: string;
+    @Column({ type: 'int', default: 0 })
+    reviews_count: number;
 
-  @Column({
-    type: 'enum',
-    enum: SitterStatus,
-    default: SitterStatus.PENDING,
-  })
-  status: SitterStatus;
+    @Column({ type: 'simple-array', nullable: true })
+    available_dates: string[];
 
-  // --- Step 4: Experience & Rates ---
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true }) // NEW
-  ratePerNight: number;
+    // --- Sitter Profile Setup Fields ---
+    @Column({ nullable: true })
+    address: string;
 
-  @Column({ type: 'text', nullable: true }) // 'TEXT bio'
-  bio: string;
+    @Column({ nullable: true })
+    houseType: string;
 
-  @Column({ type: 'text', nullable: true }) // 'TEXT experience'
-  experience: string;
+    @Column({ type: 'boolean', default: false })
+    hasGarden: boolean;
 
-  @Column({ type: 'simple-array', nullable: true }) // 'STRING photo_gallery'
-  photo_gallery: string[]; // simple-array is good for a list of URLs
+    @Column({ type: 'boolean', default: false })
+    hasOtherPets: boolean;
 
-  @Column({ type: 'float', default: 0 }) // 'FLOAT rating'
-  rating: number;
+    @Column({ nullable: true }) // URL of the uploaded ID
+    idDocumentUrl: string;
 
-  @Column({ default: 0 }) // 'INT reviews_count'
-  reviews_count: number;
+    @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+    ratePerNight: number;
 
-  @Column({ type: 'date', array: true, nullable: true }) // 'DATE[] available_dates'
-  available_dates: string[];
+    @Column({
+        type: 'enum',
+        enum: SitterStatus,
+        default: SitterStatus.PENDING,
+        nullable: true,
+    })
+    status: SitterStatus;
 
-  @CreateDateColumn() // 'TIMESTAMP created_at'
-  created_at: Date;
+    @Column({ unique: true, nullable: true })
+    userId: number;
 
-  @UpdateDateColumn() // 'TIMESTAMP updated_at'
-  updated_at: Date;
+    @OneToOne(() => User, (user) => user.sitterProfile, { nullable: true })
+    @JoinColumn({ name: 'userId' })
+    user: User;
 
-  // --- Relationships ---
-  @OneToOne(() => User, (user) => user.sitterProfile) // 'INT user_id FK'
-  @JoinColumn() // This side holds the 'user_id' foreign key
-  user: User;
+    @OneToMany(() => Booking, (booking) => booking.sitter)
+    bookings: Booking[];
 
-  @OneToMany(() => Booking, (booking) => booking.sitter)
-  bookings: Booking[];
+    @OneToMany(() => Review, (review) => review.sitter)
+    reviews: Review[];
 
-  @OneToMany(() => Review, (review) => review.sitter)
-  reviews: Review[];
+    @CreateDateColumn()
+    created_at: Date;
+
+    @UpdateDateColumn()
+    updated_at: Date;
+
+    @DeleteDateColumn({ 
+        type: 'timestamp', 
+        nullable: true, 
+        name: 'deleted_at' 
+    })
+    deleted_at: Date;
 }
