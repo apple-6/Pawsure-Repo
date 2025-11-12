@@ -12,6 +12,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
@@ -19,6 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -184,6 +186,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   ),
                                 ),
                               ),
+                              TextField(
+                                controller: _phoneController,
+                                keyboardType: TextInputType.phone,
+                                decoration: InputDecoration(
+                                  prefixIcon: const Icon(
+                                    Icons.phone_android_outlined,
+                                  ),
+                                  hintText: 'Phone number',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[100],
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                ),
+                              ),
                               const SizedBox(height: 18),
                               ElevatedButton(
                                 // Register button
@@ -194,11 +215,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                             .trim();
                                         final email = _emailController.text
                                             .trim();
+                                        final phone = _phoneController.text
+                                            .trim();
                                         final password = _passwordController
                                             .text
                                             .trim();
                                         if (name.isEmpty ||
                                             email.isEmpty ||
+                                            phone.isEmpty ||
                                             password.isEmpty) {
                                           ScaffoldMessenger.of(
                                             context,
@@ -214,7 +238,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         setState(() => _isLoading = true);
                                         try {
                                           final token = await AuthService()
-                                              .register(name, email, password);
+                                              .register(
+                                                name,
+                                                email,
+                                                password,
+                                                phone: phone,
+                                              );
                                           if (!mounted) return;
                                           if (token != null) {
                                             WidgetsBinding.instance
@@ -256,7 +285,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           }
                                         } catch (e) {
                                           if (mounted) {
-                                            // Check if the widget is still mounted
                                             WidgetsBinding.instance
                                                 .addPostFrameCallback((_) {
                                                   ScaffoldMessenger.of(
@@ -271,9 +299,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                                 });
                                           }
                                         } finally {
-                                          //Added mounted checks around UI calls that happen
-                                          //after awaits (prevents use_build_context_synchronously
-                                          //warnings and avoids calling Navigator/ScaffoldMessenger when the widget is disposed)
                                           if (mounted) {
                                             setState(() => _isLoading = false);
                                           }

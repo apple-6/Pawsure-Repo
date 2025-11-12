@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/onboarding_screen.dart';
+import 'screens/sitter/sitter_dashboard.dart';
+import 'models/sitter.dart';
 
 void main() {
   runApp(const PawsureApp());
@@ -20,11 +22,22 @@ class PawsureApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      // Start with onboarding -> login/register flow
-      home: const OnboardingScreen(),
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
+      // // Start with onboarding -> login/register flow
+      // home: const OnboardingScreen(),
+      // routes: {
+      //   '/login': (context) => const LoginScreen(),
+      //   '/register': (context) => const RegisterScreen(),
+      // },
+      // Skip auth - launch directly to sitter dashboard for preview
+      home: const SitterDashboardScreen(),
+      onGenerateRoute: (settings) {
+        if (settings.name == '/sitter/dashboard') {
+          return MaterialPageRoute(
+            builder: (context) => const SitterDashboardScreen(),
+            settings: settings,
+          );
+        }
+        return null;
       },
       debugShowCheckedModeBanner: false,
     );

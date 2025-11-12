@@ -82,21 +82,25 @@ class AuthService {
 
   /// Register a new user. Expects body: { name, email, password }
   /// If backend returns access_token, it will be stored and returned.
-  Future<String?> register(String name, String email, String password) async {
+  Future<String?> register(
+    String name,
+    String email,
+    String password, {
+    String? phone,
+  }) async {
     final uri = Uri.parse('$_baseUrl/auth/register');
     // ignore: avoid_print
     print('AuthService.register -> POST $uri');
     http.Response resp;
     try {
+      final body = {'name': name, 'email': email, 'password': password};
+      if (phone != null && phone.isNotEmpty) body['phone'] = phone;
+
       resp = await http
           .post(
             uri,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'name': name,
-              'email': email,
-              'password': password,
-            }),
+            body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 10));
     } on SocketException catch (e) {

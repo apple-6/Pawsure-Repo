@@ -16,7 +16,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     {
       'title': 'Hey! Welcome',
       'subtitle': 'Smart care for every paw.',
-      'image': 'assets/images/dog_auth.png',
+        'image': 'assets/images/dog_auth.png',
     },
     {
       'title': 'All-in-One Pet Health Hub',
