@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../main_navigation.dart';
+import 'register_screen.dart';
+import 'package:pawsure_app/screens/sitter_setup/sitter_setup_screen.dart';
+import '../../models/role.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final UserRole? role;
+
+  const LoginScreen({super.key, this.role});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -60,19 +65,19 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  Container(
-                    width: 160,
-                    height: 160,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF4CAF50),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
+                  // Container(
+                  //   width: 160,
+                  //   height: 160,
+                  //   decoration: const BoxDecoration(
+                  //     color: Color(0xFF4CAF50),
+                  //     shape: BoxShape.circle,
+                  //   ),
+                  // ),
                   // logo on top of the green circle
                   Image.asset(
-                    'assets/images/pawsureLogo.png',
-                    width: 56,
-                    height: 56,
+                    'assets/images/pawsureLogoBgRM.png',
+                    width: 160,
+                    height: 160,
                     fit: BoxFit.contain,
                   ),
                 ],
@@ -113,13 +118,25 @@ class _LoginScreenState extends State<LoginScreen> {
                     //   ),
                     // ),
                     const SizedBox(height: 8),
-                    const Center(
-                      child: Text(
-                        'Login',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    Center(
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Login',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (widget.role != null)
+                            Chip(
+                              backgroundColor: Colors.green[50],
+                              label: Text(
+                                'Signing in as ${widget.role!.label}',
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -218,7 +235,22 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 18),
                     TextButton(
                       onPressed: () {
-                        Navigator.pushNamed(context, '/register');
+                        // If the user chose 'Pet Sitter' earlier, send them to the sitter setup flow
+                        if (widget.role == UserRole.sitter) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SitterSetupScreen(),
+                            ),
+                          );
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const RegisterScreen(),
+                            ),
+                          );
+                        }
                       },
                       child: const Text("Don't have an account? Register"),
                     ),

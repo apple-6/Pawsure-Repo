@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:pawsure_app/screens/auth/login_screen.dart';
+import 'package:pawsure_app/screens/auth/register_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -58,8 +59,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      // finished onboarding -> go to role selection
-      Navigator.of(context).pushReplacementNamed('/role-selection');
+      // finished onboarding -> go to register screen
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const RegisterScreen()),
+      );
     }
   }
 

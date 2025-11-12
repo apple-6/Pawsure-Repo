@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pawsure_app/screens/sitter_setup/sitter_setup_screen.dart';
-
-import 'package:pawsure_app/main_navigation.dart';
+import 'package:pawsure_app/screens/auth/login_screen.dart';
+import 'package:pawsure_app/models/role.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -26,20 +25,11 @@ class RoleSelectionScreen extends StatelessWidget {
                   title: "I'm a Pet Owner",
                   subtitle: "Track, care, and connect for\nyour pets.",
                   onTap: () {
-                    // Registration screen removed — inform the user instead
-                    showDialog<void>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Registration disabled'),
-                        content: const Text(
-                          'Registration is currently disabled. Please check back later.',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(),
-                            child: const Text('OK'),
-                          ),
-                        ],
+                    // Navigate to login and pass the selected role
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const LoginScreen(role: UserRole.owner),
                       ),
                     );
                   },
@@ -49,11 +39,13 @@ class RoleSelectionScreen extends StatelessWidget {
                   title: "I'm a Pet Sitter",
                   subtitle: "Offer safe, loving care for\nothers' pets.",
                   onTap: () {
+                    // Navigate to login and pass the selected role (sitter)
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const SitterSetupScreen(),
-                        ),
+                        builder: (_) =>
+                            const LoginScreen(role: UserRole.sitter),
+                      ),
                     );
                   },
                 ),
