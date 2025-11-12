@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-// main_navigation.dart is available but onboarding should appear first
-// import 'main_navigation.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/auth/register_screen.dart';
 import 'screens/auth/onboarding_screen.dart';
 import 'screens/sitter/sitter_dashboard.dart';
 import 'models/sitter.dart';
 
 void main() {
+  debugPrint('[DEBUG] PawsureApp: Starting main()');
   runApp(const PawsureApp());
 }
 
@@ -16,6 +13,9 @@ class PawsureApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint(
+      '[DEBUG] PawsureApp: building MaterialApp with OnboardingScreen',
+    );
     return MaterialApp(
       title: 'Pawsure - Pet Care Companion',
       theme: ThemeData(

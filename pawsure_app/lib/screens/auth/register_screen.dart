@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import '../../main_navigation.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -14,7 +12,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -35,34 +32,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           SizedBox(
             height: size.height,
             width: size.width,
-            child: Image.asset('assets/images/dog_auth.png', fit: BoxFit.cover),
-          ),
-          // decorative top-right green shape with centered logo
-          Positioned(
-            right: -40,
-            top: -40,
-            child: SizedBox(
-              width: 160,
-              height: 160,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 160,
-                    height: 160,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF4CAF50),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  Image.asset(
-                    'assets/images/pawsureLogo.png',
-                    width: 56,
-                    height: 56,
-                    fit: BoxFit.contain,
-                  ),
-                ],
-              ),
+            child: Image.network(
+              'https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=800&q=60',
+              fit: BoxFit.cover,
             ),
           ),
           Align(
@@ -343,7 +315,66 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Sign up to get started',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 18),
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Full name',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Password',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    ElevatedButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Register pressed (UI only)'),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4CAF50),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Get Started'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/login');
+                      },
+                      child: const Text('Already have an account? Login'),
+                    ),
                   ],
                 ),
               ),
