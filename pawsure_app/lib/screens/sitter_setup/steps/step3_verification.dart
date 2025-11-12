@@ -55,6 +55,7 @@ class _Step3VerificationState extends State<Step3Verification> {
     padding: const EdgeInsets.all(16.0),
     child: Form(
       key: widget.formKey, 
+    
       child: Column(
         // ... (existing Text and Info card widgets) ...
         crossAxisAlignment: CrossAxisAlignment.start, // Align content to the left
@@ -66,7 +67,7 @@ class _Step3VerificationState extends State<Step3Verification> {
           ),
           const SizedBox(height: 16),
         
-        // --- Info card (Restored) ---
+          // --- Info card (Restored) ---
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
@@ -90,7 +91,7 @@ class _Step3VerificationState extends State<Step3Verification> {
         const Text('ID Document',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-
+        
         // --- MODIFIED FILE UPLOAD CONTAINER ---
         Container(
           // ... (existing decoration) ...
@@ -157,7 +158,8 @@ class _Step3VerificationState extends State<Step3Verification> {
             onSaved: (value) {},
           ),
         ),
-    ),
-    );
+        ],
+      ),
+    ),);
   }
 }
