@@ -25,6 +25,17 @@ let UserService = class UserService {
     async findByEmail(email) {
         return this.usersRepository.findOne({ where: { email } });
     }
+    async findByPhone(phone) {
+        return this.usersRepository.findOne({ where: { phone_number: phone } });
+    }
+    async findOneByIdentifier(identifier) {
+        return this.usersRepository.findOne({
+            where: [
+                { email: identifier },
+                { phone_number: identifier }
+            ],
+        });
+    }
     async create(userData) {
         const newUser = this.usersRepository.create(userData);
         return this.usersRepository.save(newUser);

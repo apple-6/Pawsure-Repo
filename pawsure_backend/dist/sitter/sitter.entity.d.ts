@@ -1,30 +1,31 @@
-import { Booking } from 'src/booking/booking.entity';
-import { Review } from 'src/review/review.entity';
-import { User } from 'src/user/user.entity';
+import { User } from '../user/user.entity';
+import { Booking } from '../booking/booking.entity';
+import { Review } from '../review/review.entity';
 export declare enum SitterStatus {
     PENDING = "pending",
-    VERIFIED = "verified",
+    APPROVED = "approved",
     REJECTED = "rejected"
 }
 export declare class Sitter {
     id: number;
+    bio: string;
+    experience: string;
+    photo_gallery: string;
+    rating: number;
+    reviews_count: number;
+    available_dates: string[];
     address: string;
-    phoneNumber: string;
     houseType: string;
     hasGarden: boolean;
     hasOtherPets: boolean;
     idDocumentUrl: string;
-    status: SitterStatus;
     ratePerNight: number;
-    bio: string;
-    experience: string;
-    photo_gallery: string[];
-    rating: number;
-    reviews_count: number;
-    available_dates: string[];
-    created_at: Date;
-    updated_at: Date;
+    status: SitterStatus;
+    userId: number;
     user: User;
     bookings: Booking[];
     reviews: Review[];
+    created_at: Date;
+    updated_at: Date;
+    deleted_at: Date;
 }

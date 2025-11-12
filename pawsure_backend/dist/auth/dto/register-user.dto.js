@@ -14,6 +14,7 @@ const class_validator_1 = require("class-validator");
 class RegisterUserDto {
     name;
     email;
+    phone_number;
     password;
 }
 exports.RegisterUserDto = RegisterUserDto;
@@ -23,10 +24,19 @@ __decorate([
     __metadata("design:type", String)
 ], RegisterUserDto.prototype, "name", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsEmail)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateIf)((o) => !o.phone_number),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Email or phone number must be provided.' }),
     __metadata("design:type", String)
 ], RegisterUserDto.prototype, "email", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateIf)((o) => !o.email),
+    (0, class_validator_1.IsNotEmpty)({ message: 'Email or phone number must be provided.' }),
+    __metadata("design:type", String)
+], RegisterUserDto.prototype, "phone_number", void 0);
 __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsString)(),

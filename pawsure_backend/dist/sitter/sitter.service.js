@@ -15,46 +15,132 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SitterService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
-const sitter_entity_1 = require("./sitter.entity");
 const typeorm_2 = require("typeorm");
+const sitter_entity_1 = require("./sitter.entity");
+const user_entity_1 = require("../user/user.entity");
 const user_service_1 = require("../user/user.service");
 let SitterService = class SitterService {
     sitterRepository;
     userService;
-    constructor(sitterRepository, userService) {
+    userRepository;
+    constructor(sitterRepository, userService, userRepository) {
         this.sitterRepository = sitterRepository;
         this.userService = userService;
+        this.userRepository = userRepository;
     }
-    async setupProfile(userId, setupDto) {
+    async create(createSitterDto, userId) {
         const user = await this.userService.findById(userId);
         if (!user) {
             throw new common_1.NotFoundException('User not found');
         }
-        let sitterProfile = await this.sitterRepository.findOne({
-            where: { user: { id: userId } },
+        const existingSitter = await this.sitterRepository.findOne({
+            where: { userId },
         });
-        if (!sitterProfile) {
-            sitterProfile = this.sitterRepository.create();
+        if (existingSitter) {
+            throw new common_1.ConflictException('User already has a sitter profile');
         }
-        sitterProfile.address = setupDto.address;
-        sitterProfile.phoneNumber = setupDto.phoneNumber;
-        sitterProfile.houseType = setupDto.houseType;
-        sitterProfile.hasGarden = setupDto.hasGarden;
-        sitterProfile.hasOtherPets = setupDto.hasOtherPets;
-        sitterProfile.idDocumentUrl = setupDto.idDocumentUrl;
-        sitterProfile.bio = setupDto.bio;
-        sitterProfile.ratePerNight = setupDto.ratePerNight;
-        sitterProfile.user = user;
-        await this.sitterRepository.save(sitterProfile);
-        await this.userService.updateUserRole(user.id, 'sitter');
-        return sitterProfile;
+        const sitter = this.sitterRepository.create({
+            ...createSitterDto,
+            userId,
+        });
+        const savedSitter = await this.sitterRepository.save(sitter);
+        await this.userService.updateUserRole(userId, 'sitter');
+        return savedSitter;
+    }
+    async findAll(minRating) {
+        const query = this.sitterRepository
+            .createQueryBuilder('sitter')
+            .leftJoinAndSelect('sitter.user', 'user')
+            .where('sitter.deleted_at IS NULL')
+            .orderBy('sitter.rating', 'DESC');
+        if (minRating) {
+            query.where('sitter.rating >= :minRating', { minRating });
+        }
+        return await query.getMany();
+    }
+    async findOne(id) {
+        const sitter = await this.sitterRepository.findOne({
+            where: { id },
+            withDeleted: false,
+            relations: ['user', 'reviews', 'bookings'],
+        });
+        if (!sitter) {
+            throw new common_1.NotFoundException(`Sitter with ID ${id} not found`);
+        }
+        return sitter;
+    }
+    async findByUserId(userId) {
+        return await this.sitterRepository.findOne({
+            where: { userId, deleted_at: (0, typeorm_2.IsNull)() },
+            relations: ['user'],
+        });
+    }
+    async update(id, updateSitterDto, userId) {
+        const sitter = await this.findOne(id);
+        if (sitter.userId !== userId) {
+            throw new common_1.ForbiddenException('You can only update your own sitter profile');
+        }
+        if (updateSitterDto.phoneNumber) {
+            const user = await this.userRepository.findOne({ where: { id: userId } });
+            if (user) {
+                user.phone_number = updateSitterDto.phoneNumber;
+                await this.userRepository.save(user);
+            }
+            delete updateSitterDto.phoneNumber;
+        }
+        Object.assign(sitter, updateSitterDto);
+        await this.sitterRepository.save(sitter);
+        const freshSitter = await this.sitterRepository.findOne({
+            where: { id },
+            relations: ['user', 'reviews', 'bookings'],
+        });
+        if (!freshSitter) {
+            throw new common_1.NotFoundException(`Sitter profile with ID ${id} not found after update.`);
+        }
+        return freshSitter;
+    }
+    async remove(id, userId) {
+        const sitter = await this.findOne(id);
+        if (sitter.userId !== userId) {
+            throw new common_1.ForbiddenException('You can only delete your own sitter profile');
+        }
+        await this.sitterRepository.remove(sitter);
+    }
+    async updateRating(id) {
+        const sitter = await this.sitterRepository.findOne({
+            where: { id },
+            relations: ['reviews'],
+        });
+        if (!sitter) {
+            throw new common_1.NotFoundException(`Sitter with ID ${id} not found`);
+        }
+        if (sitter.reviews && sitter.reviews.length > 0) {
+            const totalRating = sitter.reviews.reduce((sum, review) => sum + review.rating, 0);
+            sitter.rating = totalRating / sitter.reviews.length;
+            sitter.reviews_count = sitter.reviews.length;
+        }
+        else {
+            sitter.rating = 0;
+            sitter.reviews_count = 0;
+        }
+        return await this.sitterRepository.save(sitter);
+    }
+    async searchByAvailability(date) {
+        return await this.sitterRepository
+            .createQueryBuilder('sitter')
+            .leftJoinAndSelect('sitter.user', 'user')
+            .where(':date = ANY(sitter.available_dates)', { date })
+            .orderBy('sitter.rating', 'DESC')
+            .getMany();
     }
 };
 exports.SitterService = SitterService;
 exports.SitterService = SitterService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(sitter_entity_1.Sitter)),
+    __param(2, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        user_service_1.UserService])
+        user_service_1.UserService,
+        typeorm_2.Repository])
 ], SitterService);
 //# sourceMappingURL=sitter.service.js.map

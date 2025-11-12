@@ -23,6 +23,7 @@ let User = class User {
     id;
     name;
     email;
+    phone_number;
     passwordHash;
     role;
     profile_picture;
@@ -47,9 +48,19 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "name", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ unique: true }),
+    (0, typeorm_1.Column)({
+        unique: true,
+        nullable: true,
+    }),
     __metadata("design:type", String)
 ], User.prototype, "email", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        unique: true,
+        nullable: true,
+    }),
+    __metadata("design:type", String)
+], User.prototype, "phone_number", void 0);
 __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)

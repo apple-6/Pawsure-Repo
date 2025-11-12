@@ -55,32 +55,43 @@ let AuthService = class AuthService {
         this.jwtService = jwtService;
     }
     async register(registerUserDto) {
-        const existingUser = await this.userService.findByEmail(registerUserDto.email);
-        if (existingUser) {
-            throw new common_1.ConflictException('Email already in use');
+        const { email, phone_number, password, name } = registerUserDto;
+        if (email) {
+            const existingUser = await this.userService.findByEmail(email);
+            if (existingUser) {
+                throw new common_1.ConflictException('Email already in use');
+            }
+        }
+        if (phone_number) {
+            const existingUser = await this.userService.findByPhone(phone_number);
+            if (existingUser) {
+                throw new common_1.ConflictException('Phone number already in use');
+            }
         }
         const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(registerUserDto.password, saltRounds);
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
         const newUser = await this.userService.create({
-            name: registerUserDto.name,
-            email: registerUserDto.email,
+            name: name,
+            email: email,
+            phone_number: phone_number,
             passwordHash: hashedPassword,
         });
         const { passwordHash, ...result } = newUser;
         return result;
     }
     async login(loginUserDto) {
-        const user = await this.userService.findByEmail(loginUserDto.email);
+        const user = await this.userService.findOneByIdentifier(loginUserDto.identifier);
         if (!user) {
-            throw new common_1.UnauthorizedException('Invalid email or password');
+            throw new common_1.UnauthorizedException('Invalid credentials');
         }
         const isPasswordMatching = await bcrypt.compare(loginUserDto.password, user.passwordHash);
         if (!isPasswordMatching) {
-            throw new common_1.UnauthorizedException('Invalid email or password');
+            throw new common_1.UnauthorizedException('Invalid credentials');
         }
         const payload = {
-            email: user.email,
             sub: user.id,
+            email: user.email,
+            phone_number: user.phone_number,
             role: user.role,
         };
         return {

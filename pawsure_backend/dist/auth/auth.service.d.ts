@@ -10,6 +10,7 @@ export declare class AuthService {
         id: number;
         name: string;
         email: string;
+        phone_number: string;
         role: string;
         profile_picture: string;
         created_at: Date;
