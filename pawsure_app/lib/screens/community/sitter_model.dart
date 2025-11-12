@@ -1,4 +1,4 @@
-// lib/models/sitter_model.dart
+// lib/screens/community/sitter_model.dart
 
 class Sitter {
   final String id;
@@ -9,6 +9,8 @@ class Sitter {
   final double price;
   final String location;
   final String imageUrl;
+  final List<DateTime>
+  unavailableDates; // Field to track sitter's unavailable days
 
   Sitter({
     required this.id,
@@ -19,6 +21,7 @@ class Sitter {
     required this.price,
     required this.location,
     required this.imageUrl,
+    required this.unavailableDates, // Required in the constructor
   });
 }
 
@@ -34,6 +37,11 @@ List<Sitter> mockSitters = [
     location: 'Taman Century, Johor Bahru',
     imageUrl:
         'https://images.unsplash.com/photo-1543660641-768f51528657?w=400&auto=format&fit=crop',
+    // Example: Unavailable next week
+    unavailableDates: [
+      DateTime.now().add(const Duration(days: 7)),
+      DateTime.now().add(const Duration(days: 8)),
+    ],
   ),
   Sitter(
     id: 'sitter2',
@@ -45,6 +53,8 @@ List<Sitter> mockSitters = [
     location: 'KSL, Johor Bahru',
     imageUrl:
         'https://images.unsplash.com/photo-1583344652240-5e5d3261a843?w=400&auto=format&fit=crop',
+    // Example: Always available
+    unavailableDates: [],
   ),
   Sitter(
     id: 'sitter3',
@@ -56,5 +66,7 @@ List<Sitter> mockSitters = [
     location: 'Permas Jaya, Johor Bahru',
     imageUrl:
         'https://images.unsplash.com/photo-1629851722839-2e987c264a4c?w=400&auto=format&fit=crop',
+    // Example: Unavailable in two weeks
+    unavailableDates: [DateTime.now().add(const Duration(days: 14))],
   ),
 ];

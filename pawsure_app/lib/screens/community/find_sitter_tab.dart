@@ -1,14 +1,109 @@
-// lib/community/find_sitter_tab.dart
+// lib/screens/community/find_sitter_tab.dart
 
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart'; // Make sure to add this package to your pubspec.yaml
-import 'package:pawsure_app/screens/community/sitter_model.dart';
-import '../sitter_model.dart'; // Import the model file
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:intl/intl.dart';
+// CORRECTED IMPORT PATH: Since sitter_model.dart is in the same directory,
+// a simple relative import is used.
+import 'sitter_model.dart';
 
-class FindSitterTab extends StatelessWidget {
+class FindSitterTab extends StatefulWidget {
   final Function(String sitterId) onSitterClick;
 
   const FindSitterTab({super.key, required this.onSitterClick});
+
+  @override
+  State<FindSitterTab> createState() => _FindSitterTabState();
+}
+
+class _FindSitterTabState extends State<FindSitterTab> {
+  // State variables for search
+  String selectedLocation = 'Johor Bahru';
+  DateTime? selectedDate;
+  List<Sitter> availableSitters = [];
+  bool isLoading = false;
+
+  final TextEditingController _locationController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _locationController.text = selectedLocation;
+    // Load all sitters on initial build
+    _fetchAndFilterSitters();
+  }
+
+  @override
+  void dispose() {
+    _locationController.dispose();
+    super.dispose();
+  }
+
+  // --- CORE FILTERING LOGIC ---
+  Future<void> _fetchAndFilterSitters() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    // 1. Fetch all sitters (Simulated)
+    List<Sitter> allSitters = mockSitters;
+
+    // 2. Filter by Location/City/State
+    List<Sitter> locationFilteredSitters = allSitters.where((sitter) {
+      final search = selectedLocation.toLowerCase();
+
+      // If search is empty or default ('Johor Bahru'), skip location filter
+      if (search.isEmpty || search == 'johor bahru') {
+        return true;
+      }
+
+      // Check if the sitter's location (address) contains the search term
+      return sitter.location.toLowerCase().contains(search);
+    }).toList();
+
+    // 3. Filter by Available Dates (Uses the new unavailableDates field)
+    List<Sitter> finalFilteredList = locationFilteredSitters.where((sitter) {
+      // If NO date is selected, all sitters pass the date filter.
+      if (selectedDate == null) return true;
+
+      // Check if the selected date (date-only) is in the sitter's unavailable list.
+      // We must compare the year, month, and day components only.
+      return !sitter.unavailableDates.any((unavailableDate) {
+        return unavailableDate.year == selectedDate!.year &&
+            unavailableDate.month == selectedDate!.month &&
+            unavailableDate.day == selectedDate!.day;
+      });
+    }).toList();
+
+    // Simulate network delay
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // 4. Update UI
+    setState(() {
+      availableSitters = finalFilteredList;
+      isLoading = false;
+    });
+  }
+
+  // --- DATE PICKER HANDLER ---
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate ?? DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      // Keep only the date part (no time components) for accurate comparison
+      final pickedDateOnly = DateTime(picked.year, picked.month, picked.day);
+
+      setState(() {
+        selectedDate = pickedDateOnly;
+      });
+      // Automatically trigger search after a date is selected
+      _fetchAndFilterSitters();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +113,16 @@ class FindSitterTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 1. Search Bar Row
-          const _SearchBarsRow(),
+          _SearchBarsRow(
+            locationController: _locationController,
+            selectedDate: selectedDate,
+            onSearch: () {
+              // Update location state from controller before searching
+              selectedLocation = _locationController.text;
+              _fetchAndFilterSitters();
+            },
+            onDateTap: () => _selectDate(context),
+          ),
           const SizedBox(height: 16),
 
           // 2. Map View Placeholder
@@ -27,7 +131,7 @@ class FindSitterTab extends StatelessWidget {
 
           // 3. Available Sitters Header
           Text(
-            'Available Sitters',
+            'Available Sitters (${availableSitters.length})',
             style: Theme.of(
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -35,54 +139,87 @@ class FindSitterTab extends StatelessWidget {
           const SizedBox(height: 12),
 
           // 4. List of Sitters
-          // Note: Since this is in a SingleChildScrollView, we use Column instead of ListView
-          ...mockSitters.map((sitter) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: SitterCard(sitter: sitter, onClick: onSitterClick),
-            );
-          }).toList(),
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : availableSitters.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40.0),
+                  child: Center(
+                    child: Text(
+                      'No sitters found matching your criteria.',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                  ),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: availableSitters.map((sitter) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: SitterCard(
+                        sitter: sitter,
+                        onClick: widget.onSitterClick,
+                      ),
+                    );
+                  }).toList(),
+                ),
         ],
       ),
     );
   }
 }
 
-// --- Helper Widgets ---
+// -----------------------------------------------------------------------------
+// HELPER WIDGETS
+// -----------------------------------------------------------------------------
 
 class _SearchBarsRow extends StatelessWidget {
-  const _SearchBarsRow();
+  final TextEditingController locationController;
+  final DateTime? selectedDate;
+  final VoidCallback onSearch;
+  final VoidCallback onDateTap;
+
+  const _SearchBarsRow({
+    required this.locationController,
+    required this.selectedDate,
+    required this.onSearch,
+    required this.onDateTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    String dateText = selectedDate != null
+        ? DateFormat('dd MMM').format(selectedDate!)
+        : 'Dates';
+
     return Row(
       children: [
-        // Location Input
+        // Location Input (TextField)
         Expanded(
-          child: _SitterSearchInput(
-            icon: LucideIcons.mapPin,
-            text: 'Johor Bahru',
+          child: _SitterLocationInput(
+            controller: locationController,
+            onSubmitted: onSearch,
           ),
         ),
         const SizedBox(width: 8),
 
-        // Dates Input
+        // Dates Input (InkWell to trigger date picker)
         Expanded(
-          child: _SitterSearchInput(icon: LucideIcons.calendar, text: 'Dates'),
+          child: _SitterDateInput(
+            text: dateText,
+            onTap: onDateTap,
+            isActive: selectedDate != null,
+          ),
         ),
         const SizedBox(width: 8),
 
         // Search Button
         ElevatedButton(
-          onPressed: () {
-            // Handle search logic
-          },
+          onPressed: onSearch, // Calls the filter function
           style: ElevatedButton.styleFrom(
             shape: const CircleBorder(),
             padding: const EdgeInsets.all(12),
-            backgroundColor: Theme.of(
-              context,
-            ).primaryColor, // Use primary color for green
+            backgroundColor: Theme.of(context).primaryColor,
           ),
           child: const Icon(LucideIcons.search, color: Colors.white),
         ),
@@ -91,33 +228,95 @@ class _SearchBarsRow extends StatelessWidget {
   }
 }
 
-class _SitterSearchInput extends StatelessWidget {
-  final IconData icon;
-  final String text;
+class _SitterLocationInput extends StatelessWidget {
+  final TextEditingController controller;
+  final VoidCallback onSubmitted;
 
-  const _SitterSearchInput({required this.icon, required this.text});
+  const _SitterLocationInput({
+    required this.controller,
+    required this.onSubmitted,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8.0),
         border: Border.all(color: Colors.grey.shade300),
       ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.grey.shade600),
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: TextStyle(
-              color: Colors.grey.shade800,
-              fontWeight: FontWeight.w500,
-            ),
+      child: TextField(
+        controller: controller,
+        textInputAction: TextInputAction.search,
+        onSubmitted: (_) => onSubmitted(),
+        decoration: InputDecoration(
+          prefixIcon: Icon(
+            LucideIcons.mapPin,
+            size: 20,
+            color: Colors.grey.shade600,
           ),
-        ],
+          hintText: 'State/City',
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          isDense: true,
+        ),
+        style: TextStyle(
+          color: Colors.grey.shade800,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+}
+
+class _SitterDateInput extends StatelessWidget {
+  final String text;
+  final VoidCallback onTap;
+  final bool isActive;
+
+  const _SitterDateInput({
+    required this.text,
+    required this.onTap,
+    required this.isActive,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(
+            color: isActive
+                ? Theme.of(context).primaryColor
+                : Colors.grey.shade300,
+            width: isActive ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              LucideIcons.calendar,
+              size: 20,
+              color: isActive
+                  ? Theme.of(context).primaryColor
+                  : Colors.grey.shade600,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: TextStyle(
+                color: isActive
+                    ? Theme.of(context).primaryColor
+                    : Colors.grey.shade800,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -177,7 +376,7 @@ class SitterCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 2),
@@ -195,9 +394,7 @@ class SitterCard extends StatelessWidget {
               ),
               child: Image.network(
                 sitter.imageUrl,
-                width:
-                    MediaQuery.of(context).size.width * 0.4 -
-                    16, // Approx 40% of screen width minus padding
+                width: MediaQuery.of(context).size.width * 0.4 - 16,
                 height: 120,
                 fit: BoxFit.cover,
               ),
@@ -264,9 +461,7 @@ class SitterCard extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
-                          color: Theme.of(
-                            context,
-                          ).primaryColor, // Primary green color
+                          color: Theme.of(context).primaryColor,
                         ),
                         children: [
                           TextSpan(

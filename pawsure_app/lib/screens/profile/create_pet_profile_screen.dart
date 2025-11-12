@@ -93,6 +93,9 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
       return; // Exit if the form is not valid
     }
 
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     // 1. Setup the Multipart Request (This replaces the old JSON POST)
     final uri = Uri.parse('$_apiBaseUrl/pets');
     final request = http.MultipartRequest('POST', uri);
@@ -111,19 +114,19 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     // 3. Conditionally Add the Photo File
     if (_pickedFile != null) {
       try {
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'photo', // ⬅️ CRITICAL: This MUST match the field name your NestJS backend expects
-            _pickedFile!.path,
-            filename: _pickedFile!.name,
-          ),
+        final photoFile = await http.MultipartFile.fromPath(
+          'photo', // ⬅️ CRITICAL: This MUST match the field name your NestJS backend expects
+          _pickedFile!.path,
+          filename: _pickedFile!.name,
         );
-        ScaffoldMessenger.of(context).showSnackBar(
+        if (!mounted) return;
+        request.files.add(photoFile);
+        scaffoldMessenger.showSnackBar(
           const SnackBar(content: Text('Preparing photo for upload...')),
         );
       } catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text(
               'Error reading photo file: $e. Sending text profile only.',
@@ -133,7 +136,8 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
       }
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    if (!mounted) return;
+    scaffoldMessenger.showSnackBar(
       const SnackBar(content: Text('Attempting to create Pet Profile...')),
     );
 
@@ -147,7 +151,7 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
       if (response.statusCode == 201 || response.statusCode == 200) {
         final createdPet = jsonDecode(response.body);
 
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text(
               'Success! Profile for ${createdPet['name']} created.',
@@ -156,10 +160,10 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
           ),
         );
         // Navigate back and signal a refresh
-        Navigator.of(context).pop(true);
+        navigator.pop(true);
       } else {
         // Failure
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text(
               'Failed to create pet. Status: ${response.statusCode}. Body: ${response.body}',
@@ -170,7 +174,7 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('Network Error during unified upload: $e'),
           backgroundColor: Colors.red,

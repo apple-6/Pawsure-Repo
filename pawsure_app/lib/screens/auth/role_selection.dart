@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_setup_screen.dart';
 
-import 'package:pawsure_app/main_navigation.dart';
-
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
 
@@ -79,11 +77,11 @@ class RoleSelectionScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
           constraints: const BoxConstraints(minHeight: 180),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.95),
+            color: Colors.white.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 spreadRadius: 0,
               ),

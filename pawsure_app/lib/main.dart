@@ -52,12 +52,12 @@ class _AuthWrapper extends StatefulWidget {
 
 class __AuthWrapperState extends State<_AuthWrapper> {
   // ** DEVELOPMENT FLAG: SET TO TRUE TO SKIP AUTH FLOW **
-  static const bool SHOULD_SKIP_AUTH = true;
+  static const bool _shouldSkipAuth = true;
   // ** ------------------------------------------- **
 
   Future<String> _getInitialRoute() async {
     // 1. DEVELOPMENT SKIP LOGIC
-    if (SHOULD_SKIP_AUTH) {
+    if (_shouldSkipAuth) {
       debugPrint('[DEBUG] Auth Skipped: Routing to /dashboard');
       return '/dashboard';
     }

@@ -93,29 +93,28 @@ class _SitterSetupScreenState extends State<SitterSetupScreen> {
     setState(() => _isLoading = true);
 
     // Make sure the final form is saved
-    _step4Key.currentState!.save(); 
+    _step4Key.currentState!.save();
 
     // ** DEBUG: Print the data before sending **
-    print('Submitting data: $_formData');
+    debugPrint('Submitting data: $_formData');
 
     try {
       // Use the service
       await AuthService().submitSitterSetup(_formData);
-      
+
       // Handle success
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile Created!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Profile Created!')));
         Navigator.of(context).pop(); // Go back
       }
-
     } catch (e) {
       // Handle errors from the service
       if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       }
     } finally {
       if (mounted) {
@@ -124,7 +123,7 @@ class _SitterSetupScreenState extends State<SitterSetupScreen> {
     }
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     // This now returns the Scaffold with all the new UI elements
     return Scaffold(
@@ -165,13 +164,9 @@ class _SitterSetupScreenState extends State<SitterSetupScreen> {
                 // --- 3. SUBTITLE: Step X of 4 ---
                 Text(
                   'Step ${_currentStep + 1} of 4', // Dynamically updates
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 24), // Spacing
-
                 // --- 4. THE PROGRESS BAR ---
                 SitterProgressBar(currentStep: _currentStep),
 
@@ -183,7 +178,10 @@ class _SitterSetupScreenState extends State<SitterSetupScreen> {
                     children: [
                       Step1BasicInfo(formKey: _step1Key, formData: _formData),
                       Step2Environment(formKey: _step2Key, formData: _formData),
-                      Step3Verification(formKey: _step3Key, formData: _formData),
+                      Step3Verification(
+                        formKey: _step3Key,
+                        formData: _formData,
+                      ),
                       Step4Rates(formKey: _step4Key, formData: _formData),
                     ],
                   ),
@@ -210,7 +208,13 @@ class _SitterSetupScreenState extends State<SitterSetupScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               mainAxisSize: MainAxisSize.max,
                               children: const [
-                                Text('Next', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                Text(
+                                  'Next',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
                                 SizedBox(width: 8),
                                 Icon(Icons.arrow_forward_ios, size: 16),
                               ],
@@ -229,10 +233,17 @@ class _SitterSetupScreenState extends State<SitterSetupScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   minimumSize: const Size.fromHeight(50),
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
                                 ),
-                                child: const Text('< Back',
-                                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                                child: const Text(
+                                  '< Back',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -247,18 +258,28 @@ class _SitterSetupScreenState extends State<SitterSetupScreen> {
                                   ),
                                   elevation: 0,
                                   minimumSize: const Size.fromHeight(50),
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   mainAxisSize: MainAxisSize.max,
                                   children: [
                                     Text(
-                                      _currentStep == 3 ? 'Complete Setup' : 'Next',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      _currentStep == 3
+                                          ? 'Complete Setup'
+                                          : 'Next',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
                                     const SizedBox(width: 8),
-                                    const Icon(Icons.arrow_forward_ios, size: 16),
+                                    const Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 16,
+                                    ),
                                   ],
                                 ),
                               ),

@@ -240,27 +240,28 @@ class _LoginScreenState extends State<LoginScreen> {
                                 return;
                               }
                               setState(() => _isLoading = true);
+                              final scaffoldMessenger = ScaffoldMessenger.of(
+                                context,
+                              );
+                              final navigator = Navigator.of(context);
                               try {
                                 await AuthService().login(email, password);
                                 if (!mounted) return;
-                                // Safe to use context now
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                scaffoldMessenger.showSnackBar(
                                   const SnackBar(
                                     content: Text('Login successful'),
                                   ),
                                 );
-                                Navigator.pushReplacement(
-                                  context,
+                                navigator.pushReplacement(
                                   MaterialPageRoute(
                                     builder: (_) => const MainNavigation(),
                                   ),
                                 );
                               } catch (e) {
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(e.toString())),
-                                  );
-                                }
+                                if (!mounted) return;
+                                scaffoldMessenger.showSnackBar(
+                                  SnackBar(content: Text(e.toString())),
+                                );
                               } finally {
                                 if (mounted) setState(() => _isLoading = false);
                               }
