@@ -17,6 +17,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
 
   @override
@@ -273,28 +274,34 @@ class _LoginScreenState extends State<LoginScreen> {
                               }
                               setState(() => _isLoading = true);
                               try {
-                                await AuthService().login(email, password);
-                                if (!mounted) return;
-                                // Safe to use context now
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Login successful'),
-                                  ),
+                                await _authService.login(
+                                  _emailController.text.trim(),
+                                  _passwordController.text,
                                 );
-                                Navigator.pushReplacement(
-                                  context,
+                                if (!mounted) return;
+                                setState(() => _isLoading = false);
+                                Navigator.of(context).pushReplacement(
                                   MaterialPageRoute(
-                                    builder: (_) => const MainNavigation(),
+                                    builder: (context) =>
+                                        const MainNavigation(),
                                   ),
                                 );
                               } catch (e) {
+                                setState(() => _isLoading = false);
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(e.toString())),
+                                    SnackBar(
+                                      content: Text(
+                                        e.toString().replaceAll(
+                                          'Exception: ',
+                                          '',
+                                        ),
+                                      ),
+                                      backgroundColor: Colors.red,
+                                      duration: const Duration(seconds: 3),
+                                    ),
                                   );
                                 }
-                              } finally {
-                                if (mounted) setState(() => _isLoading = false);
                               }
                             },
                       style: ElevatedButton.styleFrom(

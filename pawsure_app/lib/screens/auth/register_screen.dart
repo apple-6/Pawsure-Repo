@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../main_navigation.dart';
 import 'package:pawsure_app/screens/auth/role_selection.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -361,7 +362,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               const SizedBox(height: 10),
                               TextButton(
                                 onPressed: () {
-                                  Navigator.pushNamed(context, '/login');
+                                  // Navigate to Login screen (replace current route)
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const LoginScreen(),
+                                    ),
+                                  );
                                 },
                                 child: const Text(
                                   'Already have an account? Login',
