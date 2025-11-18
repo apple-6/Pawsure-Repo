@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_setup_screen.dart';
 
-import 'package:pawsure_app/main_navigation.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});

@@ -17,6 +17,7 @@ import {
 import { SitterService } from './sitter.service';
 import { CreateSitterDto } from './dto/create-sitter.dto';
 import { UpdateSitterDto } from './dto/update-sitter.dto';
+import { SearchSitterDto } from './dto/sitter-search.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('sitters')
@@ -35,9 +36,17 @@ export class SitterController {
     return await this.sitterService.findAll(minRating);
   }
 
+  /**
+   * Search for sitters by location and/or date availability
+   * @example
+   * /sitters/search?location=New York
+   * /sitters/search?startDate=2025-12-20&endDate=2025-12-25
+   * /sitters/search?location=New York&startDate=2025-12-20&endDate=2025-12-25
+   */
   @Get('search')
-  async searchByAvailability(@Query('date') date: string) {
-    return await this.sitterService.searchByAvailability(date);
+  async searchSitters(@Query() searchSitterDto: SearchSitterDto) {
+    // The DTO will automatically validate the query parameters
+    return await this.sitterService.searchSitters(searchSitterDto);
   }
 
   @Get('my-profile')

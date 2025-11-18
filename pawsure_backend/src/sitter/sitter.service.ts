@@ -11,6 +11,8 @@ import { CreateSitterDto } from './dto/create-sitter.dto';
 import { UpdateSitterDto } from './dto/update-sitter.dto';
 import { User } from '../user/user.entity';
 import { UserService } from '../user/user.service';
+import { Booking } from '../booking/booking.entity';
+import { SearchSitterDto } from 'src/sitter/dto/sitter-search.dto';
 
 @Injectable()
 export class SitterService {
@@ -179,5 +181,54 @@ export class SitterService {
       .where(':date = ANY(sitter.available_dates)', { date })
       .orderBy('sitter.rating', 'DESC')
       .getMany();
+  }
+
+  async searchSitters(searchDto: SearchSitterDto): Promise<Sitter[]> {
+    const { location, startDate, endDate } = searchDto;
+
+    const qb = this.sitterRepository.createQueryBuilder('sitter');
+
+    // 1. Filter by Location
+    if (location) {
+      qb.andWhere('sitter.address ILIKE :location', {
+        location: `%${location}%`,
+      });
+    }
+
+    // 2. Filter by Date Availability
+    // We only apply this filter if BOTH startDate and endDate are provided
+    if (startDate && endDate) {
+      // This subquery finds sitters who are *UNAVAILABLE*.
+      // We look for any booking that overlaps with the requested date range.
+      // An overlap occurs if:
+      // (booking.start_date <= endDate) AND (booking.end_date >= startDate)
+      
+      qb.andWhere((subQuery) => {
+        const sub = subQuery
+          .subQuery()
+          .select('booking.id')
+          .from(Booking, 'booking')
+          .where('booking.sitterId = sitter.id')
+          // IMPORTANT: Only check against confirmed bookings!
+          // Adjust 'confirmed' if your status enum is different.
+          .andWhere("booking.status = 'confirmed'") 
+          .andWhere(
+            '(booking.start_date <= :endDate AND booking.end_date >= :startDate)',
+            { startDate, endDate },
+          )
+          .getQuery();
+        
+        // The "NOT EXISTS" clause keeps sitters who have NO overlapping bookings.
+        return `NOT EXISTS (${sub})`;
+      });
+    }
+
+    // Ensure we only get active sitters (not deleted)
+    qb.andWhere('sitter.deleted_at IS NULL');
+
+    // Optional: Include relations you might want to show, e.g., user details
+    qb.leftJoinAndSelect('sitter.user', 'user');
+
+    return qb.getMany();
   }
 }
