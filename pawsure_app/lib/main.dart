@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'screens/auth/onboarding_screen.dart';
+// import 'screens/auth/onboarding_screen.dart'; // DEV: Disabled to skip auth
 import 'screens/auth/role_selection.dart';
+import 'main_navigation.dart';
+import 'package:get/get.dart';
 
 void main() {
   debugPrint('[DEBUG] PawsureApp: Starting main()');
@@ -18,11 +20,13 @@ class PawsureApp extends StatelessWidget {
       useMaterial3: true,
     );
 
-    return MaterialApp(
+    return GetMaterialApp(
       title: 'Pawsure - Pet Care Companion',
       theme: theme,
-      // Start the app on the Onboarding screen so auth/onboarding appears first.
-      home: const OnboardingScreen(),
+      // DEV: Temporarily skip to MainNavigation to bypass login
+      home: const MainNavigation(),
+      // PROD: Uncomment below to use normal auth flow
+      // home: const OnboardingScreen(),
       routes: {'/role-selection': (context) => RoleSelectionScreen()},
       debugShowCheckedModeBanner: false,
     );
