@@ -44,6 +44,6 @@ class HomeController extends GetxController {
   void logMood(String mood) {
     if (mood == 'happy') currentMood.value = "😊";
     Get.snackbar("Success", "Mood logged!",
-        backgroundColor: Colors.green.withOpacity(0.2));
+        backgroundColor: Colors.green.withValues(alpha: 0.2));
   }
 }
