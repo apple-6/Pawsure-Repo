@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_setup_screen.dart';
 
-import 'package:pawsure_app/main_navigation.dart';
-
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
 
@@ -74,16 +72,16 @@ class RoleSelectionScreen extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        child: Container(
+          child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
           constraints: const BoxConstraints(minHeight: 180),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.95),
+            color: const Color.fromRGBO(255, 255, 255, 0.95),
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: const Color.fromRGBO(0, 0, 0, 0.05),
                 blurRadius: 10,
                 spreadRadius: 0,
               ),

@@ -95,8 +95,8 @@ class _SitterSetupScreenState extends State<SitterSetupScreen> {
     // Make sure the final form is saved
     _step4Key.currentState!.save(); 
 
-    // ** DEBUG: Print the data before sending **
-    print('Submitting data: $_formData');
+  // ** DEBUG: Print the data before sending **
+  debugPrint('Submitting data: $_formData');
 
     try {
       // Use the service

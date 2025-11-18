@@ -21,7 +21,7 @@ export class Pet {
   @Column() // 'STRING name'
   name: string;
 
-  @Column({nullable: true}) // 'STRING species'
+  @Column({ nullable: true }) // 'STRING species'
   species: string;
 
   @Column() // 'STRING breed'
@@ -55,15 +55,15 @@ export class Pet {
   updated_at: Date;
 
   // --- Relationships ---
-  @ManyToOne(() => User, (user) => user.pets) // 'INT user_id FK'
+  @ManyToOne(() => User, (user: User) => user.pets) // 'INT user_id FK'
   owner: User;
 
-  @OneToMany(() => Booking, (booking) => booking.pet)
+  @OneToMany(() => Booking, (booking: Booking) => booking.pet)
   bookings: Booking[];
 
-  @OneToMany(() => ActivityLog, (log) => log.pet)
+  @OneToMany(() => ActivityLog, (log: ActivityLog) => log.pet)
   activityLogs: ActivityLog[];
 
-  @OneToMany(() => HealthRecord, (record) => record.pet)
+  @OneToMany(() => HealthRecord, (record: HealthRecord) => record.pet)
   healthRecords: HealthRecord[];
 }

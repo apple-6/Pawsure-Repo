@@ -240,24 +240,26 @@ class _LoginScreenState extends State<LoginScreen> {
                                 return;
                               }
                               setState(() => _isLoading = true);
+                              // Capture references to avoid using BuildContext across async gaps
+                              final scaffold = ScaffoldMessenger.of(context);
+                              final navigator = Navigator.of(context);
                               try {
                                 await AuthService().login(email, password);
                                 if (!mounted) return;
-                                // Safe to use context now
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                // Safe to use captured references now
+                                scaffold.showSnackBar(
                                   const SnackBar(
                                     content: Text('Login successful'),
                                   ),
                                 );
-                                Navigator.pushReplacement(
-                                  context,
+                                navigator.pushReplacement(
                                   MaterialPageRoute(
                                     builder: (_) => const MainNavigation(),
                                   ),
                                 );
                               } catch (e) {
                                 if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  scaffold.showSnackBar(
                                     SnackBar(content: Text(e.toString())),
                                   );
                                 }
