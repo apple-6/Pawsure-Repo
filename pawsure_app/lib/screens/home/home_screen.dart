@@ -1,29 +1,63 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../controllers/home_controller.dart';
+import '../../components/status_card.dart';
+import '../../components/sos_button.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Inject the logic controller
+    final HomeController controller = Get.put(HomeController());
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home Dashboard'),
-        backgroundColor: Colors.blue[100],
-      ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.home, size: 64, color: Colors.blue),
-            SizedBox(height: 16),
-            Text('Home Screen Content', style: TextStyle(fontSize: 18)),
-            SizedBox(height: 8),
-            Text(
-              'Welcome to Pawsure!',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-          ],
+      backgroundColor: const Color(0xFFF9FAFB),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("Hello, Sarah",
+                          style: TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.bold)),
+                      InkWell(
+                        onTap: controller.switchPet,
+                        child: Obx(() => Text(
+                            "Switch: ${controller.currentPet['name']} ▼",
+                            style: const TextStyle(color: Colors.grey))),
+                      ),
+                    ],
+                  ),
+                  const SOSButton(),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Status Card (Reactive)
+              Obx(() => StatusCard(
+                    petName: controller.currentPet['name'],
+                    petType: controller.currentPet['type'],
+                    currentMood: controller.currentMood.value,
+                    streak: controller.streak.value,
+                    progress: controller.dailyProgress,
+                    goals: controller.dailyGoals,
+                  )),
+            ],
+          ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        backgroundColor: Colors.deepPurple,
+        child: const Icon(Icons.auto_awesome, color: Colors.white),
       ),
     );
   }
