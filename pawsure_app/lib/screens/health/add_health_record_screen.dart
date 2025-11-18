@@ -94,6 +94,24 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
       return;
     }
 
+    if (_selectedType == null) {
+      Get.snackbar(
+        'Error',
+        'Please select a record type.',
+        snackPosition: SnackPosition.TOP,
+      );
+      return;
+    }
+
+    if (_selectedDate == null) {
+      Get.snackbar(
+        'Error',
+        'Please select a date.',
+        snackPosition: SnackPosition.TOP,
+      );
+      return;
+    }
+
     setState(() => _submitting = true);
 
     // Get petId from controller
@@ -182,10 +200,10 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                           _selectedDate == null
                               ? 'No date selected'
                               : _selectedDate!
-                                    .toLocal()
-                                    .toString()
-                                    .split(' ')
-                                    .first,
+                                  .toLocal()
+                                  .toString()
+                                  .split(' ')
+                                  .first,
                         ),
                       ),
                     ),
