@@ -1,5 +1,5 @@
-import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class HomeController extends GetxController {
   // --- State Variables ---
@@ -10,7 +10,7 @@ class HomeController extends GetxController {
   // Daily Progress
   var dailyProgress = <String, int>{"walks": 1, "meals": 2, "wellbeing": 1}.obs;
 
-  // --- Mock Data ---
+  // --- Mock Data (Replace with Services later) ---
   final Map<String, int> dailyGoals = {"walks": 2, "meals": 2, "wellbeing": 1};
 
   final List<Map<String, dynamic>> pets = [
@@ -33,17 +33,25 @@ class HomeController extends GetxController {
     },
   ];
 
-  // --- Actions ---
+  // --- Computed Properties ---
   Map<String, dynamic> get currentPet =>
       pets.firstWhere((p) => p['id'] == currentPetId.value);
 
+  // --- Actions ---
   void switchPet() {
+    // Toggles between pet 1 and 2 for demo purposes
     currentPetId.value = currentPetId.value == "1" ? "2" : "1";
   }
 
   void logMood(String mood) {
     if (mood == 'happy') currentMood.value = "😊";
-    Get.snackbar("Success", "Mood logged!",
-        backgroundColor: Colors.green.withValues(alpha: 0.2));
+    // Show a GetX snackbar
+    Get.snackbar(
+      "Mood Logged",
+      "You logged $mood for ${currentPet['name']}",
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.green.withValues(alpha: 0.1),
+      colorText: Colors.green[800],
+    );
   }
 }

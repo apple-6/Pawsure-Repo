@@ -6,7 +6,7 @@ import 'package:pawsure_app/services/api_service.dart';
 
 class HealthController extends GetxController
     with GetSingleTickerProviderStateMixin {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService = Get.find<ApiService>();
 
   // --- STATE VARIABLES ---
 
