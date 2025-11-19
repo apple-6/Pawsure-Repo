@@ -3,9 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
-// CORRECTED IMPORT PATH: Since sitter_model.dart is in the same directory,
-// a simple relative import is used.
-import 'sitter_model.dart';
 
 class FindSitterTab extends StatefulWidget {
   final Function(String sitterId) onSitterClick;
@@ -17,7 +14,6 @@ class FindSitterTab extends StatefulWidget {
 }
 
 class _FindSitterTabState extends State<FindSitterTab> {
-  // State variables for search
   String selectedLocation = 'Johor Bahru';
   DateTime? selectedDate;
   List<Sitter> availableSitters = [];
@@ -29,7 +25,6 @@ class _FindSitterTabState extends State<FindSitterTab> {
   void initState() {
     super.initState();
     _locationController.text = selectedLocation;
-    // Load all sitters on initial build
     _fetchAndFilterSitters();
   }
 
@@ -39,35 +34,26 @@ class _FindSitterTabState extends State<FindSitterTab> {
     super.dispose();
   }
 
-  // --- CORE FILTERING LOGIC ---
   Future<void> _fetchAndFilterSitters() async {
     setState(() {
       isLoading = true;
     });
 
-    // 1. Fetch all sitters (Simulated)
+    // 1. Use the local mock data (No external dependency)
     List<Sitter> allSitters = mockSitters;
 
-    // 2. Filter by Location/City/State
+    // 2. Filter by Location
     List<Sitter> locationFilteredSitters = allSitters.where((sitter) {
       final search = selectedLocation.toLowerCase();
-
-      // If search is empty or default ('Johor Bahru'), skip location filter
       if (search.isEmpty || search == 'johor bahru') {
         return true;
       }
-
-      // Check if the sitter's location (address) contains the search term
       return sitter.location.toLowerCase().contains(search);
     }).toList();
 
-    // 3. Filter by Available Dates (Uses the new unavailableDates field)
+    // 3. Filter by Available Dates
     List<Sitter> finalFilteredList = locationFilteredSitters.where((sitter) {
-      // If NO date is selected, all sitters pass the date filter.
       if (selectedDate == null) return true;
-
-      // Check if the selected date (date-only) is in the sitter's unavailable list.
-      // We must compare the year, month, and day components only.
       return !sitter.unavailableDates.any((unavailableDate) {
         return unavailableDate.year == selectedDate!.year &&
             unavailableDate.month == selectedDate!.month &&
@@ -75,17 +61,16 @@ class _FindSitterTabState extends State<FindSitterTab> {
       });
     }).toList();
 
-    // Simulate network delay
     await Future.delayed(const Duration(milliseconds: 500));
 
-    // 4. Update UI
-    setState(() {
-      availableSitters = finalFilteredList;
-      isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        availableSitters = finalFilteredList;
+        isLoading = false;
+      });
+    }
   }
 
-  // --- DATE PICKER HANDLER ---
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -94,13 +79,10 @@ class _FindSitterTabState extends State<FindSitterTab> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked != null) {
-      // Keep only the date part (no time components) for accurate comparison
       final pickedDateOnly = DateTime(picked.year, picked.month, picked.day);
-
       setState(() {
         selectedDate = pickedDateOnly;
       });
-      // Automatically trigger search after a date is selected
       _fetchAndFilterSitters();
     }
   }
@@ -112,24 +94,18 @@ class _FindSitterTabState extends State<FindSitterTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Search Bar Row
           _SearchBarsRow(
             locationController: _locationController,
             selectedDate: selectedDate,
             onSearch: () {
-              // Update location state from controller before searching
               selectedLocation = _locationController.text;
               _fetchAndFilterSitters();
             },
             onDateTap: () => _selectDate(context),
           ),
           const SizedBox(height: 16),
-
-          // 2. Map View Placeholder
           const _MapViewPlaceholder(),
           const SizedBox(height: 24),
-
-          // 3. Available Sitters Header
           Text(
             'Available Sitters (${availableSitters.length})',
             style: Theme.of(
@@ -137,8 +113,6 @@ class _FindSitterTabState extends State<FindSitterTab> {
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-
-          // 4. List of Sitters
           isLoading
               ? const Center(child: CircularProgressIndicator())
               : availableSitters.isEmpty
@@ -152,7 +126,6 @@ class _FindSitterTabState extends State<FindSitterTab> {
                   ),
                 )
               : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: availableSitters.map((sitter) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12.0),
@@ -194,28 +167,74 @@ class _SearchBarsRow extends StatelessWidget {
 
     return Row(
       children: [
-        // Location Input (TextField)
         Expanded(
-          child: _SitterLocationInput(
-            controller: locationController,
-            onSubmitted: onSearch,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8.0),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: TextField(
+              controller: locationController,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => onSearch(),
+              decoration: InputDecoration(
+                prefixIcon: Icon(
+                  LucideIcons.mapPin,
+                  size: 20,
+                  color: Colors.grey.shade600,
+                ),
+                hintText: 'State/City',
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                isDense: true,
+              ),
+            ),
           ),
         ),
         const SizedBox(width: 8),
-
-        // Dates Input (InkWell to trigger date picker)
         Expanded(
-          child: _SitterDateInput(
-            text: dateText,
+          child: InkWell(
             onTap: onDateTap,
-            isActive: selectedDate != null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8.0),
+                border: Border.all(
+                  color: selectedDate != null
+                      ? Theme.of(context).primaryColor
+                      : Colors.grey.shade300,
+                  width: selectedDate != null ? 2 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    LucideIcons.calendar,
+                    size: 20,
+                    color: selectedDate != null
+                        ? Theme.of(context).primaryColor
+                        : Colors.grey.shade600,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    dateText,
+                    style: TextStyle(
+                      color: selectedDate != null
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey.shade800,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
         const SizedBox(width: 8),
-
-        // Search Button
         ElevatedButton(
-          onPressed: onSearch, // Calls the filter function
+          onPressed: onSearch,
           style: ElevatedButton.styleFrom(
             shape: const CircleBorder(),
             padding: const EdgeInsets.all(12),
@@ -224,100 +243,6 @@ class _SearchBarsRow extends StatelessWidget {
           child: const Icon(LucideIcons.search, color: Colors.white),
         ),
       ],
-    );
-  }
-}
-
-class _SitterLocationInput extends StatelessWidget {
-  final TextEditingController controller;
-  final VoidCallback onSubmitted;
-
-  const _SitterLocationInput({
-    required this.controller,
-    required this.onSubmitted,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8.0),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: TextField(
-        controller: controller,
-        textInputAction: TextInputAction.search,
-        onSubmitted: (_) => onSubmitted(),
-        decoration: InputDecoration(
-          prefixIcon: Icon(
-            LucideIcons.mapPin,
-            size: 20,
-            color: Colors.grey.shade600,
-          ),
-          hintText: 'State/City',
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-          isDense: true,
-        ),
-        style: TextStyle(
-          color: Colors.grey.shade800,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-}
-
-class _SitterDateInput extends StatelessWidget {
-  final String text;
-  final VoidCallback onTap;
-  final bool isActive;
-
-  const _SitterDateInput({
-    required this.text,
-    required this.onTap,
-    required this.isActive,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8.0),
-          border: Border.all(
-            color: isActive
-                ? Theme.of(context).primaryColor
-                : Colors.grey.shade300,
-            width: isActive ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              LucideIcons.calendar,
-              size: 20,
-              color: isActive
-                  ? Theme.of(context).primaryColor
-                  : Colors.grey.shade600,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              text,
-              style: TextStyle(
-                color: isActive
-                    ? Theme.of(context).primaryColor
-                    : Colors.grey.shade800,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -333,10 +258,7 @@ class _MapViewPlaceholder extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: Colors.grey.shade300,
-          style: BorderStyle.solid,
-        ),
+        border: Border.all(color: Colors.grey.shade300),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -349,10 +271,6 @@ class _MapViewPlaceholder extends StatelessWidget {
               color: Colors.grey.shade600,
               fontWeight: FontWeight.w600,
             ),
-          ),
-          Text(
-            'Will show sitter locations',
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
           ),
         ],
       ),
@@ -376,7 +294,7 @@ class SitterCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.1),
+              color: Colors.grey.withOpacity(0.1),
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 2),
@@ -386,7 +304,6 @@ class SitterCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sitter Image (40% width)
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(10),
@@ -397,10 +314,14 @@ class SitterCard extends StatelessWidget {
                 width: MediaQuery.of(context).size.width * 0.4 - 16,
                 height: 120,
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: MediaQuery.of(context).size.width * 0.4 - 16,
+                  height: 120,
+                  color: Colors.grey.shade200,
+                  child: const Icon(Icons.person, color: Colors.grey),
+                ),
               ),
             ),
-
-            // Sitter Details (60% width)
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -416,7 +337,6 @@ class SitterCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    // Rating
                     Row(
                       children: [
                         const Icon(
@@ -443,7 +363,6 @@ class SitterCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    // Services
                     Text(
                       sitter.services,
                       style: TextStyle(
@@ -454,25 +373,12 @@ class SitterCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
-                    // Price
-                    Text.rich(
-                      TextSpan(
-                        text: 'RM${sitter.price.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: '/night',
-                            style: TextStyle(
-                              fontWeight: FontWeight.normal,
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
+                    Text(
+                      'RM${sitter.price.toStringAsFixed(0)}/night',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Theme.of(context).primaryColor,
                       ),
                     ),
                   ],
@@ -485,3 +391,70 @@ class SitterCard extends StatelessWidget {
     );
   }
 }
+
+// -----------------------------------------------------------------------------
+// DATA MODELS & MOCK DATA (Added here to prevent crashes)
+// -----------------------------------------------------------------------------
+
+class Sitter {
+  final String id;
+  final String name;
+  final double rating;
+  final int reviewCount;
+  final String services;
+  final double price;
+  final String imageUrl;
+  final String location;
+  final List<DateTime> unavailableDates;
+
+  Sitter({
+    required this.id,
+    required this.name,
+    required this.rating,
+    required this.reviewCount,
+    required this.services,
+    required this.price,
+    required this.imageUrl,
+    required this.location,
+    required this.unavailableDates,
+  });
+}
+
+final List<Sitter> mockSitters = [
+  Sitter(
+    id: '1',
+    name: 'Sarah Jenkins',
+    rating: 4.9,
+    reviewCount: 124,
+    services: 'Boarding, House Sitting',
+    price: 45,
+    imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80',
+    location: 'Johor Bahru, Johor',
+    unavailableDates: [
+      DateTime.now().add(const Duration(days: 2)),
+      DateTime.now().add(const Duration(days: 3)),
+    ],
+  ),
+  Sitter(
+    id: '2',
+    name: 'Mike Ross',
+    rating: 4.7,
+    reviewCount: 89,
+    services: 'Dog Walking, Drop-in',
+    price: 30,
+    imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e',
+    location: 'Skudai, Johor',
+    unavailableDates: [],
+  ),
+  Sitter(
+    id: '3',
+    name: 'Jessica Pearson',
+    rating: 5.0,
+    reviewCount: 210,
+    services: 'Boarding, Grooming',
+    price: 60,
+    imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2',
+    location: 'Johor Bahru, Johor',
+    unavailableDates: [DateTime.now().add(const Duration(days: 5))],
+  ),
+];
