@@ -240,14 +240,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 return;
                               }
                               setState(() => _isLoading = true);
-                              // Capture references to avoid using BuildContext across async gaps
-                              final scaffold = ScaffoldMessenger.of(context);
+                              final scaffoldMessenger = ScaffoldMessenger.of(
+                                context,
+                              );
                               final navigator = Navigator.of(context);
                               try {
                                 await AuthService().login(email, password);
                                 if (!mounted) return;
-                                // Safe to use captured references now
-                                scaffold.showSnackBar(
+                                scaffoldMessenger.showSnackBar(
                                   const SnackBar(
                                     content: Text('Login successful'),
                                   ),
@@ -258,11 +258,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 );
                               } catch (e) {
-                                if (mounted) {
-                                  scaffold.showSnackBar(
-                                    SnackBar(content: Text(e.toString())),
-                                  );
-                                }
+                                if (!mounted) return;
+                                scaffoldMessenger.showSnackBar(
+                                  SnackBar(content: Text(e.toString())),
+                                );
                               } finally {
                                 if (mounted) setState(() => _isLoading = false);
                               }

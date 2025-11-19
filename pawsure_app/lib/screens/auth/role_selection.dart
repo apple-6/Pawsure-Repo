@@ -72,16 +72,16 @@ class RoleSelectionScreen extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-          child: Container(
+        child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
           constraints: const BoxConstraints(minHeight: 180),
           decoration: BoxDecoration(
-            color: const Color.fromRGBO(255, 255, 255, 0.95),
+            color: Colors.white.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: const Color.fromRGBO(0, 0, 0, 0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 spreadRadius: 0,
               ),

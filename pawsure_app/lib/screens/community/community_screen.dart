@@ -1,73 +1,86 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:pawsure_app/controllers/community_controller.dart';
+import 'find_sitter_tab.dart'; // Ensure this path is correct
+// import 'feed_tab.dart'; // You will create this for the Feed content
 
 class CommunityScreen extends StatelessWidget {
   const CommunityScreen({super.key});
 
+  // Dummy function for handling navigation when a sitter is clicked
+  void _handleSitterClick(BuildContext context, String sitterId) {
+    // In a real app, you would navigate to the Sitter Profile screen here.
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Navigating to Sitter Profile: $sitterId'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final CommunityController controller = Get.find<CommunityController>();
+    // Use DefaultTabController to manage the tabs
+    return DefaultTabController(
+      length: 2, // Number of main tabs: Feed and Find a Sitter
+      child: Scaffold(
+        // We are replacing the AppBar with a custom structure to include the Tabs
+        appBar: AppBar(
+          automaticallyImplyLeading: false, // Often used in tab screens
+          toolbarHeight: 0, // Hide the standard app bar height
+        ),
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pet Community'),
-        backgroundColor: Colors.purple[100],
-      ),
-      body: Obx(() {
-        final posts = controller.posts;
-        if (posts.isEmpty) {
-          return const Center(child: Text('No posts yet'));
-        }
-        return ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: posts.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final p = posts[index];
-            return Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(p['title'] ?? '',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Text(p['content'] ?? ''),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('${p['likes']} likes • ${p['comments']} comments',
-                            style: const TextStyle(color: Colors.grey)),
-                        IconButton(
-                          icon: const Icon(Icons.thumb_up_alt_outlined),
-                          onPressed: () =>
-                              controller.likePost(p['id'] as String),
-                        )
-                      ],
-                    )
-                  ],
-                ),
+        // Body contains the main title, tab bar, and tab views
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Title
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
+              child: Text(
+                'Community',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
-            );
-          },
-        );
-      }),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          // TODO: Replace with a create-post dialog and CommunityService.addPost
-          final payload = {
-            'userId': 'u1',
-            'title': 'New post',
-            'content': 'Hello from Pawsure (placeholder)'
-          };
-          await controller.addPost(payload);
-          Get.snackbar('Posted', 'Your post was added (placeholder)');
-        },
-        backgroundColor: Colors.purple,
-        child: const Icon(Icons.add),
+            ),
+
+            // Main Tabs (Feed / Find a Sitter)
+            TabBar(
+              indicatorSize: TabBarIndicatorSize.label,
+              indicatorWeight: 3.0,
+              labelColor: Colors.green, // Primary color for active tab
+              unselectedLabelColor: Colors.grey.shade600,
+              dividerColor: Colors.grey.shade300,
+              tabs: const [
+                Tab(text: 'Feed'),
+                Tab(text: 'Find a Sitter'),
+              ],
+            ),
+
+            // Separator line beneath the tabs
+            const Divider(height: 1, color: Color(0xFFE0E0E0)),
+
+            // Tab Content Area
+            Expanded(
+              child: TabBarView(
+                children: [
+                  // 1. Feed Tab Content (Placeholder)
+                  const Center(
+                    child: Text(
+                      'Feed Content (For You, Following, Nearby, Topics)',
+                    ),
+                  ),
+
+                  // 2. Find a Sitter Tab Content
+                  FindSitterTab(
+                    onSitterClick: (sitterId) =>
+                        _handleSitterClick(context, sitterId),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        // Your bottom navigation bar would go here (similar to BottomNav in your TS code)
+        // bottomNavigationBar: const BottomNav(userType: 'owner'),
       ),
     );
   }
