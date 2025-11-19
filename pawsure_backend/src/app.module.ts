@@ -33,7 +33,7 @@ import { AuthModule } from './auth/auth.module';
         type: 'postgres', // Database type
         url: configService.get<string>('DATABASE_URL'), // Get URL from .env
         autoLoadEntities: true, // Automatically load your table models (Entities)
-        synchronize: true, // DEV ONLY: Auto-create/update tables (Disable in production!)
+        synchronize: false, // DEV ONLY: Auto-create/update tables (Disable in production!)
         ssl: { // Required for Supabase/cloud connections
           rejectUnauthorized: false
         }
