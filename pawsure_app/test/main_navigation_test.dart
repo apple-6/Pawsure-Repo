@@ -43,8 +43,13 @@ class TestBindings implements Bindings {
 void main() {
   testWidgets('MainNavigation tab switching', (WidgetTester tester) async {
     // Increase the test window size to avoid layout overflow for large screens
-    tester.binding.window.physicalSizeTestValue = const Size(1280, 1024);
+    // Using the modern approach without deprecated APIs
+    const testSize = Size(1280, 1024);
+    tester.binding.window.physicalSizeTestValue = testSize;
     tester.binding.window.devicePixelRatioTestValue = 1.0;
+
+    addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+    addTearDown(tester.binding.window.clearDevicePixelRatioTestValue);
 
     await tester.pumpWidget(
       GetMaterialApp(
@@ -77,11 +82,5 @@ void main() {
     await tester.tap(find.byIcon(Icons.person));
     await tester.pumpAndSettle();
     expect(find.text('Profile'), findsWidgets);
-
-    // Restore window size
-    addTearDown(() {
-      tester.binding.window.clearPhysicalSizeTestValue();
-      tester.binding.window.clearDevicePixelRatioTestValue();
-    });
   });
 }
