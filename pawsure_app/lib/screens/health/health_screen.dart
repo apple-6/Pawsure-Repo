@@ -12,8 +12,11 @@ class HealthScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get the controller. Get.put() was already called in main_navigation.dart
-    final HealthController controller = Get.find<HealthController>();
+    // FIX: Safely find the controller, or create it if it's missing.
+    // This prevents "HealthController not found" crashes.
+    final HealthController controller = Get.isRegistered<HealthController>()
+        ? Get.find<HealthController>()
+        : Get.put(HealthController());
 
     return Scaffold(
       appBar: AppBar(
@@ -21,7 +24,7 @@ class HealthScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        // Wrap the title in Obx() to be reactive
+        // 1. Title reacts to selected pet
         title: Obx(() {
           if (controller.isLoadingPets.value) {
             return const SizedBox(
@@ -33,10 +36,11 @@ class HealthScreen extends StatelessWidget {
           if (controller.pets.isEmpty) {
             return const Text('No Pets Available');
           }
+          // Display name of selected pet, or default text
           return Text(controller.selectedPet.value?.name ?? 'Select Pet');
         }),
         actions: [
-          // Wrap PopupMenuButton in Obx() to react to pets list changes
+          // 2. Dropdown menu to switch pets
           Obx(() {
             if (!controller.isLoadingPets.value && controller.pets.isNotEmpty) {
               return PopupMenuButton<Pet>(
@@ -50,8 +54,10 @@ class HealthScreen extends StatelessWidget {
                         value: pet,
                         child: Row(
                           children: [
+                            // Show a checkmark next to the currently active pet
                             if (controller.selectedPet.value?.id == pet.id)
-                              const Icon(Icons.check, size: 20),
+                              const Icon(Icons.check,
+                                  size: 20, color: Colors.green),
                             const SizedBox(width: 8),
                             Text(pet.name),
                           ],
@@ -63,16 +69,19 @@ class HealthScreen extends StatelessWidget {
             }
             return const SizedBox.shrink();
           }),
+
+          // Share Button (Placeholder)
           TextButton.icon(
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Share with Vet feature coming soon!'),
+                  duration: Duration(seconds: 1),
                 ),
               );
             },
             icon: const Icon(Icons.share_outlined, size: 20),
-            label: const Text('Share with Vet'),
+            label: const Text('Share'),
             style: TextButton.styleFrom(foregroundColor: Colors.black),
           ),
         ],
@@ -81,6 +90,7 @@ class HealthScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
+          // 3. Tab Bar Section
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Container(
@@ -89,11 +99,17 @@ class HealthScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(24),
               ),
               child: TabBar(
-                controller:
-                    controller.tabController, // Use controller's TabController
+                controller: controller.tabController, // Connected to Controller
                 indicator: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    )
+                  ],
                 ),
                 labelColor: Colors.black,
                 unselectedLabelColor: Colors.grey,
@@ -106,21 +122,34 @@ class HealthScreen extends StatelessWidget {
               ),
             ),
           ),
+
+          // 4. Tab Views
           Expanded(
             child: TabBarView(
-              controller:
-                  controller.tabController, // Use controller's TabController
+              controller: controller.tabController,
               children: [
+                // Assuming you have these widgets created in /tabs/
                 ProfileTab(),
-                // RecordsTab no longer needs petId passed to it!
-                // It will find the controller itself.
+
+                // Wrap RecordsTab in Obx to handle null checks
                 Obx(() {
                   if (controller.selectedPet.value == null) {
-                    return const Center(child: Text('Please select a pet.'));
+                    return const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.pets, size: 48, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text('Please add or select a pet first.'),
+                        ],
+                      ),
+                    );
                   }
                   return const RecordsTab();
                 }),
+
                 CalendarTab(),
+
                 AIScanTab(),
               ],
             ),
