@@ -1,23 +1,25 @@
-import { ActivityLog } from 'src/activity-log/activity-log.entity';
-import { Booking } from 'src/booking/booking.entity';
-import { HealthRecord } from 'src/health-record/health-record.entity';
-import { User } from 'src/user/user.entity';
+import { User } from '../user/user.entity';
+import { ActivityLog } from '../activity-log/activity-log.entity';
+import { HealthRecord } from '../health-record/health-record.entity';
+import { Booking } from '../booking/booking.entity';
 export declare class Pet {
     id: number;
     name: string;
     species: string;
     breed: string;
-    dob: string;
+    dob: Date;
     weight: number;
     allergies: string;
     vaccination_dates: string[];
-    last_vet_visit: string;
+    last_vet_visit: Date;
     mood_rating: number;
     streak: number;
-    created_at: Date;
-    updated_at: Date;
+    photoUrl: string;
+    ownerId: number;
     owner: User;
-    bookings: Booking[];
     activityLogs: ActivityLog[];
     healthRecords: HealthRecord[];
+    bookings: Booking[];
+    created_at: Date;
+    updated_at: Date;
 }

@@ -22,17 +22,20 @@ class ActivityScreen extends StatelessWidget {
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: activities.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final a = activities[index];
             return Card(
               child: ListTile(
-                leading:
-                    const Icon(Icons.directions_walk, color: Colors.orange),
+                leading: const Icon(
+                  Icons.directions_walk,
+                  color: Colors.orange,
+                ),
                 title: Text(a['title'] ?? 'Activity'),
                 subtitle: Text('Duration: ${a['durationMinutes']} min'),
-                trailing:
-                    Text(a['activityDate']?.toString().split('T').first ?? ''),
+                trailing: Text(
+                  a['activityDate']?.toString().split('T').first ?? '',
+                ),
               ),
             );
           },

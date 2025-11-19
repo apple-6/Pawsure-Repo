@@ -26,9 +26,12 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
         });
         this.configService = configService;
         this.userService = userService;
+        console.log('JWT Secret in strategy:', configService.get('JWT_SECRET'));
     }
     async validate(payload) {
+        console.log('JWT Payload:', payload);
         const user = await this.userService.findById(payload.sub);
+        console.log('User found:', user ? 'Yes' : 'No');
         if (!user) {
             throw new common_1.UnauthorizedException();
         }

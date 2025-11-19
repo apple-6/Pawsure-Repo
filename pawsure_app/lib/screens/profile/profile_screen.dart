@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pawsure_app/screens/profile/my_pets_screen.dart';
+import 'package:pawsure_app/controllers/profile_controller.dart';
 
 class ProfileScreen extends StatelessWidget {
-  final String userName;
-  final String userRole;
+  final String? userName;
+  final String? userRole;
 
-  const ProfileScreen({
-    super.key,
-    required this.userName,
-    required this.userRole,
-  });
+  const ProfileScreen({super.key, this.userName, this.userRole});
 
   @override
   Widget build(BuildContext context) {
+    final ProfileController profileController = Get.find<ProfileController>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
@@ -34,31 +34,54 @@ class ProfileScreen extends StatelessWidget {
             // Profile Header
             Row(
               children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.green,
-                  child: Text(
-                    userName.isNotEmpty ? userName[0].toUpperCase() : "B",
-                    style: TextStyle(fontSize: 30, color: Colors.white),
-                  ),
-                ),
+                Obx(() {
+                  final name =
+                      userName ??
+                      ('${profileController.user['firstName'] ?? ''} ${profileController.user['lastName'] ?? ''}')
+                          .trim();
+                  final initial = (name.isNotEmpty
+                      ? name[0].toUpperCase()
+                      : 'B');
+                  return CircleAvatar(
+                    radius: 40,
+                    backgroundColor: Colors.green,
+                    child: Text(
+                      initial,
+                      style: const TextStyle(fontSize: 30, color: Colors.white),
+                    ),
+                  );
+                }),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        userName,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      Obx(() {
+                        final name =
+                            userName ??
+                            ('${profileController.user['firstName'] ?? ''} ${profileController.user['lastName'] ?? ''}')
+                                .trim();
+                        return Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        );
+                      }),
                       const SizedBox(height: 4),
-                      Text(
-                        userRole, // e.g., "Role: Pet Owner"
-                        style: TextStyle(fontSize: 14, color: Colors.grey),
-                      ),
+                      Obx(() {
+                        final role =
+                            userRole ??
+                            (profileController.user['role'] ?? 'Pet Owner');
+                        return Text(
+                          role,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                        );
+                      }),
                     ],
                   ),
                 ),

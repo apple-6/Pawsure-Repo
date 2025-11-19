@@ -9,8 +9,8 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Inject the logic controller
-    final HomeController controller = Get.put(HomeController());
+    // Retrieve the controller registered in InitialBindings
+    final HomeController controller = Get.find<HomeController>();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -26,14 +26,21 @@ class HomeScreen extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Hello, Sarah",
-                          style: TextStyle(
-                              fontSize: 24, fontWeight: FontWeight.bold)),
+                      const Text(
+                        "Hello, Sarah",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       InkWell(
                         onTap: controller.switchPet,
-                        child: Obx(() => Text(
+                        child: Obx(
+                          () => Text(
                             "Switch: ${controller.currentPet['name']} ▼",
-                            style: const TextStyle(color: Colors.grey))),
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -42,14 +49,16 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               // Status Card (Reactive)
-              Obx(() => StatusCard(
-                    petName: controller.currentPet['name'],
-                    petType: controller.currentPet['type'],
-                    currentMood: controller.currentMood.value,
-                    streak: controller.streak.value,
-                    progress: controller.dailyProgress,
-                    goals: controller.dailyGoals,
-                  )),
+              Obx(
+                () => StatusCard(
+                  petName: controller.currentPet['name'],
+                  petType: controller.currentPet['type'],
+                  currentMood: controller.currentMood.value,
+                  streak: controller.streak.value,
+                  progress: controller.dailyProgress,
+                  goals: controller.dailyGoals,
+                ),
+              ),
             ],
           ),
         ),

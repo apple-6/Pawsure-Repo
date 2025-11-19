@@ -22,8 +22,64 @@ let PetService = class PetService {
     constructor(petRepository) {
         this.petRepository = petRepository;
     }
-    async findAll() {
-        return this.petRepository.find();
+    async create(createPetDto) {
+        const pet = this.petRepository.create(createPetDto);
+        return await this.petRepository.save(pet);
+    }
+    async findAll(ownerId) {
+        if (ownerId) {
+            return await this.petRepository.find({
+                where: { ownerId },
+                relations: ['owner'],
+                order: { created_at: 'DESC' },
+            });
+        }
+        return await this.petRepository.find({
+            relations: ['owner'],
+            order: { created_at: 'DESC' },
+        });
+    }
+    async findOne(id) {
+        const pet = await this.petRepository.findOne({
+            where: { id },
+            relations: ['owner', 'activityLogs', 'healthRecords'],
+        });
+        if (!pet) {
+            throw new common_1.NotFoundException(`Pet with ID ${id} not found`);
+        }
+        return pet;
+    }
+    async findByOwner(ownerId) {
+        return await this.petRepository.find({
+            where: { ownerId },
+            relations: ['owner'],
+            order: { created_at: 'DESC' },
+        });
+    }
+    async update(id, updatePetDto, userId) {
+        const pet = await this.findOne(id);
+        if (pet.ownerId !== userId) {
+            throw new common_1.ForbiddenException('You can only update your own pets');
+        }
+        Object.assign(pet, updatePetDto);
+        return await this.petRepository.save(pet);
+    }
+    async remove(id, userId) {
+        const pet = await this.findOne(id);
+        if (pet.ownerId !== userId) {
+            throw new common_1.ForbiddenException('You can only delete your own pets');
+        }
+        await this.petRepository.remove(pet);
+    }
+    async updateStreak(id, streak) {
+        const pet = await this.findOne(id);
+        pet.streak = streak;
+        return await this.petRepository.save(pet);
+    }
+    async updateMoodRating(id, moodRating) {
+        const pet = await this.findOne(id);
+        pet.mood_rating = moodRating;
+        return await this.petRepository.save(pet);
     }
 };
 exports.PetService = PetService;
