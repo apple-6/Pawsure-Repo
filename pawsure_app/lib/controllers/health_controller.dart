@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-// Keep your model imports.
-// Ensure your Pet model 'id' is a String, not an int!
 import 'package:pawsure_app/models/health_record_model.dart';
 import 'package:pawsure_app/models/pet_model.dart';
+import 'package:pawsure_app/services/api_service.dart';
 
 class HealthController extends GetxController
     with GetSingleTickerProviderStateMixin {
-  // 1. Replace ApiService with direct Supabase Client
-  final _supabase = Supabase.instance.client;
+  final ApiService _apiService = Get.find<ApiService>();
 
   // --- STATE VARIABLES ---
 
@@ -32,14 +29,13 @@ class HealthController extends GetxController
   @override
   void onInit() {
     super.onInit();
-    // Initialize TabController (4 tabs: Overview, Vaccine, Medical, etc.)
     tabController = TabController(length: 4, vsync: this);
-
     _fetchPets();
 
-    // Worker: Listens to 'selectedPet' changes
+    // Worker: Automatically fetch records when pet changes
     ever(selectedPet, (Pet? pet) {
       if (pet != null) {
+        debugPrint('🐕 Selected pet: ${pet.name}, ID: ${pet.id}');
         _fetchHealthRecords(pet.id);
       } else {
         healthRecords.clear();
@@ -47,7 +43,7 @@ class HealthController extends GetxController
       }
     });
 
-    // Worker: Re-runs filter when data or filter type changes
+    // Worker: Automatically filter records when data or filter changes
     everAll([healthRecords, selectedFilter], (_) {
       _updateFilteredRecords();
     });
@@ -61,56 +57,60 @@ class HealthController extends GetxController
 
   // --- BUSINESS LOGIC ---
 
-  // 2. Fetch Pets directly from Supabase
+  /// Fetch pets from backend API
   Future<void> _fetchPets() async {
     try {
       isLoadingPets.value = true;
-      final userId = _supabase.auth.currentUser?.id;
+      debugPrint('🔍 Fetching pets from API...');
 
-      if (userId == null) return;
-
-      // Fetch from 'pets' table
-      final response =
-          await _supabase.from('pets').select().eq('owner_id', userId);
-
-      final List<dynamic> data = response;
-
-      // Convert JSON to Pet Models
-      final fetchedPets = data.map((json) => Pet.fromJson(json)).toList();
+      final fetchedPets = await _apiService.getPets();
+      debugPrint('📦 Fetched ${fetchedPets.length} pets');
 
       if (fetchedPets.isNotEmpty) {
         pets.assignAll(fetchedPets);
-        // Select the first pet automatically
         selectedPet.value = fetchedPets.first;
+        debugPrint('✅ Selected first pet: ${fetchedPets.first.name}');
+      } else {
+        debugPrint('⚠️ No pets found');
       }
-    } catch (e) {
-      debugPrint('Error loading pets: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error loading pets: $e');
+      debugPrint('Stack trace: $stackTrace');
+      Get.snackbar(
+        'Error',
+        'Failed to load pets: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     } finally {
       isLoadingPets.value = false;
     }
   }
 
-  // 3. Fetch Records directly from Supabase
-  // NOTE: Changed petId type from int to String (Supabase UUIDs are strings)
-  Future<void> _fetchHealthRecords(String petId) async {
+  /// Fetch health records from backend API
+  Future<void> _fetchHealthRecords(int petId) async {
     try {
       isLoadingRecords.value = true;
+      debugPrint('🔍 Fetching health records for pet ID: $petId');
 
-      // Fetch from 'health_records' table
-      // Note: If you were using a 'vaccines' table before, ensure you have
-      // migrated to a 'health_records' table, or change the table name below.
-      final response = await _supabase
-          .from('health_records')
-          .select()
-          .eq('pet_id', petId)
-          .order('date', ascending: false); // Assuming 'date' column exists
+      final records = await _apiService.getHealthRecords(petId);
+      debugPrint('📦 Fetched ${records.length} health records');
 
-      final List<dynamic> data = response;
-
-      final records = data.map((json) => HealthRecord.fromJson(json)).toList();
       healthRecords.assignAll(records);
-    } catch (e) {
-      debugPrint('Error fetching health records: $e');
+      debugPrint('✅ Assigned ${records.length} records to state');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error fetching health records: $e');
+      debugPrint('Stack trace: $stackTrace');
+
+      Get.snackbar(
+        'Error',
+        'Failed to load health records',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+
       healthRecords.clear();
       filteredRecords.clear();
     } finally {
@@ -118,7 +118,7 @@ class HealthController extends GetxController
     }
   }
 
-  // Filter Logic (Stays the same)
+  /// Filter records based on selected type
   void _updateFilteredRecords() {
     if (selectedFilter.value == 'All') {
       filteredRecords.assignAll(healthRecords);
@@ -129,35 +129,40 @@ class HealthController extends GetxController
             .toList(),
       );
     }
+    debugPrint(
+      '🔧 Filtered to ${filteredRecords.length} records (filter: ${selectedFilter.value})',
+    );
   }
 
-  // --- PUBLIC METHODS (for UI) ---
+  // --- PUBLIC METHODS (for UI to call) ---
 
+  /// Called by the pet dropdown in health_screen.dart
   void selectPet(Pet? pet) {
     if (pet != null) {
       selectedPet.value = pet;
     }
   }
 
+  /// Called by the filter chips in records_tab.dart
   void setFilter(String filter) {
     selectedFilter.value = filter;
   }
 
-  // 4. Add Record directly to Supabase
+  /// Called by AddHealthRecordScreen
   Future<void> addNewHealthRecord(
     Map<String, dynamic> payload,
-    String petId, // Changed to String
+    int petId,
   ) async {
     try {
-      // Ensure payload has the pet_id
-      payload['pet_id'] = petId;
+      debugPrint('➕ Adding health record for pet ID: $petId');
 
-      await _supabase.from('health_records').insert(payload);
+      await _apiService.addHealthRecord(petId, payload);
+      debugPrint('✅ Health record added successfully');
 
-      // Refresh the list
+      // Refresh the list after adding
       await _fetchHealthRecords(petId);
 
-      Get.back();
+      Get.back(); // Go back to the previous screen
       Get.snackbar(
         'Success',
         'Health record added successfully!',
@@ -165,14 +170,29 @@ class HealthController extends GetxController
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error adding health record: $e');
+      debugPrint('Stack trace: $stackTrace');
+
       Get.snackbar(
         'Error',
-        'Failed to add record: $e',
+        'Failed to add record: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
+    }
+  }
+
+  /// Refresh pets list (can be called from UI if needed)
+  Future<void> refreshPets() async {
+    await _fetchPets();
+  }
+
+  /// Refresh health records for current pet (can be called from UI if needed)
+  Future<void> refreshHealthRecords() async {
+    if (selectedPet.value != null) {
+      await _fetchHealthRecords(selectedPet.value!.id);
     }
   }
 }

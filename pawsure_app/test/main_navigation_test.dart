@@ -21,7 +21,41 @@ class _MockApiService extends ApiService {
       <HealthRecord>[];
 
   @override
-  Future<void> addHealthRecord(int petId, Map<String, dynamic> payload) async {}
+  Future<HealthRecord> addHealthRecord(
+    int petId,
+    Map<String, dynamic> payload,
+  ) async {
+    // Return a mock HealthRecord
+    return HealthRecord(
+      id: 1,
+      recordType: 'Vaccination',
+      recordDate: '2024-01-01',
+      description: 'Test record',
+      clinic: null,
+      nextDueDate: null,
+    );
+  }
+
+  // Also add the new methods if they're being tested
+  @override
+  Future<HealthRecord> updateHealthRecord(
+    int recordId,
+    Map<String, dynamic> payload,
+  ) async {
+    return HealthRecord(
+      id: recordId,
+      recordType: 'Vaccination',
+      recordDate: '2024-01-01',
+      description: 'Updated test record',
+      clinic: null,
+      nextDueDate: null,
+    );
+  }
+
+  @override
+  Future<void> deleteHealthRecord(int recordId) async {
+    // Mock delete - does nothing
+  }
 }
 
 class TestBindings implements Bindings {
