@@ -55,7 +55,7 @@ let AuthService = class AuthService {
         this.jwtService = jwtService;
     }
     async register(registerUserDto) {
-        const { email, phone_number, password, name } = registerUserDto;
+        const { email, phone_number, password, name, role } = registerUserDto;
         if (email) {
             const existingUser = await this.userService.findByEmail(email);
             if (existingUser) {
@@ -75,6 +75,7 @@ let AuthService = class AuthService {
             email: email,
             phone_number: phone_number,
             passwordHash: hashedPassword,
+            role: role || 'owner',
         });
         const { passwordHash, ...result } = newUser;
         return result;

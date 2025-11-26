@@ -29,22 +29,25 @@ let SitterService = class SitterService {
         this.userRepository = userRepository;
     }
     async create(createSitterDto, userId) {
-        const user = await this.userService.findById(userId);
+        const user = await this.userRepository.findOne({ where: { id: userId } });
         if (!user) {
             throw new common_1.NotFoundException('User not found');
         }
-        const existingSitter = await this.sitterRepository.findOne({
-            where: { userId },
-        });
-        if (existingSitter) {
+        if (user.role === 'sitter') {
             throw new common_1.ConflictException('User already has a sitter profile');
         }
-        const sitter = this.sitterRepository.create({
-            ...createSitterDto,
-            userId,
+        Object.assign(user, createSitterDto);
+        user.role = 'sitter';
+        await this.userRepository.save(user);
+        user.role = 'sitter';
+        await this.userRepository.save(user);
+        const savedSitter = await this.sitterRepository.findOne({
+            where: { userId },
+            relations: ['user']
         });
-        const savedSitter = await this.sitterRepository.save(sitter);
-        await this.userService.updateUserRole(userId, 'sitter');
+        if (!savedSitter) {
+            throw new common_1.NotFoundException('Failed to retrieve Sitter profile after creation');
+        }
         return savedSitter;
     }
     async findAll(minRating) {
@@ -79,14 +82,6 @@ let SitterService = class SitterService {
         const sitter = await this.findOne(id);
         if (sitter.userId !== userId) {
             throw new common_1.ForbiddenException('You can only update your own sitter profile');
-        }
-        if (updateSitterDto.phoneNumber) {
-            const user = await this.userRepository.findOne({ where: { id: userId } });
-            if (user) {
-                user.phone_number = updateSitterDto.phoneNumber;
-                await this.userRepository.save(user);
-            }
-            delete updateSitterDto.phoneNumber;
         }
         Object.assign(sitter, updateSitterDto);
         await this.sitterRepository.save(sitter);

@@ -14,13 +14,14 @@ const sitter_entity_1 = require("./sitter.entity");
 const sitter_controller_1 = require("./sitter.controller");
 const user_module_1 = require("../user/user.module");
 const auth_module_1 = require("../auth/auth.module");
+const user_entity_1 = require("../user/user.entity");
 let SitterModule = class SitterModule {
 };
 exports.SitterModule = SitterModule;
 exports.SitterModule = SitterModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([sitter_entity_1.Sitter]),
+            typeorm_1.TypeOrmModule.forFeature([sitter_entity_1.Sitter, user_entity_1.User]),
             user_module_1.UserModule,
             auth_module_1.AuthModule,
         ],
