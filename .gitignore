@@ -71,3 +71,8 @@ pawsure-app-*.json
 .env.production
 # Ignore built artifacts
 pawsure_backend/dist/
+
+# Flutter
+**/linux/flutter/**
+**/macos/Flutter/**
+**/windows/flutter/**
