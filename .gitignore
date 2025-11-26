@@ -72,10 +72,7 @@ pawsure-app-*.json
 # Ignore built artifacts
 pawsure_backend/dist/
 
-<<<<<<< HEAD
 # Flutter
 **/linux/flutter/**
 **/macos/Flutter/**
 **/windows/flutter/**
-=======
->>>>>>> fada9a5dc1a1ec11eeb8ea71d7e0e4f5df528583
