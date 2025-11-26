@@ -18,7 +18,7 @@ export class AuthService {
 
   // --- REGISTER FUNCTION ---
   async register(registerUserDto: RegisterUserDto) {
-    const { email, phone_number, password, name } = registerUserDto;
+    const { email, phone_number, password, name, role } = registerUserDto;
 
     // --- CHANGED: Conflict Checking ---
     // 1. Check if email is already in use (if provided)
@@ -49,6 +49,7 @@ export class AuthService {
       email: email,
       phone_number: phone_number, // <-- ADDED
       passwordHash: hashedPassword,
+      role: role || 'owner', // Default to 'owner' if not provided
     });
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

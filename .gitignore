@@ -120,3 +120,7 @@ my_conflicts.txt
 output.txt
 
 
+# Flutter
+**/linux/flutter/**
+**/macos/Flutter/**
+**/windows/flutter/**
