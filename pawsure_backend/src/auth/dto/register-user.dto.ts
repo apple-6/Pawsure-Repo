@@ -33,4 +33,9 @@ export class RegisterUserDto {
   @IsString()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   password: string;
+
+  // --- ROLE FIELD ---
+  @IsString()
+  @IsOptional()
+  role?: string; // Optional, defaults to 'user' in entity
 }
