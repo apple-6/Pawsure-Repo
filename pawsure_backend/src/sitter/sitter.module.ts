@@ -5,10 +5,11 @@ import { Sitter } from './sitter.entity';
 import { SitterController } from './sitter.controller';
 import { UserModule } from 'src/user/user.module';
 import { AuthModule } from 'src/auth/auth.module';
+import { User } from 'src/user/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Sitter]),
+    TypeOrmModule.forFeature([Sitter, User]),
     UserModule,
     AuthModule,
   ],

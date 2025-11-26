@@ -19,8 +19,18 @@ export class User {
   @Column() // 'STRING name'
   name: string;
 
-  @Column({ unique: true }) // 'STRING email'
+  @Column({
+    unique: true,
+    nullable: true,
+  }) // 'STRING email'
   email: string;
+
+  @Column({
+    // <-- ADD THIS WHOLE BLOCK
+    unique: true,
+    nullable: true,
+  })
+  phone_number: string;
 
   @Column() // 'STRING password'
   passwordHash: string; // Renamed from 'password' for security
