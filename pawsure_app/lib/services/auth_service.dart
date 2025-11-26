@@ -11,28 +11,47 @@ class AuthService {
   // - Real devices: replace with your machine's LAN IP (e.g. http://192.168.1.100:3000)
   static String get _baseUrl {
     try {
-      if (Platform.isAndroid) return 'http://10.202.109.35:3000';
+      if (Platform.isAndroid) return 'http://192.168.1.8:3000';
       if (Platform.isIOS) return 'http://localhost:3000';
     } catch (_) {}
     // return 'http://localhost:3000';
     // return 'http://127.0.0.1:3000';
-    return 'http://10.202.109.35:3000';
+    // return 'http://10.202.109.35:3000';
+    return 'http://192.168.1.8:3000';
   }
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  Future<String> login(String email, String password) async {
+  /// Login with email or phone number
+  /// Automatically adds +60 prefix for phone numbers
+  Future<String> login(
+    String emailOrPhone,
+    String password, {
+    bool isPhone = false,
+  }) async {
     final uri = Uri.parse('$_baseUrl/auth/login');
     // Debug: print the request target
     // ignore: avoid_print
     print('AuthService.login -> POST $uri');
     http.Response resp;
     try {
+      // Add +60 prefix for phone numbers if not already present
+      String identifier = emailOrPhone;
+      if (isPhone && !emailOrPhone.startsWith('+')) {
+        identifier = '+60$emailOrPhone';
+      }
+      
+      // Backend accepts 'identifier' which can be either email or phone
+      final body = {
+        'identifier': identifier,
+        'password': password,
+      };
+
       resp = await http
           .post(
             uri,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'email': email, 'password': password}),
+            body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 10));
     } on SocketException catch (e) {
@@ -49,6 +68,17 @@ class AuthService {
       final token = data['access_token'] as String?;
       if (token == null) throw Exception('access_token not found in response');
       await _storage.write(key: 'jwt', value: token);
+
+      // Fetch and store user profile
+      try {
+        final profile = await this.profile();
+        if (profile != null && profile.containsKey('role')) {
+          await _storage.write(key: 'user_role', value: profile['role']);
+        }
+      } catch (_) {
+        // Ignore profile fetch errors
+      }
+
       return token;
     } else {
       String message = 'Login failed: ${resp.statusCode}';
@@ -62,43 +92,70 @@ class AuthService {
 
   Future<void> logout() async {
     await _storage.delete(key: 'jwt');
+    await _storage.delete(key: 'user_role');
   }
 
   Future<String?> getToken() async {
     return _storage.read(key: 'jwt');
   }
 
+  /// Get user role
+  Future<String?> getUserRole() async {
+    return _storage.read(key: 'user_role');
+  }
+
   Future<Map<String, dynamic>?> profile() async {
     final token = await getToken();
     if (token == null) return null;
     final uri = Uri.parse('$_baseUrl/auth/me');
-    final resp = await http.get(
-      uri,
-      headers: {'Authorization': 'Bearer $token'},
-    );
-    if (resp.statusCode == 200) {
-      return jsonDecode(resp.body) as Map<String, dynamic>;
+    try {
+      final resp = await http
+          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {
+      // Ignore errors
     }
     return null;
   }
 
-  /// Register a new user. Expects body: { name, email, password }
+  /// Register a new user with optional phone number and role
+  /// Expects body: { name, email, password, phone_number?, role }
+  /// Automatically adds +60 prefix for phone numbers
   /// If backend returns access_token, it will be stored and returned.
-  Future<String?> register(String name, String email, String password) async {
+  Future<String?> register(
+    String name,
+    String email,
+    String password, {
+    String? phoneNumber,
+    String role = 'owner', // Default role is 'owner'
+  }) async {
     final uri = Uri.parse('$_baseUrl/auth/register');
     // ignore: avoid_print
     print('AuthService.register -> POST $uri');
     http.Response resp;
     try {
+      // Add +60 prefix for phone numbers if provided and not already present
+      String? formattedPhone = phoneNumber;
+      if (phoneNumber != null && phoneNumber.isNotEmpty && !phoneNumber.startsWith('+')) {
+        formattedPhone = '+60$phoneNumber';
+      }
+      
+      final body = {
+        'name': name,
+        'email': email,
+        'password': password,
+        'role': role,
+        if (formattedPhone != null && formattedPhone.isNotEmpty) 'phone_number': formattedPhone,
+      };
+
       resp = await http
           .post(
             uri,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'name': name,
-              'email': email,
-              'password': password,
-            }),
+            body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 10));
     } on SocketException catch (e) {

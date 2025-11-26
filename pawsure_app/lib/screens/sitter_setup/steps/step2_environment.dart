@@ -44,7 +44,7 @@ class _Step2EnvironmentState extends State<Step2Environment> {
             // --- House Type Dropdown ---
             DropdownButtonFormField<String>(
               decoration: const InputDecoration(labelText: 'House Type'),
-              value: _selectedHouseType,
+              initialValue: _selectedHouseType,
               items: _houseTypes.map((String type) {
                 return DropdownMenuItem<String>(
                   value: type,
