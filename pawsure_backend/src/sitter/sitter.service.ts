@@ -19,37 +19,43 @@ export class SitterService {
     private readonly sitterRepository: Repository<Sitter>,
     private readonly userService: UserService,
 
-    // 2. Inject the User Repository
     @InjectRepository(User)
     private userRepository: Repository<User>,
   ) {}
 
   async create(createSitterDto: CreateSitterDto, userId: number): Promise<Sitter> {
-    // Check if user exists
-    const user = await this.userService.findById(userId);
+    // 1. Fetch the existing User entity.
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
     // Check if user already has a sitter profile
-    const existingSitter = await this.sitterRepository.findOne({
-      where: { userId },
-    });
-
-    if (existingSitter) {
+    if (user.role === 'sitter') {
       throw new ConflictException('User already has a sitter profile');
     }
 
-    // Create sitter profile
-    const sitter = this.sitterRepository.create({
-      ...createSitterDto,
-      userId,
+    // 2. CORRECT LOGIC for Single Table Inheritance: Apply ALL DTO fields 
+    // (user fields like phoneNumber + sitter fields like bio, rates) directly to the User object.
+    Object.assign(user, createSitterDto);
+    user.role = 'sitter';
+    // Save the updated User record (which holds all Sitter data).
+    await this.userRepository.save(user);
+
+    // 3. Update the role and save the complete, single entity (record in the 'users' table).
+    user.role = 'sitter';
+    await this.userRepository.save(user);
+
+    // 4. Fetch the record using the SitterRepository to return the correct Sitter type.
+    const savedSitter = await this.sitterRepository.findOne({ 
+        where: { userId },
+        relations: ['user'] 
     });
 
-    const savedSitter = await this.sitterRepository.save(sitter);
-
-    // Update user role to 'sitter'
-    await this.userService.updateUserRole(userId, 'sitter');
+    if (!savedSitter) {
+        throw new NotFoundException('Failed to retrieve Sitter profile after creation');
+    }
 
     return savedSitter;
   }
@@ -95,40 +101,25 @@ export class SitterService {
     updateSitterDto: UpdateSitterDto,
     userId: number,
   ): Promise<Sitter> {
+    // We fetch the Sitter entity (which contains both user and sitter data)
     const sitter = await this.findOne(id);
 
-    // Check if the user owns this sitter profile
     if (sitter.userId !== userId) {
       throw new ForbiddenException('You can only update your own sitter profile');
     }
 
-    if (updateSitterDto.phoneNumber) {
-        // Find the user entity directly
-        const user = await this.userRepository.findOne({ where: { id: userId } });
-        
-        if (user) {
-            user.phone_number = updateSitterDto.phoneNumber;
-            // Save the updated user entity separately
-            await this.userRepository.save(user); 
-        }
-        
-        // CRITICAL: Remove the redundant phoneNumber field from the DTO
-        // so it doesn't get assigned to the Sitter entity
-        delete updateSitterDto.phoneNumber; 
-
-    }
-
+    // 5. CORRECT LOGIC for Single Table Inheritance: Apply ALL DTO properties directly to the Sitter entity.
     Object.assign(sitter, updateSitterDto);
+    
+    // We save the Sitter entity, updating the single shared record in the 'users' table.
     await this.sitterRepository.save(sitter);
 
-    // 3. Get a FRESH Sitter object to ensure the related 'user' data is up-to-date
-    // The previous findOne call might have stale user data, so we explicitly find it again
+    // Get a FRESH Sitter object to ensure all related data is up-to-date
     const freshSitter = await this.sitterRepository.findOne({
         where: { id },
         relations: ['user', 'reviews', 'bookings'],
     });
 
-    // Add this null check:
     if (!freshSitter) {
         throw new NotFoundException(`Sitter profile with ID ${id} not found after update.`);
     }
@@ -144,6 +135,7 @@ export class SitterService {
       throw new ForbiddenException('You can only delete your own sitter profile');
     }
 
+    // We rely on TypeORM's configuration (soft-delete behavior) when removing the entity.
     await this.sitterRepository.remove(sitter);
   }
 
