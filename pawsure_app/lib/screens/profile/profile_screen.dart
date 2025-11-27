@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/screens/profile/my_pets_screen.dart';
 import 'package:pawsure_app/controllers/profile_controller.dart';
+import 'package:pawsure_app/services/auth_service.dart';
+import 'package:pawsure_app/services/storage_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   final String? userName;
@@ -9,19 +11,84 @@ class ProfileScreen extends StatelessWidget {
 
   const ProfileScreen({super.key, this.userName, this.userRole});
 
+  // Logout function
+  Future<void> _handleLogout(BuildContext context) async {
+    // Show confirmation dialog
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true) {
+      try {
+        // Get services
+        final authService = Get.find<AuthService>();
+        final storageService = Get.find<StorageService>();
+
+        // Clear token and user data
+        await storageService.deleteToken();
+
+        // Clear all controllers
+        Get.deleteAll(force: true);
+
+        // Navigate to login screen and clear navigation stack
+        Get.offAllNamed('/login');
+
+        // Show success message
+        Get.snackbar(
+          'Success',
+          'You have been logged out',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green[800],
+        );
+      } catch (e) {
+        debugPrint('❌ Error during logout: $e');
+        Get.snackbar(
+          'Error',
+          'Failed to logout: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red[800],
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ProfileController profileController = Get.find<ProfileController>();
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false, // ← REMOVED BACK BUTTON
         title: const Text('Profile'),
         backgroundColor: Colors.teal[100],
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
-              // Navigate to edit profile or settings
+              Get.snackbar(
+                'Coming Soon',
+                'Edit profile feature will be available soon!',
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: Colors.blue.withOpacity(0.1),
+                colorText: Colors.blue[800],
+              );
             },
           ),
         ],
@@ -41,7 +108,7 @@ class ProfileScreen extends StatelessWidget {
                           .trim();
                   final initial = (name.isNotEmpty
                       ? name[0].toUpperCase()
-                      : 'B');
+                      : 'U');
                   return CircleAvatar(
                     radius: 40,
                     backgroundColor: Colors.green,
@@ -62,7 +129,7 @@ class ProfileScreen extends StatelessWidget {
                             ('${profileController.user['firstName'] ?? ''} ${profileController.user['lastName'] ?? ''}')
                                 .trim();
                         return Text(
-                          name,
+                          name.isNotEmpty ? name : 'User',
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -88,7 +155,13 @@ class ProfileScreen extends StatelessWidget {
                 IconButton(
                   icon: Icon(Icons.edit, color: Colors.teal[100]),
                   onPressed: () {
-                    // Navigate to edit profile screen
+                    Get.snackbar(
+                      'Coming Soon',
+                      'Edit profile feature will be available soon!',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.blue.withOpacity(0.1),
+                      colorText: Colors.blue[800],
+                    );
                   },
                 ),
               ],
@@ -101,7 +174,6 @@ class ProfileScreen extends StatelessWidget {
               title: 'My Pets',
               icon: Icons.pets,
               onTap: () {
-                // Navigate to My Pets screen
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (context) => const MyPetsScreen()),
                 );
@@ -112,7 +184,13 @@ class ProfileScreen extends StatelessWidget {
               title: 'My Favourite Sitters',
               icon: Icons.favorite_border,
               onTap: () {
-                // Navigate to My Favourite Sitters screen
+                Get.snackbar(
+                  'Coming Soon',
+                  'Favourite Sitters feature will be available soon!',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.blue.withOpacity(0.1),
+                  colorText: Colors.blue[800],
+                );
               },
             ),
             _buildMenuItem(
@@ -120,7 +198,13 @@ class ProfileScreen extends StatelessWidget {
               title: 'Payment Methods',
               icon: Icons.payment,
               onTap: () {
-                // Navigate to Payment Methods screen
+                Get.snackbar(
+                  'Coming Soon',
+                  'Payment Methods feature will be available soon!',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.blue.withOpacity(0.1),
+                  colorText: Colors.blue[800],
+                );
               },
             ),
             _buildMenuItem(
@@ -128,12 +212,18 @@ class ProfileScreen extends StatelessWidget {
               title: 'Settings',
               icon: Icons.settings,
               onTap: () {
-                // Navigate to Settings screen
+                Get.snackbar(
+                  'Coming Soon',
+                  'Settings feature will be available soon!',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.blue.withOpacity(0.1),
+                  colorText: Colors.blue[800],
+                );
               },
             ),
             const SizedBox(height: 24),
 
-            // Role Section (Become a Sitter)
+            // Role Section
             Padding(
               padding: const EdgeInsets.only(left: 16.0),
               child: Text(
@@ -147,7 +237,13 @@ class ProfileScreen extends StatelessWidget {
               title: 'Become a Sitter',
               icon: Icons.arrow_forward,
               onTap: () {
-                // Navigate to Become a Sitter screen
+                Get.snackbar(
+                  'Coming Soon',
+                  'Sitter registration will be available soon!',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.blue.withOpacity(0.1),
+                  colorText: Colors.blue[800],
+                );
               },
             ),
             const SizedBox(height: 24),
@@ -158,16 +254,20 @@ class ProfileScreen extends StatelessWidget {
               title: 'Help & Support',
               icon: Icons.help_outline,
               onTap: () {
-                // Navigate to Help & Support screen
+                Get.snackbar(
+                  'Coming Soon',
+                  'Help & Support feature will be available soon!',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.blue.withOpacity(0.1),
+                  colorText: Colors.blue[800],
+                );
               },
             ),
             _buildMenuItem(
               context,
               title: 'Log Out',
               icon: Icons.exit_to_app,
-              onTap: () {
-                // Log out action
-              },
+              onTap: () => _handleLogout(context), // ← FUNCTIONAL LOGOUT
               color: Colors.red,
             ),
           ],
@@ -176,7 +276,6 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // Helper method to build each menu item
   Widget _buildMenuItem(
     BuildContext context, {
     required String title,
