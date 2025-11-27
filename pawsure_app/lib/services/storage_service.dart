@@ -25,8 +25,12 @@ class FileStorageService implements StorageService {
         return Map<String, String>.from(json.decode(content));
       }
     } catch (e, st) {
-      developer.log('Error reading storage file: $e',
-          name: 'FileStorageService', error: e, stackTrace: st);
+      developer.log(
+        'Error reading storage file: $e',
+        name: 'FileStorageService',
+        error: e,
+        stackTrace: st,
+      );
     }
     return {};
   }
@@ -36,8 +40,12 @@ class FileStorageService implements StorageService {
       final file = await _getFile();
       await file.writeAsString(json.encode(data));
     } catch (e, st) {
-      developer.log('Error writing storage file: $e',
-          name: 'FileStorageService', error: e, stackTrace: st);
+      developer.log(
+        'Error writing storage file: $e',
+        name: 'FileStorageService',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 

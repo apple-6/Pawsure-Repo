@@ -118,6 +118,7 @@ pawsure_backend/dist/
 /pawsure_backend/node_modules
 my_conflicts.txt
 output.txt
+tree.txt
 
 
 # Flutter

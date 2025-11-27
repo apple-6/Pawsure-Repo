@@ -17,7 +17,7 @@ class AuthService {
     // return 'http://localhost:3000';
     // return 'http://127.0.0.1:3000';
     // return 'http://10.202.109.35:3000';
-    return 'http://192.168.1.8:3000';
+    return 'http://localhost:3000';
   }
 
   // Use file-based storage implementation
@@ -41,12 +41,9 @@ class AuthService {
       if (isPhone && !emailOrPhone.startsWith('+')) {
         identifier = '+60$emailOrPhone';
       }
-      
+
       // Backend accepts 'identifier' which can be either email or phone
-      final body = {
-        'identifier': identifier,
-        'password': password,
-      };
+      final body = {'identifier': identifier, 'password': password};
 
       resp = await http
           .post(
@@ -140,16 +137,19 @@ class AuthService {
     try {
       // Add +60 prefix for phone numbers if provided and not already present
       String? formattedPhone = phoneNumber;
-      if (phoneNumber != null && phoneNumber.isNotEmpty && !phoneNumber.startsWith('+')) {
+      if (phoneNumber != null &&
+          phoneNumber.isNotEmpty &&
+          !phoneNumber.startsWith('+')) {
         formattedPhone = '+60$phoneNumber';
       }
-      
+
       final body = {
         'name': name,
         'email': email,
         'password': password,
         'role': role,
-        if (formattedPhone != null && formattedPhone.isNotEmpty) 'phone_number': formattedPhone,
+        if (formattedPhone != null && formattedPhone.isNotEmpty)
+          'phone_number': formattedPhone,
       };
 
       resp = await http
