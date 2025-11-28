@@ -8,6 +8,11 @@ abstract class StorageService {
   Future<void> write({required String key, required String value});
   Future<String?> read({required String key});
   Future<void> delete({required String key});
+
+  // ✅ ADD THIS HELPER METHOD
+  Future<void> deleteToken() async {
+    await delete(key: 'auth_token');
+  }
 }
 
 /// File-based storage implementation for desktop and mobile platforms
@@ -67,5 +72,11 @@ class FileStorageService implements StorageService {
     final map = await _readMap();
     map.remove(key);
     await _writeMap(map);
+  }
+
+  // ✅ IMPLEMENT THE HELPER METHOD
+  @override
+  Future<void> deleteToken() async {
+    await delete(key: 'auth_token');
   }
 }

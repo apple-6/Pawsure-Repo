@@ -366,20 +366,13 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final input = _emailOrPhoneController.text.trim();
       final password = _passwordController.text;
-
-      // Determine if input is email or phone
       final isEmail = _isEmail(input);
 
-      // Call appropriate login method
-      await _authService.login(
-        input, // Can be email or phone
-        password,
-        isPhone: !isEmail, // Flag to indicate if it's a phone number
-      );
+      await _authService.login(input, password, isPhone: !isEmail);
 
       if (!mounted) return;
 
-      // Get user profile to check role
+      // Get user profile
       final profile = await _authService.profile();
 
       if (profile != null) {
@@ -392,23 +385,12 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
 
-        // Navigate based on role
-        if (userRole == 'sitter') {
-          // TODO: Navigate to Sitter Dashboard when created
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const MainNavigation()),
-          );
-        } else {
-          // Navigate to Pet Owner Dashboard
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const MainNavigation()),
-          );
-        }
+        // ✅ FIX: Use Get.offAllNamed to ensure proper navigation
+        Get.offAllNamed(
+          '/home',
+        ); // This goes to MainNavigation which defaults to Home tab
       } else {
-        // Default navigation if profile fetch fails
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MainNavigation()),
-        );
+        Get.offAllNamed('/home');
       }
     } catch (e) {
       setState(() => _isLoading = false);

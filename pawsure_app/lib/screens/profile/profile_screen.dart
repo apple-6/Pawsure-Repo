@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/screens/profile/my_pets_screen.dart';
 import 'package:pawsure_app/controllers/profile_controller.dart';
-import 'package:pawsure_app/services/auth_service.dart';
 import 'package:pawsure_app/services/storage_service.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -35,26 +34,30 @@ class ProfileScreen extends StatelessWidget {
 
     if (shouldLogout == true) {
       try {
-        // Get services
-        final authService = Get.find<AuthService>();
         final storageService = Get.find<StorageService>();
-
-        // Clear token and user data
         await storageService.deleteToken();
 
-        // Clear all controllers
-        Get.deleteAll(force: true);
+        // ✅ FIX: Reset all controller states before logout
+        if (Get.isRegistered<HealthController>()) {
+          Get.find<HealthController>().resetState();
+        }
+        if (Get.isRegistered<HomeController>()) {
+          Get.find<HomeController>().resetState();
+        }
+        if (Get.isRegistered<ProfileController>()) {
+          Get.find<ProfileController>().resetState();
+        }
 
-        // Navigate to login screen and clear navigation stack
+        Get.deleteAll(force: false);
         Get.offAllNamed('/login');
 
-        // Show success message
         Get.snackbar(
           'Success',
           'You have been logged out',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green.withOpacity(0.1),
           colorText: Colors.green[800],
+          duration: const Duration(seconds: 2),
         );
       } catch (e) {
         debugPrint('❌ Error during logout: $e');
