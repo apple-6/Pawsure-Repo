@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/services/api_service.dart';
-import 'package:pawsure_app/services/auth_service.dart';
+import 'package:pawsure_app/controllers/profile_controller.dart';
 
 class HomeController extends GetxController {
   ApiService get _apiService => Get.find<ApiService>();
-  AuthService get _authService => Get.find<AuthService>();
 
   // --- State Variables ---
   var pets = <Pet>[].obs;
@@ -24,19 +23,43 @@ class HomeController extends GetxController {
   void onInit() {
     super.onInit();
     loadPets();
-    _loadUserName();
+    _syncUserName();
   }
 
-  /// Load user name
-  Future<void> _loadUserName() async {
+  /// Sync user name from ProfileController
+  void _syncUserName() {
     try {
-      final profile = await _authService.profile();
-      if (profile != null) {
-        userName.value =
-            (profile['name'] as String?)?.split(' ').first ?? 'User';
-      }
+      // Wait a bit for ProfileController to initialize
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (Get.isRegistered<ProfileController>()) {
+          final profileController = Get.find<ProfileController>();
+
+          // Set initial value
+          _updateUserNameFromProfile(profileController);
+
+          // Listen for changes
+          ever(profileController.user, (_) {
+            _updateUserNameFromProfile(profileController);
+          });
+        } else {
+          debugPrint('⚠️ ProfileController not registered');
+        }
+      });
     } catch (e) {
-      debugPrint('❌ Error loading user name: $e');
+      debugPrint('❌ Error syncing user name: $e');
+    }
+  }
+
+  /// Helper method to update username from profile
+  void _updateUserNameFromProfile(ProfileController profileController) {
+    final fullName = profileController.user['name'] as String?;
+    if (fullName != null && fullName.isNotEmpty) {
+      // Extract first name
+      userName.value = fullName.split(' ').first;
+      debugPrint('✅ Username updated to: ${userName.value}');
+    } else {
+      userName.value = 'User';
+      debugPrint('⚠️ No name found in profile, using default');
     }
   }
 
@@ -51,8 +74,12 @@ class HomeController extends GetxController {
 
       if (fetchedPets.isNotEmpty) {
         pets.assignAll(fetchedPets);
-        selectedPet.value = fetchedPets.first;
-        _updatePetData(fetchedPets.first);
+        // Only reset selectedPet if it wasn't already set or is invalid
+        if (selectedPet.value == null ||
+            !fetchedPets.any((p) => p.id == selectedPet.value?.id)) {
+          selectedPet.value = fetchedPets.first;
+          _updatePetData(fetchedPets.first);
+        }
       } else {
         pets.clear();
         selectedPet.value = null;
@@ -68,7 +95,6 @@ class HomeController extends GetxController {
 
   /// Update data when pet is selected
   void _updatePetData(Pet pet) {
-    // Update mood from pet's mood rating
     if (pet.moodRating != null) {
       if (pet.moodRating! >= 8) {
         currentMood.value = "😊";
@@ -82,7 +108,6 @@ class HomeController extends GetxController {
     }
 
     // TODO: Fetch actual activity data from backend
-    // For now, use placeholder
     dailyProgress.value = {"walks": 1, "meals": 2, "wellbeing": 0};
   }
 

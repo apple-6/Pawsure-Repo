@@ -29,6 +29,7 @@ class ProfileController extends GetxController {
 
         user.value = {
           'id': profile['id'],
+          'name': name,
           'firstName': nameParts.isNotEmpty ? nameParts.first : '',
           'lastName': nameParts.length > 1 ? nameParts.skip(1).join(' ') : '',
           'email': profile['email'],

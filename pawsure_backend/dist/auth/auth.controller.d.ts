@@ -25,4 +25,12 @@ export declare class AuthController {
     login(loginUserDto: LoginUserDto): Promise<{
         access_token: string;
     }>;
+    getProfile(req: any): {
+        id: any;
+        name: any;
+        email: any;
+        role: any;
+        phone_number: any;
+        profile_picture: any;
+    };
 }

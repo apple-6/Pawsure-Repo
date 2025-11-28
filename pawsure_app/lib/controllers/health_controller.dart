@@ -197,6 +197,10 @@ class HealthController extends GetxController
     isLoadingRecords.value = false;
     selectedFilter.value = 'All';
 
+    if (tabController.index != 0) {
+      tabController.index = 0;
+    }
+
     debugPrint('✅ HealthController state reset');
 
     // Fetch fresh data

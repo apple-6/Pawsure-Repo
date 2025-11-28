@@ -73,8 +73,9 @@ class AuthService {
         if (profile != null && profile.containsKey('role')) {
           await _storage.write(key: 'user_role', value: profile['role']);
         }
-      } catch (_) {
-        // Ignore profile fetch errors
+      } catch (e) {
+        // ignore: avoid_print
+        print('⚠️ Failed to fetch profile after login: $e');
       }
 
       return token;
@@ -102,19 +103,42 @@ class AuthService {
     return _storage.read(key: 'user_role');
   }
 
+  /// Get current user profile
+  /// ✅ FIXED: Changed from /auth/me to /auth/profile
   Future<Map<String, dynamic>?> profile() async {
     final token = await getToken();
-    if (token == null) return null;
-    final uri = Uri.parse('$_baseUrl/auth/me');
+    if (token == null) {
+      // ignore: avoid_print
+      print('⚠️ No token available for profile request');
+      return null;
+    }
+
+    final uri = Uri.parse('$_baseUrl/auth/profile'); // ✅ Changed from /auth/me
+    // ignore: avoid_print
+    print('🔍 AuthService.profile -> GET $uri');
+
     try {
       final resp = await http
           .get(uri, headers: {'Authorization': 'Bearer $token'})
           .timeout(const Duration(seconds: 10));
+
+      // ignore: avoid_print
+      print('📦 Profile Response: ${resp.statusCode}');
+
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        // ignore: avoid_print
+        print('✅ Profile data received: ${data['name']}');
+        return data;
+      } else {
+        // ignore: avoid_print
+        print(
+          '⚠️ Profile endpoint returned: ${resp.statusCode} - ${resp.body}',
+        );
       }
-    } catch (_) {
-      // Ignore errors
+    } catch (e) {
+      // ignore: avoid_print
+      print('❌ AuthService.profile error: $e');
     }
     return null;
   }

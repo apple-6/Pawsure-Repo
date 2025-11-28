@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart'; // ← ADD THIS IMPORT
 import '../../services/auth_service.dart';
-import '../../main_navigation.dart';
 import 'register_screen.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_setup_screen.dart';
 import '../../models/role.dart';
@@ -29,7 +29,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Helper function to check if input is email or phone
   bool _isEmail(String input) {
     return input.contains('@');
   }
@@ -81,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
                       color: Colors.black12,
                       blurRadius: 12,
@@ -376,19 +375,17 @@ class _LoginScreenState extends State<LoginScreen> {
       final profile = await _authService.profile();
 
       if (profile != null) {
-        final userRole = profile['role'] as String?;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome back, ${profile['name']}!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Welcome back, ${profile['name']}!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // ✅ FIX: Use Get.offAllNamed to ensure proper navigation
-        Get.offAllNamed(
-          '/home',
-        ); // This goes to MainNavigation which defaults to Home tab
+        // Navigate to home
+        Get.offAllNamed('/home');
       } else {
         Get.offAllNamed('/home');
       }
