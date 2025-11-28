@@ -1,69 +1,75 @@
-// src/pet/pet.entity.ts
-import { ActivityLog } from 'src/activity-log/activity-log.entity';
-import { Booking } from 'src/booking/booking.entity';
-import { HealthRecord } from 'src/health-record/health-record.entity';
-import { User } from 'src/user/user.entity';
 import {
   Entity,
-  Column,
   PrimaryGeneratedColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
+  Column,
   ManyToOne,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+  JoinColumn,
 } from 'typeorm';
+import { User } from '../user/user.entity';
+import { ActivityLog } from '../activity-log/activity-log.entity';
+import { HealthRecord } from '../health-record/health-record.entity';
+import { Booking } from '../booking/booking.entity';
 
 @Entity('pets')
 export class Pet {
-  @PrimaryGeneratedColumn() // 'INT pet_id PK'
+  @PrimaryGeneratedColumn()
   id: number;
 
-  @Column() // 'STRING name'
+  @Column()
   name: string;
 
-  @Column({nullable: true}) // 'STRING species'
+  @Column({ nullable: true }) // 'STRING species'
   species: string;
 
-  @Column() // 'STRING breed'
+  @Column()
   breed: string;
 
-  @Column({ type: 'date', nullable: true }) // 'DATE dob'
-  dob: string;
+  @Column({ type: 'date', nullable: true })
+  dob: Date;
 
-  @Column({ type: 'float', nullable: true }) // 'FLOAT weight'
+  @Column({ type: 'double precision', nullable: true })
   weight: number;
 
-  @Column({ type: 'text', nullable: true }) // 'TEXT allergies'
+  @Column({ type: 'text', nullable: true })
   allergies: string;
 
-  @Column({ type: 'date', array: true, nullable: true }) // 'DATE[] vaccination_dates'
+  @Column({ type: 'simple-array', nullable: true })
   vaccination_dates: string[];
 
-  @Column({ type: 'date', nullable: true }) // 'DATE last_vet_visit'
-  last_vet_visit: string;
+  @Column({ type: 'date', nullable: true })
+  last_vet_visit: Date;
 
-  @Column({ type: 'float', nullable: true }) // 'FLOAT mood_rating'
+  @Column({ type: 'double precision', nullable: true })
   mood_rating: number;
 
-  @Column({ default: 0 }) // 'INT streak'
+  @Column({ type: 'int', default: 0 })
   streak: number;
 
-  @CreateDateColumn() // 'TIMESTAMP created_at'
-  created_at: Date;
+  @Column({ nullable: true })
+  photoUrl: string;
 
-  @UpdateDateColumn() // 'TIMESTAMP updated_at'
-  updated_at: Date;
+  @Column()
+  ownerId: number;
 
-  // --- Relationships ---
-  @ManyToOne(() => User, (user) => user.pets) // 'INT user_id FK'
+  @ManyToOne(() => User, (user) => user.pets)
+  @JoinColumn({ name: 'ownerId' })
   owner: User;
+
+  @OneToMany(() => ActivityLog, (activityLog) => activityLog.pet)
+  activityLogs: ActivityLog[];
+
+  @OneToMany(() => HealthRecord, (healthRecord) => healthRecord.pet)
+  healthRecords: HealthRecord[];
 
   @OneToMany(() => Booking, (booking) => booking.pet)
   bookings: Booking[];
 
-  @OneToMany(() => ActivityLog, (log) => log.pet)
-  activityLogs: ActivityLog[];
+  @CreateDateColumn()
+  created_at: Date;
 
-  @OneToMany(() => HealthRecord, (record) => record.pet)
-  healthRecords: HealthRecord[];
+  @UpdateDateColumn()
+  updated_at: Date;
 }

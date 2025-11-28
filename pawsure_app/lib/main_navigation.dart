@@ -1,56 +1,85 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'controllers/navigation_controller.dart';
+import 'controllers/health_controller.dart';
+import 'controllers/home_controller.dart';
+import 'controllers/profile_controller.dart';
+
+// Import your screens
 import 'screens/home/home_screen.dart';
 import 'screens/health/health_screen.dart';
 import 'screens/activity/activity_screen.dart';
 import 'screens/community/community_screen.dart';
 import 'screens/profile/profile_screen.dart';
 
-class MainNavigation extends StatefulWidget {
+class MainNavigation extends StatelessWidget {
   const MainNavigation({super.key});
 
   @override
-  State<MainNavigation> createState() => _MainNavigationState();
-}
-
-class _MainNavigationState extends State<MainNavigation> {
-  int _currentIndex = 0;
-
-  // List of screens to display
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const HealthScreen(),
-    const ActivityScreen(),
-    const CommunityScreen(),
-    const ProfileScreen(),
-  ];
-
-  @override
   Widget build(BuildContext context) {
+    // Get controllers
+    final NavigationController nav = Get.isRegistered<NavigationController>()
+        ? Get.find<NavigationController>()
+        : Get.put(NavigationController());
+
+    // Ensure HealthController exists
+    if (!Get.isRegistered<HealthController>()) {
+      Get.put(HealthController());
+    }
+
+    // ✅ FIX: Reset to home tab and refresh data on create
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      nav.changePage(0); // Reset to Home tab
+
+      // Refresh controllers with new user data
+      if (Get.isRegistered<HomeController>()) {
+        Get.find<HomeController>().loadPets();
+      }
+      if (Get.isRegistered<HealthController>()) {
+        Get.find<HealthController>().refreshPets();
+      }
+      if (Get.isRegistered<ProfileController>()) {
+        Get.find<ProfileController>().loadProfile();
+      }
+    });
+
+    // Define your screens
+    final screens = [
+      const HomeScreen(),
+      const HealthScreen(),
+      const ActivityScreen(),
+      const CommunityScreen(),
+      const ProfileScreen(),
+    ];
+
+    const primaryColor = Color(0xFF22c55e);
+
     return Scaffold(
-      body: _screens[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.health_and_safety),
-            label: 'Health',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.directions_run),
-            label: 'Activity',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Community'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
+      body: Obx(() => screens[nav.currentIndex.value]),
+      bottomNavigationBar: Obx(
+        () => BottomNavigationBar(
+          currentIndex: nav.currentIndex.value,
+          onTap: nav.changePage,
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: primaryColor,
+          unselectedItemColor: Colors.grey,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.favorite),
+              label: 'Health',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.show_chart),
+              label: 'Activity',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.people),
+              label: 'Community',
+            ),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          ],
+        ),
       ),
     );
   }

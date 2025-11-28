@@ -1,29 +1,153 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:pawsure_app/controllers/health_controller.dart';
+import 'package:pawsure_app/models/pet_model.dart';
+import 'tabs/profile_tab.dart';
+import 'tabs/records_tab.dart';
+import 'tabs/calendar_tab.dart';
+import 'tabs/ai_scan_tab.dart';
 
 class HealthScreen extends StatelessWidget {
   const HealthScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final HealthController controller = Get.isRegistered<HealthController>()
+        ? Get.find<HealthController>()
+        : Get.put(HealthController());
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pet Health'),
-        backgroundColor: Colors.green[100],
+        automaticallyImplyLeading: false, // ← REMOVED BACK BUTTON
+        // Title reacts to selected pet
+        title: Obx(() {
+          if (controller.isLoadingPets.value) {
+            return const SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            );
+          }
+          if (controller.pets.isEmpty) {
+            return const Text('No Pets Available');
+          }
+          return Text(controller.selectedPet.value?.name ?? 'Select Pet');
+        }),
+        actions: [
+          // Dropdown menu to switch pets
+          Obx(() {
+            if (!controller.isLoadingPets.value && controller.pets.isNotEmpty) {
+              return PopupMenuButton<Pet>(
+                icon: const Icon(Icons.pets),
+                onSelected: (Pet pet) {
+                  controller.selectPet(pet);
+                },
+                itemBuilder: (context) => controller.pets
+                    .map(
+                      (pet) => PopupMenuItem<Pet>(
+                        value: pet,
+                        child: Row(
+                          children: [
+                            if (controller.selectedPet.value?.id == pet.id)
+                              const Icon(
+                                Icons.check,
+                                size: 20,
+                                color: Colors.green,
+                              ),
+                            const SizedBox(width: 8),
+                            Text(pet.name),
+                          ],
+                        ),
+                      ),
+                    )
+                    .toList(),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
+
+          // Share Button
+          TextButton.icon(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Share with Vet feature coming soon!'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+            icon: const Icon(Icons.share_outlined, size: 20),
+            label: const Text('Share'),
+            style: TextButton.styleFrom(foregroundColor: Colors.black),
+          ),
+        ],
+        toolbarHeight: 64,
       ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.health_and_safety, size: 64, color: Colors.green),
-            SizedBox(height: 16),
-            Text('Health Screen Content', style: TextStyle(fontSize: 18)),
-            SizedBox(height: 8),
-            Text(
-              'Track your pet\'s health records',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+      body: Column(
+        children: [
+          // Tab Bar Section
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F6F9),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: TabBar(
+                controller: controller.tabController,
+                indicator: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                labelColor: Colors.black,
+                unselectedLabelColor: Colors.grey,
+                tabs: const [
+                  Tab(text: 'Profile'),
+                  Tab(text: 'Records'),
+                  Tab(text: 'Calendar'),
+                  Tab(text: 'AI Scan'),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+
+          // Tab Views
+          Expanded(
+            child: TabBarView(
+              controller: controller.tabController,
+              children: [
+                ProfileTab(),
+
+                Obx(() {
+                  if (controller.selectedPet.value == null) {
+                    return const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.pets, size: 48, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text('Please add or select a pet first.'),
+                        ],
+                      ),
+                    );
+                  }
+                  return const RecordsTab();
+                }),
+
+                CalendarTab(),
+
+                AIScanTab(),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
