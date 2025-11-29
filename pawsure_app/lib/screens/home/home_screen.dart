@@ -1,8 +1,10 @@
+// pawsure_app/lib/screens/home/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/home_controller.dart';
 import '../../widgets/home/status_card.dart';
 import '../../widgets/home/sos_button.dart';
+import '../../widgets/home/upcoming_events_card.dart'; // 🆕 IMPORT
 import '../../models/pet_model.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -143,6 +145,11 @@ class HomeScreen extends StatelessWidget {
                   progress: controller.dailyProgress,
                   goals: controller.dailyGoals,
                 ),
+
+                const SizedBox(height: 24),
+
+                // 🆕 Upcoming Events Card
+                UpcomingEventsCard(petId: pet.id),
               ],
             ),
           ),

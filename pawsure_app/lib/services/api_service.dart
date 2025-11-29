@@ -3,10 +3,10 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/models/health_record_model.dart';
+import 'package:pawsure_app/models/event_model.dart'; // 🆕 IMPORT
 import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
 
-// Use the same base URL pattern as your existing code
 const String apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
   defaultValue: 'http://10.0.2.2:3000',
@@ -20,7 +20,6 @@ class ApiService {
       'Accept': 'application/json',
     };
 
-    // Get JWT token from AuthService
     try {
       final authService = Get.find<AuthService>();
       final token = await authService.getToken();
@@ -37,6 +36,10 @@ class ApiService {
 
     return headers;
   }
+
+  // ========================================================================
+  // PETS API
+  // ========================================================================
 
   /// GET /pets - Fetch all pets for the authenticated user
   Future<List<Pet>> getPets() async {
@@ -75,6 +78,10 @@ class ApiService {
       rethrow;
     }
   }
+
+  // ========================================================================
+  // HEALTH RECORDS API
+  // ========================================================================
 
   /// GET /pets/:petId/health-records - Fetch health records for a specific pet
   Future<List<HealthRecord>> getHealthRecords(int petId) async {
@@ -215,6 +222,191 @@ class ApiService {
       debugPrint('✅ Health record deleted successfully');
     } catch (e, stackTrace) {
       debugPrint('❌ Error in deleteHealthRecord: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  // ========================================================================
+  // 🆕 EVENTS API
+  // ========================================================================
+
+  /// GET /events?petId=X - Fetch all events for a specific pet
+  Future<List<EventModel>> getEvents(int petId) async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/events?petId=$petId');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/events?petId=$petId'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        final events = jsonList
+            .map((e) => EventModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+
+        debugPrint('✅ Parsed ${events.length} events');
+        return events;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to load events (${response.statusCode}): ${response.body}',
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in getEvents: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  /// GET /events/upcoming?petId=X&limit=3 - Get upcoming events for dashboard
+  Future<List<EventModel>> getUpcomingEvents(int petId, {int limit = 3}) async {
+    try {
+      debugPrint(
+        '🔍 API: GET $apiBaseUrl/events/upcoming?petId=$petId&limit=$limit',
+      );
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/events/upcoming?petId=$petId&limit=$limit'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        final events = jsonList
+            .map((e) => EventModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+
+        debugPrint('✅ Parsed ${events.length} upcoming events');
+        return events;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to load upcoming events (${response.statusCode}): ${response.body}',
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in getUpcomingEvents: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  /// POST /events - Create a new event
+  Future<EventModel> createEvent(Map<String, dynamic> payload) async {
+    try {
+      debugPrint('➕ API: POST $apiBaseUrl/events');
+      debugPrint('📤 Payload: ${jsonEncode(payload)}');
+
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/events'),
+        headers: headers,
+        body: jsonEncode(payload),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final Map<String, dynamic> json =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        final event = EventModel.fromJson(json);
+
+        debugPrint('✅ Event created successfully');
+        return event;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to create event (${response.statusCode}): ${response.body}',
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in createEvent: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  /// PATCH /events/:id - Update event status
+  Future<EventModel> updateEventStatus(
+    int eventId,
+    EventStatus newStatus,
+  ) async {
+    try {
+      debugPrint('🔄 API: PATCH $apiBaseUrl/events/$eventId');
+      final payload = {'status': newStatus.toJson()};
+      debugPrint('📤 Payload: ${jsonEncode(payload)}');
+
+      final headers = await _getHeaders();
+      final response = await http.patch(
+        Uri.parse('$apiBaseUrl/events/$eventId'),
+        headers: headers,
+        body: jsonEncode(payload),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        return EventModel.fromJson(json);
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to update event status (${response.statusCode}): ${response.body}',
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in updateEventStatus: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  /// DELETE /events/:id - Delete an event
+  Future<void> deleteEvent(int eventId) async {
+    try {
+      debugPrint('🗑️ API: DELETE $apiBaseUrl/events/$eventId');
+
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse('$apiBaseUrl/events/$eventId'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        if (response.statusCode == 401) {
+          throw Exception('Authentication failed. Please log in again.');
+        }
+        throw Exception(
+          'Failed to delete event (${response.statusCode}): ${response.body}',
+        );
+      }
+
+      debugPrint('✅ Event deleted successfully');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in deleteEvent: $e');
       debugPrint('Stack trace: $stackTrace');
       rethrow;
     }

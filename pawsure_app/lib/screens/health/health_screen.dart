@@ -1,10 +1,10 @@
+// pawsure_app/lib/screens/health/health_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'tabs/profile_tab.dart';
 import 'tabs/records_tab.dart';
-import 'tabs/calendar_tab.dart';
 import 'tabs/ai_scan_tab.dart';
 
 class HealthScreen extends StatelessWidget {
@@ -18,8 +18,7 @@ class HealthScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false, // ← REMOVED BACK BUTTON
-        // Title reacts to selected pet
+        automaticallyImplyLeading: false,
         title: Obx(() {
           if (controller.isLoadingPets.value) {
             return const SizedBox(
@@ -85,7 +84,7 @@ class HealthScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // Tab Bar Section
+          // Tab Bar Section (Calendar tab REMOVED)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Container(
@@ -111,14 +110,13 @@ class HealthScreen extends StatelessWidget {
                 tabs: const [
                   Tab(text: 'Profile'),
                   Tab(text: 'Records'),
-                  Tab(text: 'Calendar'),
-                  Tab(text: 'AI Scan'),
+                  Tab(text: 'AI Scan'), // Calendar tab REMOVED
                 ],
               ),
             ),
           ),
 
-          // Tab Views
+          // Tab Views (CalendarTab REMOVED)
           Expanded(
             child: TabBarView(
               controller: controller.tabController,
@@ -141,9 +139,7 @@ class HealthScreen extends StatelessWidget {
                   return const RecordsTab();
                 }),
 
-                CalendarTab(),
-
-                AIScanTab(),
+                AIScanTab(), // Calendar tab REMOVED
               ],
             ),
           ),
