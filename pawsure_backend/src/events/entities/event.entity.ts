@@ -56,6 +56,7 @@ export class Event {
   @Column({ type: 'text', nullable: true })
   notes: string;
 
+  // Ideally, use the relation to manage this, but having the ID column explicitly is helpful for APIs
   @Column()
   petId: number;
 

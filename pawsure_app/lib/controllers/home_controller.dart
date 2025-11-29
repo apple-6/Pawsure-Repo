@@ -137,9 +137,9 @@ class HomeController extends GetxController {
 
   /// Log mood
   void logMood(String mood) {
-    if (mood == 'happy')
+    if (mood == 'happy') {
       currentMood.value = "😊";
-    else if (mood == 'neutral')
+    } else if (mood == 'neutral')
       currentMood.value = "😐";
     else if (mood == 'sad')
       currentMood.value = "😢";

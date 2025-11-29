@@ -6,7 +6,6 @@ import 'package:pawsure_app/controllers/calendar_controller.dart';
 import 'package:pawsure_app/controllers/home_controller.dart';
 import 'package:pawsure_app/models/event_model.dart';
 import 'package:pawsure_app/widgets/calendar/add_event_modal.dart';
-import 'package:pawsure_app/widgets/calendar/edit_event_modal.dart';
 
 class CalendarScreen extends StatelessWidget {
   const CalendarScreen({super.key});
@@ -37,7 +36,7 @@ class CalendarScreen extends StatelessWidget {
                     (p) => p.id == petId,
                   );
                   homeController.selectPet(pet);
-                  controller.loadEvents(petId as int);
+                  controller.loadEvents(petId);
                 },
                 itemBuilder: (context) => homeController.pets
                     .map(

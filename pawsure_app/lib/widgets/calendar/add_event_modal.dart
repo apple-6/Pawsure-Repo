@@ -105,7 +105,7 @@ class _AddEventModalState extends State<AddEventModal> {
 
                 // Event Type Dropdown
                 DropdownButtonFormField<EventType>(
-                  value: _selectedType,
+                  initialValue: _selectedType,
                   decoration: const InputDecoration(
                     labelText: 'Event Type *',
                     border: OutlineInputBorder(),

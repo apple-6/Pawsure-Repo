@@ -117,7 +117,7 @@ class _EditEventModalState extends State<EditEventModal> {
 
                 // Event Type Dropdown
                 DropdownButtonFormField<EventType>(
-                  value: _selectedType,
+                  initialValue: _selectedType,
                   decoration: const InputDecoration(
                     labelText: 'Event Type *',
                     border: OutlineInputBorder(),
@@ -150,7 +150,7 @@ class _EditEventModalState extends State<EditEventModal> {
 
                 // Status Dropdown
                 DropdownButtonFormField<EventStatus>(
-                  value: _selectedStatus,
+                  initialValue: _selectedStatus,
                   decoration: const InputDecoration(
                     labelText: 'Status *',
                     border: OutlineInputBorder(),
