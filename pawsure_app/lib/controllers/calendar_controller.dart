@@ -1,8 +1,11 @@
 // pawsure_app/lib/controllers/calendar_controller.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 import 'package:pawsure_app/models/event_model.dart';
 import 'package:pawsure_app/services/api_service.dart';
+import 'package:pawsure_app/services/auth_service.dart';
 
 class CalendarController extends GetxController {
   final ApiService _apiService = Get.find<ApiService>();
@@ -267,6 +270,82 @@ class CalendarController extends GetxController {
     }
   }
 
+  /// Update an event with full details
+  Future<void> updateEvent(
+    EventModel event, {
+    bool triggerHealthDialog = false,
+  }) async {
+    try {
+      debugPrint('🔄 Updating event ${event.id}...');
+
+      // Build payload
+      final payload = {
+        'title': event.title,
+        'dateTime': event.dateTime.toIso8601String(),
+        'eventType': event.eventType.toJson(),
+        'status': event.status.toJson(),
+        if (event.location != null) 'location': event.location,
+        if (event.notes != null) 'notes': event.notes,
+      };
+
+      debugPrint('📤 Payload: ${jsonEncode(payload)}');
+
+      // Get headers and make API call
+      final headers = {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Accept': 'application/json',
+      };
+
+      // Get auth token
+      try {
+        final authService = Get.find<AuthService>();
+        final token = await authService.getToken();
+        if (token != null && token.isNotEmpty) {
+          headers['Authorization'] = 'Bearer $token';
+        }
+      } catch (e) {
+        debugPrint('⚠️ Could not get auth token: $e');
+      }
+
+      final response = await http.patch(
+        Uri.parse('http://10.0.2.2:3000/events/${event.id}'),
+        headers: headers,
+        body: jsonEncode(payload),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final updatedEvent = EventModel.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>,
+        );
+
+        // Update local state
+        _updateEventInState(updatedEvent);
+
+        debugPrint('✅ Event updated successfully');
+
+        // Trigger health dialog if requested
+        if (triggerHealthDialog) {
+          _showHealthRecordDialog(updatedEvent);
+        }
+
+        // Refresh both views
+        if (currentPetId.value != null) {
+          await loadUpcomingEvents(currentPetId.value!);
+          await loadEvents(currentPetId.value!);
+        }
+      } else {
+        throw Exception(
+          'Failed to update event (${response.statusCode}): ${response.body}',
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error updating event: $e');
+      rethrow;
+    }
+  }
+
   /// Delete an event
   Future<void> deleteEvent(EventModel event) async {
     try {
@@ -299,6 +378,7 @@ class CalendarController extends GetxController {
         backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red[900],
       );
+      rethrow;
     }
   }
 

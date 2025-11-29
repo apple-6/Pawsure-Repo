@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import '../../controllers/home_controller.dart';
 import '../../widgets/home/status_card.dart';
 import '../../widgets/home/sos_button.dart';
-import '../../widgets/home/upcoming_events_card.dart'; // 🆕 IMPORT
+import '../../widgets/home/upcoming_events_card.dart';
 import '../../models/pet_model.dart';
 
 class HomeScreen extends StatelessWidget {

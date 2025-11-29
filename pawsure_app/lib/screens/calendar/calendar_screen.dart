@@ -6,6 +6,7 @@ import 'package:pawsure_app/controllers/calendar_controller.dart';
 import 'package:pawsure_app/controllers/home_controller.dart';
 import 'package:pawsure_app/models/event_model.dart';
 import 'package:pawsure_app/widgets/calendar/add_event_modal.dart';
+import 'package:pawsure_app/widgets/calendar/edit_event_modal.dart';
 
 class CalendarScreen extends StatelessWidget {
   const CalendarScreen({super.key});
@@ -436,24 +437,29 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color color;
+    Color backgroundColor;
+    Color textColor;
     String label;
 
     switch (status) {
       case EventStatus.pending:
-        color = Colors.orange;
+        backgroundColor = Colors.orange;
+        textColor = Colors.orange.shade800;
         label = 'Pending';
         break;
       case EventStatus.completed:
-        color = Colors.green;
+        backgroundColor = Colors.green;
+        textColor = Colors.green.shade800;
         label = 'Completed';
         break;
       case EventStatus.upcoming:
-        color = Colors.blue;
+        backgroundColor = Colors.blue;
+        textColor = Colors.blue.shade800;
         label = 'Upcoming';
         break;
       case EventStatus.missed:
-        color = Colors.red;
+        backgroundColor = Colors.red;
+        textColor = Colors.red.shade800;
         label = 'Missed';
         break;
     }
@@ -461,16 +467,16 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: backgroundColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: backgroundColor.withOpacity(0.3)),
       ),
       child: Text(
         label,
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: color.shade800,
+          color: textColor,
         ),
       ),
     );
