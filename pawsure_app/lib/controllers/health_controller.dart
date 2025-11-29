@@ -1,3 +1,4 @@
+// pawsure_app/lib/controllers/health_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/models/health_record_model.dart';
@@ -143,37 +144,38 @@ class HealthController extends GetxController
     selectedFilter.value = filter;
   }
 
+  /// 🔧 ENHANCED: Add new health record with better error handling
   Future<void> addNewHealthRecord(
     Map<String, dynamic> payload,
     int petId,
   ) async {
     try {
       debugPrint('➕ Adding health record for pet ID: $petId');
+      debugPrint('📤 Payload: $payload');
 
-      await _apiService.addHealthRecord(petId, payload);
-      debugPrint('✅ Health record added successfully');
+      // Call API service
+      final newRecord = await _apiService.addHealthRecord(petId, payload);
+      debugPrint('✅ Health record created with ID: ${newRecord.id}');
 
+      // Add to local state immediately for instant feedback
+      if (selectedPet.value?.id == petId) {
+        healthRecords.add(newRecord);
+        _updateFilteredRecords();
+        debugPrint('✅ Added record to local state');
+      }
+
+      // Refresh from server to ensure sync
       await _fetchHealthRecords(petId);
+      debugPrint('✅ Health records refreshed from server');
 
-      Get.back();
-      Get.snackbar(
-        'Success',
-        'Health record added successfully!',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
+      // Note: Don't show snackbar here, let the screen handle it
+      // This allows the screen to control navigation timing
     } catch (e, stackTrace) {
       debugPrint('❌ Error adding health record: $e');
       debugPrint('Stack trace: $stackTrace');
 
-      Get.snackbar(
-        'Error',
-        'Failed to add record: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      // Rethrow to let the screen handle the error
+      rethrow;
     }
   }
 
@@ -185,6 +187,11 @@ class HealthController extends GetxController
     if (selectedPet.value != null) {
       await _fetchHealthRecords(selectedPet.value!.id);
     }
+  }
+
+  /// 🔧 ENHANCED: Fetch health records for a specific pet (used by prefill)
+  Future<void> fetchHealthRecords(int petId) async {
+    await _fetchHealthRecords(petId);
   }
 
   /// Reset controller state (call after logout)

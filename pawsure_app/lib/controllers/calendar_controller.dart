@@ -137,43 +137,71 @@ class CalendarController extends GetxController {
   // ========================================================================
 
   /// Get events for a specific day (used by calendar widget)
+  /// 🔧 ENHANCED: Added comprehensive null safety checks
   List<EventModel> getEventsForDay(DateTime day) {
-    final normalizedDay = DateTime(day.year, day.month, day.day);
-    return events[normalizedDay] ?? [];
+    try {
+      final normalizedDay = DateTime(day.year, day.month, day.day);
+
+      // Return empty list if events is null or doesn't contain the day
+      if (!events.containsKey(normalizedDay)) {
+        return [];
+      }
+
+      final dayEvents = events[normalizedDay];
+      return dayEvents ?? [];
+    } catch (e) {
+      debugPrint('⚠️ Error in getEventsForDay: $e');
+      return [];
+    }
   }
 
   /// Get events for the currently selected day
   List<EventModel> get selectedDayEvents => getEventsForDay(selectedDay.value);
 
   /// Check if a day has any events (for calendar markers)
+  /// 🔧 ENHANCED: Added null safety checks
   bool hasEventsOnDay(DateTime day) {
-    final normalizedDay = DateTime(day.year, day.month, day.day);
-    return events.containsKey(normalizedDay) &&
-        events[normalizedDay]!.isNotEmpty;
+    try {
+      final normalizedDay = DateTime(day.year, day.month, day.day);
+      return events.containsKey(normalizedDay) &&
+          events[normalizedDay] != null &&
+          events[normalizedDay]!.isNotEmpty;
+    } catch (e) {
+      debugPrint('⚠️ Error in hasEventsOnDay: $e');
+      return false;
+    }
   }
 
   /// Get the marker color for a day based on event statuses
+  /// 🔧 ENHANCED: Added comprehensive null safety and error handling
   Color? getMarkerColorForDay(DateTime day) {
-    final dayEvents = getEventsForDay(day);
-    if (dayEvents.isEmpty) return null;
+    try {
+      final dayEvents = getEventsForDay(day);
+      if (dayEvents.isEmpty) return null;
 
-    // Priority: Pending/Missed > Upcoming > Completed
-    final hasPending = dayEvents.any((e) => e.status == EventStatus.pending);
-    final hasMissed = dayEvents.any((e) => e.status == EventStatus.missed);
-    final hasUpcoming = dayEvents.any((e) => e.status == EventStatus.upcoming);
-    final hasCompleted = dayEvents.any(
-      (e) => e.status == EventStatus.completed,
-    );
+      // Priority: Pending/Missed > Completed > Upcoming
+      final hasPending = dayEvents.any((e) => e.status == EventStatus.pending);
+      final hasMissed = dayEvents.any((e) => e.status == EventStatus.missed);
+      final hasUpcoming = dayEvents.any(
+        (e) => e.status == EventStatus.upcoming,
+      );
+      final hasCompleted = dayEvents.any(
+        (e) => e.status == EventStatus.completed,
+      );
 
-    if (hasPending || hasMissed) {
-      return Colors.red; // 🔴 Red dot for pending/missed
-    } else if (hasCompleted) {
-      return Colors.green; // 🟢 Green dot for completed
-    } else if (hasUpcoming) {
-      return Colors.grey; // ⚪ Grey dot for upcoming
+      if (hasPending || hasMissed) {
+        return Colors.red; // 🔴 Red dot for pending/missed
+      } else if (hasCompleted) {
+        return Colors.green; // 🟢 Green dot for completed
+      } else if (hasUpcoming) {
+        return Colors.grey; // ⚪ Grey dot for upcoming
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('⚠️ Error in getMarkerColorForDay: $e');
+      return null;
     }
-
-    return null;
   }
 
   /// Update selected day
@@ -271,6 +299,7 @@ class CalendarController extends GetxController {
   }
 
   /// Update an event with full details
+  /// 🔧 ENHANCED: Better error handling and API URL configuration
   Future<void> updateEvent(
     EventModel event, {
     bool triggerHealthDialog = false,
@@ -284,8 +313,10 @@ class CalendarController extends GetxController {
         'dateTime': event.dateTime.toIso8601String(),
         'eventType': event.eventType.toJson(),
         'status': event.status.toJson(),
-        if (event.location != null) 'location': event.location,
-        if (event.notes != null) 'notes': event.notes,
+        if (event.location != null && event.location!.isNotEmpty)
+          'location': event.location,
+        if (event.notes != null && event.notes!.isNotEmpty)
+          'notes': event.notes,
       };
 
       debugPrint('📤 Payload: ${jsonEncode(payload)}');
@@ -307,8 +338,14 @@ class CalendarController extends GetxController {
         debugPrint('⚠️ Could not get auth token: $e');
       }
 
+      // 🔧 FIX: Use localhost for Windows, 10.0.2.2 for Android emulator
+      const apiUrl = String.fromEnvironment(
+        'API_BASE_URL',
+        defaultValue: 'http://localhost:3000',
+      );
+
       final response = await http.patch(
-        Uri.parse('http://10.0.2.2:3000/events/${event.id}'),
+        Uri.parse('$apiUrl/events/${event.id}'),
         headers: headers,
         body: jsonEncode(payload),
       );
@@ -387,51 +424,63 @@ class CalendarController extends GetxController {
   // ========================================================================
 
   /// Update an event in local state after API response
+  /// 🔧 ENHANCED: Added null safety checks
   void _updateEventInState(EventModel updatedEvent) {
-    // Update in events map
-    final dateKey = DateTime(
-      updatedEvent.dateTime.year,
-      updatedEvent.dateTime.month,
-      updatedEvent.dateTime.day,
-    );
+    try {
+      // Update in events map
+      final dateKey = DateTime(
+        updatedEvent.dateTime.year,
+        updatedEvent.dateTime.month,
+        updatedEvent.dateTime.day,
+      );
 
-    if (events.containsKey(dateKey)) {
-      final index = events[dateKey]!.indexWhere((e) => e.id == updatedEvent.id);
-      if (index != -1) {
-        events[dateKey]![index] = updatedEvent;
-        events.refresh();
+      if (events.containsKey(dateKey) && events[dateKey] != null) {
+        final index = events[dateKey]!.indexWhere(
+          (e) => e.id == updatedEvent.id,
+        );
+        if (index != -1) {
+          events[dateKey]![index] = updatedEvent;
+          events.refresh();
+        }
       }
-    }
 
-    // Update in upcoming events
-    final upcomingIndex = upcomingEvents.indexWhere(
-      (e) => e.id == updatedEvent.id,
-    );
-    if (upcomingIndex != -1) {
-      upcomingEvents[upcomingIndex] = updatedEvent;
-      upcomingEvents.refresh();
+      // Update in upcoming events
+      final upcomingIndex = upcomingEvents.indexWhere(
+        (e) => e.id == updatedEvent.id,
+      );
+      if (upcomingIndex != -1) {
+        upcomingEvents[upcomingIndex] = updatedEvent;
+        upcomingEvents.refresh();
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error updating event in state: $e');
     }
   }
 
   /// Remove an event from local state after deletion
+  /// 🔧 ENHANCED: Added null safety checks
   void _removeEventFromState(EventModel event) {
-    // Remove from events map
-    final dateKey = DateTime(
-      event.dateTime.year,
-      event.dateTime.month,
-      event.dateTime.day,
-    );
+    try {
+      // Remove from events map
+      final dateKey = DateTime(
+        event.dateTime.year,
+        event.dateTime.month,
+        event.dateTime.day,
+      );
 
-    if (events.containsKey(dateKey)) {
-      events[dateKey]!.removeWhere((e) => e.id == event.id);
-      if (events[dateKey]!.isEmpty) {
-        events.remove(dateKey);
+      if (events.containsKey(dateKey) && events[dateKey] != null) {
+        events[dateKey]!.removeWhere((e) => e.id == event.id);
+        if (events[dateKey]!.isEmpty) {
+          events.remove(dateKey);
+        }
+        events.refresh();
       }
-      events.refresh();
-    }
 
-    // Remove from upcoming events
-    upcomingEvents.removeWhere((e) => e.id == event.id);
+      // Remove from upcoming events
+      upcomingEvents.removeWhere((e) => e.id == event.id);
+    } catch (e) {
+      debugPrint('⚠️ Error removing event from state: $e');
+    }
   }
 
   // ========================================================================
@@ -443,7 +492,7 @@ class CalendarController extends GetxController {
     Get.defaultDialog(
       title: 'Save to Health Records?',
       middleText:
-          'Would you like to add this health event to ${event.title}\'s health records?',
+          'Would you like to add this health event to your pet\'s health records?',
       textConfirm: 'Yes, Save',
       textCancel: 'Skip',
       confirmTextColor: Colors.white,
@@ -459,6 +508,9 @@ class CalendarController extends GetxController {
 
   /// Navigate to health record form with pre-filled data
   void _navigateToHealthRecordForm(EventModel event) {
+    debugPrint('🏥 Navigating to health record form...');
+    debugPrint('📦 Event data: petId=${event.petId}, title=${event.title}');
+
     // Navigate to Health Records screen with pre-filled data
     Get.toNamed(
       '/health/add-record',
