@@ -213,4 +213,62 @@ class HealthController extends GetxController
     // Fetch fresh data
     _fetchPets();
   }
+
+  /// 🆕 Update an existing health record
+  Future<void> updateHealthRecord(
+    int recordId,
+    Map<String, dynamic> payload,
+  ) async {
+    try {
+      debugPrint('🔄 HealthController: Updating health record $recordId...');
+      debugPrint('📤 HealthController: Payload: $payload');
+
+      // Call API service
+      final updatedRecord = await _apiService.updateHealthRecord(
+        recordId,
+        payload,
+      );
+      debugPrint(
+        '✅ HealthController: Record updated with ID: ${updatedRecord.id}',
+      );
+
+      // Update local state
+      final index = healthRecords.indexWhere((r) => r.id == recordId);
+      if (index != -1) {
+        healthRecords[index] = updatedRecord;
+        _updateFilteredRecords();
+        debugPrint('✅ HealthController: Updated record in local state');
+      }
+
+      // Refresh from server to ensure sync
+      if (selectedPet.value != null) {
+        await _fetchHealthRecords(selectedPet.value!.id);
+      }
+      debugPrint('✅ HealthController: Health records refreshed from server');
+    } catch (e, stackTrace) {
+      debugPrint('❌ HealthController: Error updating health record: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  /// 🆕 Delete a health record
+  Future<void> deleteHealthRecord(int recordId) async {
+    try {
+      debugPrint('🗑️ HealthController: Deleting health record $recordId...');
+
+      // Call API service
+      await _apiService.deleteHealthRecord(recordId);
+      debugPrint('✅ HealthController: Record deleted from server');
+
+      // Remove from local state
+      healthRecords.removeWhere((r) => r.id == recordId);
+      _updateFilteredRecords();
+      debugPrint('✅ HealthController: Removed record from local state');
+    } catch (e, stackTrace) {
+      debugPrint('❌ HealthController: Error deleting health record: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
 }

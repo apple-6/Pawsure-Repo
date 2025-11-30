@@ -242,6 +242,15 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
           final navController = Get.find<NavigationController>();
           navController.changePage(1); // Health tab
           debugPrint('✅ Switched to Health tab');
+
+          await Future.delayed(const Duration(milliseconds: 100));
+          if (Get.isRegistered<HealthController>()) {
+            final healthController = Get.find<HealthController>();
+            healthController.tabController.animateTo(
+              1,
+            ); // ✅ Records tab (index 1)
+            debugPrint('✅ Switched to Records tab');
+          }
         }
       } catch (e) {
         debugPrint('⚠️ Could not switch tabs: $e');

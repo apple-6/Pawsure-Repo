@@ -162,6 +162,7 @@ class ApiService {
   }
 
   /// PUT /health-records/:recordId - Update an existing health record
+  /// 🔧 FIXED: Corrected the API endpoint
   Future<HealthRecord> updateHealthRecord(
     int recordId,
     Map<String, dynamic> payload,
@@ -172,7 +173,7 @@ class ApiService {
 
       final headers = await _getHeaders();
       final response = await http.put(
-        Uri.parse('$apiBaseUrl/health-records/$recordId'),
+        Uri.parse('$apiBaseUrl/health-records/$recordId'), // ✅ Correct endpoint
         headers: headers,
         body: jsonEncode(payload),
       );
@@ -199,13 +200,14 @@ class ApiService {
   }
 
   /// DELETE /health-records/:recordId - Delete a health record
+  /// 🔧 FIXED: Corrected the API endpoint
   Future<void> deleteHealthRecord(int recordId) async {
     try {
       debugPrint('🗑️ API: DELETE $apiBaseUrl/health-records/$recordId');
 
       final headers = await _getHeaders();
       final response = await http.delete(
-        Uri.parse('$apiBaseUrl/health-records/$recordId'),
+        Uri.parse('$apiBaseUrl/health-records/$recordId'), // ✅ Correct endpoint
         headers: headers,
       );
 

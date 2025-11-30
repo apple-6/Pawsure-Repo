@@ -311,21 +311,17 @@ class CalendarController extends GetxController {
     try {
       debugPrint('🔄 Updating event ${event.id}...');
       debugPrint('   Original dateTime: ${event.dateTime}');
+      debugPrint('   Is UTC: ${event.dateTime.isUtc}');
+      debugPrint('   Local: ${event.dateTime.toLocal()}');
 
-      // 🔧 CRITICAL FIX: Preserve timezone by using UTC explicitly
-      // This prevents the date from shifting when sent to backend
-      final utcDateTime = DateTime.utc(
-        event.dateTime.year,
-        event.dateTime.month,
-        event.dateTime.day,
-        event.dateTime.hour,
-        event.dateTime.minute,
-      );
+      // 🔧 CRITICAL FIX: Just send the datetime as-is (already in correct format)
+      // Don't try to convert - just use the ISO string directly
+      final dateTimeString = event.dateTime.toIso8601String();
 
       // Build payload
       final payload = {
         'title': event.title,
-        'dateTime': utcDateTime.toIso8601String(), // Send as UTC
+        'dateTime': dateTimeString,
         'eventType': event.eventType.toJson(),
         'status': event.status.toJson(),
         if (event.location != null && event.location!.isNotEmpty)
@@ -335,7 +331,7 @@ class CalendarController extends GetxController {
       };
 
       debugPrint('📤 Payload: ${jsonEncode(payload)}');
-      debugPrint('   Sending dateTime as: ${utcDateTime.toIso8601String()}');
+      debugPrint('   Sending dateTime as: $dateTimeString');
 
       // Get headers and make API call
       final headers = {
