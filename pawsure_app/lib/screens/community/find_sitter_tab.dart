@@ -1,8 +1,8 @@
 // lib/screens/community/find_sitter_tab.dart
 
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
-import 'package:intl/intl.dart';
+// Removed 'package:lucide_icons/lucide_icons.dart';
+// Removed 'package:intl/intl.dart';
 
 class FindSitterTab extends StatefulWidget {
   final Function(String sitterId) onSitterClick;
