@@ -17,39 +17,64 @@ const common_1 = require("@nestjs/common");
 const platform_express_1 = require("@nestjs/platform-express");
 const pet_service_1 = require("./pet.service");
 const create_pet_dto_1 = require("./dto/create-pet.dto");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 let PetController = class PetController {
     petService;
     constructor(petService) {
         this.petService = petService;
     }
+    async getMyPets(req) {
+        console.log('🔍 JWT User from token:', req.user);
+        const userId = req.user.id;
+        console.log('🔍 Fetching pets for user ID:', userId);
+        const pets = await this.petService.findByOwner(userId);
+        console.log('📦 Found', pets.length, 'pets for user', userId);
+        return pets;
+    }
+    async debugAllPets() {
+        console.log('🐛 Debug endpoint called - fetching all pets');
+        const allPets = await this.petService.findAll();
+        console.log('🐛 Total pets in database:', allPets.length);
+        return {
+            total: allPets.length,
+            pets: allPets.map(p => ({
+                id: p.id,
+                name: p.name,
+                ownerId: p.ownerId,
+                species: p.species,
+                breed: p.breed
+            }))
+        };
+    }
+    async getPetsByOwnerParam(ownerId) {
+        console.log('🔍 Fetching pets for ownerId:', ownerId);
+        return this.petService.findByOwner(Number(ownerId));
+    }
     async createPet(createPetDto, file, req) {
-        const ownerId = req.user?.id || 1;
+        console.log('➕ Creating pet for user:', req.user.id);
+        const ownerId = req.user.id;
         createPetDto.ownerId = ownerId;
         if (file) {
             createPetDto.photoUrl = `https://your-supabase-url/storage/photos/${file.filename}`;
         }
         return this.petService.create(createPetDto);
     }
-    async getPetsByOwnerParam(ownerId) {
-        return this.petService.findByOwner(Number(ownerId));
-    }
-    async getPetsByOwnerQuery(ownerId) {
-        if (!ownerId)
-            return [];
-        return this.petService.findByOwner(Number(ownerId));
-    }
 };
 exports.PetController = PetController;
 __decorate([
-    (0, common_1.Post)(),
-    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('photo')),
-    __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.UploadedFile)()),
-    __param(2, (0, common_1.Request)()),
+    (0, common_1.Get)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_pet_dto_1.CreatePetDto, Object, Object]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
-], PetController.prototype, "createPet", null);
+], PetController.prototype, "getMyPets", null);
+__decorate([
+    (0, common_1.Get)('debug'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], PetController.prototype, "debugAllPets", null);
 __decorate([
     (0, common_1.Get)('owner/:ownerId'),
     __param(0, (0, common_1.Param)('ownerId')),
@@ -58,12 +83,16 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], PetController.prototype, "getPetsByOwnerParam", null);
 __decorate([
-    (0, common_1.Get)(),
-    __param(0, (0, common_1.Query)('ownerId')),
+    (0, common_1.Post)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('photo')),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.UploadedFile)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [create_pet_dto_1.CreatePetDto, Object, Object]),
     __metadata("design:returntype", Promise)
-], PetController.prototype, "getPetsByOwnerQuery", null);
+], PetController.prototype, "createPet", null);
 exports.PetController = PetController = __decorate([
     (0, common_1.Controller)('pets'),
     __metadata("design:paramtypes", [pet_service_1.PetService])

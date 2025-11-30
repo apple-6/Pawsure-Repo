@@ -6,22 +6,19 @@ import 'package:pawsure_app/services/api_service.dart';
 
 class HealthController extends GetxController
     with GetSingleTickerProviderStateMixin {
-  final ApiService _apiService = Get.find<ApiService>();
+  // Get ApiService lazily
+  ApiService get _apiService => Get.find<ApiService>();
 
   // --- STATE VARIABLES ---
-
-  // From health_screen.dart
   var pets = <Pet>[].obs;
   var selectedPet = Rx<Pet?>(null);
   var isLoadingPets = true.obs;
 
-  // From records_tab.dart
-  var healthRecords = <HealthRecord>[].obs; // Master list
-  var filteredRecords = <HealthRecord>[].obs; // UI list
+  var healthRecords = <HealthRecord>[].obs;
+  var filteredRecords = <HealthRecord>[].obs;
   var isLoadingRecords = false.obs;
   var selectedFilter = 'All'.obs;
 
-  // For the TabBar
   late TabController tabController;
 
   // --- LIFECYCLE & WORKERS ---
@@ -32,7 +29,6 @@ class HealthController extends GetxController
     tabController = TabController(length: 4, vsync: this);
     _fetchPets();
 
-    // Worker: Automatically fetch records when pet changes
     ever(selectedPet, (Pet? pet) {
       if (pet != null) {
         debugPrint('🐕 Selected pet: ${pet.name}, ID: ${pet.id}');
@@ -43,7 +39,6 @@ class HealthController extends GetxController
       }
     });
 
-    // Worker: Automatically filter records when data or filter changes
     everAll([healthRecords, selectedFilter], (_) {
       _updateFilteredRecords();
     });
@@ -57,7 +52,6 @@ class HealthController extends GetxController
 
   // --- BUSINESS LOGIC ---
 
-  /// Fetch pets from backend API
   Future<void> _fetchPets() async {
     try {
       isLoadingPets.value = true;
@@ -76,19 +70,21 @@ class HealthController extends GetxController
     } catch (e, stackTrace) {
       debugPrint('❌ Error loading pets: $e');
       debugPrint('Stack trace: $stackTrace');
-      Get.snackbar(
-        'Error',
-        'Failed to load pets: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.snackbar(
+          'Error',
+          'Failed to load pets: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      });
     } finally {
       isLoadingPets.value = false;
     }
   }
 
-  /// Fetch health records from backend API
   Future<void> _fetchHealthRecords(int petId) async {
     try {
       isLoadingRecords.value = true;
@@ -103,13 +99,15 @@ class HealthController extends GetxController
       debugPrint('❌ Error fetching health records: $e');
       debugPrint('Stack trace: $stackTrace');
 
-      Get.snackbar(
-        'Error',
-        'Failed to load health records',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.snackbar(
+          'Error',
+          'Failed to load health records',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      });
 
       healthRecords.clear();
       filteredRecords.clear();
@@ -118,7 +116,6 @@ class HealthController extends GetxController
     }
   }
 
-  /// Filter records based on selected type
   void _updateFilteredRecords() {
     if (selectedFilter.value == 'All') {
       filteredRecords.assignAll(healthRecords);
@@ -134,21 +131,18 @@ class HealthController extends GetxController
     );
   }
 
-  // --- PUBLIC METHODS (for UI to call) ---
+  // --- PUBLIC METHODS ---
 
-  /// Called by the pet dropdown in health_screen.dart
   void selectPet(Pet? pet) {
     if (pet != null) {
       selectedPet.value = pet;
     }
   }
 
-  /// Called by the filter chips in records_tab.dart
   void setFilter(String filter) {
     selectedFilter.value = filter;
   }
 
-  /// Called by AddHealthRecordScreen
   Future<void> addNewHealthRecord(
     Map<String, dynamic> payload,
     int petId,
@@ -159,10 +153,9 @@ class HealthController extends GetxController
       await _apiService.addHealthRecord(petId, payload);
       debugPrint('✅ Health record added successfully');
 
-      // Refresh the list after adding
       await _fetchHealthRecords(petId);
 
-      Get.back(); // Go back to the previous screen
+      Get.back();
       Get.snackbar(
         'Success',
         'Health record added successfully!',
@@ -184,15 +177,33 @@ class HealthController extends GetxController
     }
   }
 
-  /// Refresh pets list (can be called from UI if needed)
   Future<void> refreshPets() async {
     await _fetchPets();
   }
 
-  /// Refresh health records for current pet (can be called from UI if needed)
   Future<void> refreshHealthRecords() async {
     if (selectedPet.value != null) {
       await _fetchHealthRecords(selectedPet.value!.id);
     }
+  }
+
+  /// Reset controller state (call after logout)
+  void resetState() {
+    pets.clear();
+    selectedPet.value = null;
+    healthRecords.clear();
+    filteredRecords.clear();
+    isLoadingPets.value = true;
+    isLoadingRecords.value = false;
+    selectedFilter.value = 'All';
+
+    if (tabController.index != 0) {
+      tabController.index = 0;
+    }
+
+    debugPrint('✅ HealthController state reset');
+
+    // Fetch fresh data
+    _fetchPets();
   }
 }

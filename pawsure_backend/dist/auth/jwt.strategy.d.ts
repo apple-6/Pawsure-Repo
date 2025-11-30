@@ -9,6 +9,7 @@ export declare class JwtStrategy extends JwtStrategy_base {
     validate(payload: {
         sub: number;
         email: string;
+        role?: string;
     }): Promise<import("../user/user.entity").User>;
 }
 export {};

@@ -8,6 +8,11 @@ abstract class StorageService {
   Future<void> write({required String key, required String value});
   Future<String?> read({required String key});
   Future<void> delete({required String key});
+
+  // ✅ ADD THIS HELPER METHOD
+  Future<void> deleteToken() async {
+    await delete(key: 'auth_token');
+  }
 }
 
 /// File-based storage implementation for desktop and mobile platforms
@@ -25,8 +30,12 @@ class FileStorageService implements StorageService {
         return Map<String, String>.from(json.decode(content));
       }
     } catch (e, st) {
-      developer.log('Error reading storage file: $e',
-          name: 'FileStorageService', error: e, stackTrace: st);
+      developer.log(
+        'Error reading storage file: $e',
+        name: 'FileStorageService',
+        error: e,
+        stackTrace: st,
+      );
     }
     return {};
   }
@@ -36,8 +45,12 @@ class FileStorageService implements StorageService {
       final file = await _getFile();
       await file.writeAsString(json.encode(data));
     } catch (e, st) {
-      developer.log('Error writing storage file: $e',
-          name: 'FileStorageService', error: e, stackTrace: st);
+      developer.log(
+        'Error writing storage file: $e',
+        name: 'FileStorageService',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -59,5 +72,11 @@ class FileStorageService implements StorageService {
     final map = await _readMap();
     map.remove(key);
     await _writeMap(map);
+  }
+
+  // ✅ IMPLEMENT THE HELPER METHOD
+  @override
+  Future<void> deleteToken() async {
+    await delete(key: 'auth_token');
   }
 }

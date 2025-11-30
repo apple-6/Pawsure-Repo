@@ -16,6 +16,7 @@ class RegisterUserDto {
     email;
     phone_number;
     password;
+    role;
 }
 exports.RegisterUserDto = RegisterUserDto;
 __decorate([
@@ -43,4 +44,9 @@ __decorate([
     (0, class_validator_1.MinLength)(8, { message: 'Password must be at least 8 characters long' }),
     __metadata("design:type", String)
 ], RegisterUserDto.prototype, "password", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], RegisterUserDto.prototype, "role", void 0);
 //# sourceMappingURL=register-user.dto.js.map

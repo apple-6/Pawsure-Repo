@@ -22,19 +22,21 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
         super({
             jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
-            secretOrKey: configService.get('JWT_SECRET') || 'fallback-secret-key-12345',
+            secretOrKey: configService.get('JWT_SECRET') || 'my-super-secret-jwt-key-12345',
         });
         this.configService = configService;
         this.userService = userService;
-        console.log('JWT Secret in strategy:', configService.get('JWT_SECRET'));
+        console.log('✅ JWT Strategy initialized');
+        console.log('🔑 JWT Secret:', configService.get('JWT_SECRET'));
     }
     async validate(payload) {
-        console.log('JWT Payload:', payload);
+        console.log('🔐 Validating JWT payload:', payload);
         const user = await this.userService.findById(payload.sub);
-        console.log('User found:', user ? 'Yes' : 'No');
         if (!user) {
-            throw new common_1.UnauthorizedException();
+            console.log('❌ User not found for ID:', payload.sub);
+            throw new common_1.UnauthorizedException('User not found');
         }
+        console.log('✅ User validated:', { id: user.id, email: user.email, role: user.role });
         return user;
     }
 };

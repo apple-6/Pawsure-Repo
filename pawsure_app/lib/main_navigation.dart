@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'controllers/navigation_controller.dart'; // Import the new controller
-import 'controllers/health_controller.dart'; // Import HealthController
+import 'controllers/navigation_controller.dart';
+import 'controllers/health_controller.dart';
+import 'controllers/home_controller.dart';
+import 'controllers/profile_controller.dart';
 
 // Import your screens
 import 'screens/home/home_screen.dart';
@@ -15,18 +17,33 @@ class MainNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Get existing controllers registered in `InitialBindings`.
-    // Use `Get.find` to avoid re-registering controllers every rebuild.
+    // Get controllers
     final NavigationController nav = Get.isRegistered<NavigationController>()
         ? Get.find<NavigationController>()
         : Get.put(NavigationController());
 
-    // Initialize HealthController only if it wasn't registered by bindings.
+    // Ensure HealthController exists
     if (!Get.isRegistered<HealthController>()) {
       Get.put(HealthController());
     }
 
-    // 2. Define your screens
+    // ✅ FIX: Reset to home tab and refresh data on create
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      nav.changePage(0); // Reset to Home tab
+
+      // Refresh controllers with new user data
+      if (Get.isRegistered<HomeController>()) {
+        Get.find<HomeController>().loadPets();
+      }
+      if (Get.isRegistered<HealthController>()) {
+        Get.find<HealthController>().refreshPets();
+      }
+      if (Get.isRegistered<ProfileController>()) {
+        Get.find<ProfileController>().loadProfile();
+      }
+    });
+
+    // Define your screens
     final screens = [
       const HomeScreen(),
       const HealthScreen(),
@@ -35,17 +52,14 @@ class MainNavigation extends StatelessWidget {
       const ProfileScreen(),
     ];
 
-    // Pawsure Green
     const primaryColor = Color(0xFF22c55e);
 
     return Scaffold(
-      // 3. Use Obx() to listen for changes in the page index
       body: Obx(() => screens[nav.currentIndex.value]),
-
       bottomNavigationBar: Obx(
         () => BottomNavigationBar(
           currentIndex: nav.currentIndex.value,
-          onTap: nav.changePage, // Uses the controller's action
+          onTap: nav.changePage,
           type: BottomNavigationBarType.fixed,
           selectedItemColor: primaryColor,
           unselectedItemColor: Colors.grey,

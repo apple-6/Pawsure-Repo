@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart'; // ← ADD THIS IMPORT
 import '../../services/auth_service.dart';
-import '../../main_navigation.dart';
 import 'register_screen.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_setup_screen.dart';
 import '../../models/role.dart';
@@ -29,7 +29,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Helper function to check if input is email or phone
   bool _isEmail(String input) {
     return input.contains('@');
   }
@@ -81,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
                       color: Colors.black12,
                       blurRadius: 12,
@@ -366,49 +365,29 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final input = _emailOrPhoneController.text.trim();
       final password = _passwordController.text;
-
-      // Determine if input is email or phone
       final isEmail = _isEmail(input);
 
-      // Call appropriate login method
-      await _authService.login(
-        input, // Can be email or phone
-        password,
-        isPhone: !isEmail, // Flag to indicate if it's a phone number
-      );
+      await _authService.login(input, password, isPhone: !isEmail);
 
       if (!mounted) return;
 
-      // Get user profile to check role
+      // Get user profile
       final profile = await _authService.profile();
 
       if (profile != null) {
-        final userRole = profile['role'] as String?;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Welcome back, ${profile['name']}!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Navigate based on role
-        if (userRole == 'sitter') {
-          // TODO: Navigate to Sitter Dashboard when created
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const MainNavigation()),
-          );
-        } else {
-          // Navigate to Pet Owner Dashboard
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const MainNavigation()),
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome back, ${profile['name']}!'),
+              backgroundColor: Colors.green,
+            ),
           );
         }
+
+        // Navigate to home
+        Get.offAllNamed('/home');
       } else {
-        // Default navigation if profile fetch fails
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MainNavigation()),
-        );
+        Get.offAllNamed('/home');
       }
     } catch (e) {
       setState(() => _isLoading = false);
