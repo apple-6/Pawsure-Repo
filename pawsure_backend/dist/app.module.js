@@ -27,6 +27,7 @@ const comments_module_1 = require("./comments/comments.module");
 const likes_module_1 = require("./likes/likes.module");
 const role_module_1 = require("./role/role.module");
 const auth_module_1 = require("./auth/auth.module");
+const events_module_1 = require("./events/events.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -44,10 +45,10 @@ exports.AppModule = AppModule = __decorate([
                     type: 'postgres',
                     url: configService.get('DATABASE_URL'),
                     autoLoadEntities: true,
-                    synchronize: false,
+                    synchronize: true,
                     ssl: {
-                        rejectUnauthorized: false
-                    }
+                        rejectUnauthorized: false,
+                    },
                 }),
             }),
             ai_module_1.AiModule,
@@ -65,6 +66,7 @@ exports.AppModule = AppModule = __decorate([
             likes_module_1.LikesModule,
             role_module_1.RoleModule,
             auth_module_1.AuthModule,
+            events_module_1.EventsModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

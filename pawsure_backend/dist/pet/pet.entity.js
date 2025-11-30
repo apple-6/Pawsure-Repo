@@ -15,6 +15,7 @@ const user_entity_1 = require("../user/user.entity");
 const activity_log_entity_1 = require("../activity-log/activity-log.entity");
 const health_record_entity_1 = require("../health-record/health-record.entity");
 const booking_entity_1 = require("../booking/booking.entity");
+const event_entity_1 = require("../events/entities/event.entity");
 let Pet = class Pet {
     id;
     name;
@@ -33,6 +34,7 @@ let Pet = class Pet {
     activityLogs;
     healthRecords;
     bookings;
+    events;
     created_at;
     updated_at;
 };
@@ -106,6 +108,10 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => booking_entity_1.Booking, (booking) => booking.pet),
     __metadata("design:type", Array)
 ], Pet.prototype, "bookings", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => event_entity_1.Event, (event) => event.pet),
+    __metadata("design:type", Array)
+], Pet.prototype, "events", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)

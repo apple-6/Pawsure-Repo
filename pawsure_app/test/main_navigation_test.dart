@@ -25,11 +25,11 @@ class _MockApiService extends ApiService {
     int petId,
     Map<String, dynamic> payload,
   ) async {
-    // Return a mock HealthRecord
+    // Return a mock HealthRecord with DateTime objects
     return HealthRecord(
       id: 1,
       recordType: 'Vaccination',
-      recordDate: '2024-01-01',
+      recordDate: DateTime(2024, 1, 1), // ✅ Changed from String to DateTime
       description: 'Test record',
       clinic: null,
       nextDueDate: null,
@@ -45,7 +45,7 @@ class _MockApiService extends ApiService {
     return HealthRecord(
       id: recordId,
       recordType: 'Vaccination',
-      recordDate: '2024-01-01',
+      recordDate: DateTime(2024, 1, 1), // ✅ Changed from String to DateTime
       description: 'Updated test record',
       clinic: null,
       nextDueDate: null,

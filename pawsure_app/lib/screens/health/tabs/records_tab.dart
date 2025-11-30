@@ -1,9 +1,11 @@
+// pawsure_app/lib/screens/health/tabs/records_tab.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
 import 'package:pawsure_app/screens/health/add_health_record_screen.dart';
 import 'package:pawsure_app/widgets/health/filter_chip_row.dart';
 import 'package:pawsure_app/widgets/health/health_record_card.dart';
+import 'package:pawsure_app/widgets/health/edit_health_record_modal.dart'; // 🆕 Add this import
 
 class RecordsTab extends StatelessWidget {
   const RecordsTab({super.key});
@@ -44,7 +46,12 @@ class RecordsTab extends StatelessWidget {
                         itemCount: controller.filteredRecords.length,
                         itemBuilder: (context, index) {
                           final record = controller.filteredRecords[index];
-                          return HealthRecordCard(record: record);
+                          // 🆕 Add onTap callback to make records tappable
+                          return HealthRecordCard(
+                            record: record,
+                            onTap: () =>
+                                _showEditHealthRecordModal(context, record),
+                          );
                         },
                       ),
               ),
@@ -55,12 +62,8 @@ class RecordsTab extends StatelessWidget {
             right: 16,
             child: FloatingActionButton.extended(
               onPressed: () async {
-                // Update FAB logic
                 if (controller.selectedPet.value != null) {
-                  // Use Get.to() for navigation
                   await Get.to(() => const AddHealthRecordScreen());
-                  // No need to pass petId, AddHealthRecordScreen will find it.
-                  // No need to check for 'created == true', the controller handles the refresh.
                 } else {
                   Get.snackbar(
                     'No Pet Selected',
@@ -71,10 +74,22 @@ class RecordsTab extends StatelessWidget {
               },
               icon: const Icon(Icons.add),
               label: const Text('Add Record'),
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
             ),
           ),
         ],
       );
     });
+  }
+
+  // 🆕 Method to show edit modal
+  void _showEditHealthRecordModal(BuildContext context, record) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => EditHealthRecordModal(record: record),
+    );
   }
 }

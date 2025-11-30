@@ -1,3 +1,4 @@
+// pawsure_backend/src/pet/pet.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -12,6 +13,7 @@ import { User } from '../user/user.entity';
 import { ActivityLog } from '../activity-log/activity-log.entity';
 import { HealthRecord } from '../health-record/health-record.entity';
 import { Booking } from '../booking/booking.entity';
+import { Event } from '../events/entities/event.entity'; // 🆕 IMPORT
 
 @Entity('pets')
 export class Pet {
@@ -21,7 +23,7 @@ export class Pet {
   @Column()
   name: string;
 
-  @Column({ nullable: true }) // 'STRING species'
+  @Column({ nullable: true })
   species: string;
 
   @Column()
@@ -66,6 +68,10 @@ export class Pet {
 
   @OneToMany(() => Booking, (booking) => booking.pet)
   bookings: Booking[];
+
+  // 🆕 NEW RELATIONSHIP
+  @OneToMany(() => Event, (event) => event.pet)
+  events: Event[];
 
   @CreateDateColumn()
   created_at: Date;
