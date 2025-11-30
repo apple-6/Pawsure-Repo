@@ -107,15 +107,18 @@ class CalendarController extends GetxController {
   // ========================================================================
 
   /// Group events by date (strips time component)
+  /// 🔧 FIXED: Use local date to avoid timezone issues
   void _groupEventsByDate(List<EventModel> eventList) {
     final Map<DateTime, List<EventModel>> grouped = {};
 
     for (final event in eventList) {
-      // Normalize date (remove time component)
+      // 🔧 CRITICAL FIX: Convert to local time first, then normalize
+      // This prevents timezone shifts from moving events to wrong days
+      final localDateTime = event.dateTime.toLocal();
       final dateKey = DateTime(
-        event.dateTime.year,
-        event.dateTime.month,
-        event.dateTime.day,
+        localDateTime.year,
+        localDateTime.month,
+        localDateTime.day,
       );
 
       if (!grouped.containsKey(dateKey)) {
@@ -137,9 +140,10 @@ class CalendarController extends GetxController {
   // ========================================================================
 
   /// Get events for a specific day (used by calendar widget)
-  /// 🔧 ENHANCED: Added comprehensive null safety checks
+  /// 🔧 ENHANCED: Added comprehensive null safety checks and timezone handling
   List<EventModel> getEventsForDay(DateTime day) {
     try {
+      // 🔧 CRITICAL FIX: Normalize using local date
       final normalizedDay = DateTime(day.year, day.month, day.day);
 
       // Return empty list if events is null or doesn't contain the day
@@ -299,18 +303,29 @@ class CalendarController extends GetxController {
   }
 
   /// Update an event with full details
-  /// 🔧 ENHANCED: Better error handling and API URL configuration
+  /// 🔧 ENHANCED: Better error handling and timezone preservation
   Future<void> updateEvent(
     EventModel event, {
     bool triggerHealthDialog = false,
   }) async {
     try {
       debugPrint('🔄 Updating event ${event.id}...');
+      debugPrint('   Original dateTime: ${event.dateTime}');
+
+      // 🔧 CRITICAL FIX: Preserve timezone by using UTC explicitly
+      // This prevents the date from shifting when sent to backend
+      final utcDateTime = DateTime.utc(
+        event.dateTime.year,
+        event.dateTime.month,
+        event.dateTime.day,
+        event.dateTime.hour,
+        event.dateTime.minute,
+      );
 
       // Build payload
       final payload = {
         'title': event.title,
-        'dateTime': event.dateTime.toIso8601String(),
+        'dateTime': utcDateTime.toIso8601String(), // Send as UTC
         'eventType': event.eventType.toJson(),
         'status': event.status.toJson(),
         if (event.location != null && event.location!.isNotEmpty)
@@ -320,6 +335,7 @@ class CalendarController extends GetxController {
       };
 
       debugPrint('📤 Payload: ${jsonEncode(payload)}');
+      debugPrint('   Sending dateTime as: ${utcDateTime.toIso8601String()}');
 
       // Get headers and make API call
       final headers = {
@@ -338,7 +354,7 @@ class CalendarController extends GetxController {
         debugPrint('⚠️ Could not get auth token: $e');
       }
 
-      // 🔧 FIX: Use localhost for Windows, 10.0.2.2 for Android emulator
+      // Use appropriate API URL
       const apiUrl = String.fromEnvironment(
         'API_BASE_URL',
         defaultValue: 'http://localhost:3000',
@@ -357,17 +373,18 @@ class CalendarController extends GetxController {
           jsonDecode(response.body) as Map<String, dynamic>,
         );
 
+        debugPrint('✅ Event updated successfully');
+        debugPrint('   Received dateTime: ${updatedEvent.dateTime}');
+
         // Update local state
         _updateEventInState(updatedEvent);
-
-        debugPrint('✅ Event updated successfully');
 
         // Trigger health dialog if requested
         if (triggerHealthDialog) {
           _showHealthRecordDialog(updatedEvent);
         }
 
-        // Refresh both views
+        // Refresh both views to ensure date grouping is correct
         if (currentPetId.value != null) {
           await loadUpcomingEvents(currentPetId.value!);
           await loadEvents(currentPetId.value!);
@@ -424,25 +441,57 @@ class CalendarController extends GetxController {
   // ========================================================================
 
   /// Update an event in local state after API response
-  /// 🔧 ENHANCED: Added null safety checks
+  /// 🔧 ENHANCED: Handle date changes properly (event moved to different day)
   void _updateEventInState(EventModel updatedEvent) {
     try {
-      // Update in events map
-      final dateKey = DateTime(
-        updatedEvent.dateTime.year,
-        updatedEvent.dateTime.month,
-        updatedEvent.dateTime.day,
+      // 🔧 CRITICAL FIX: Handle case where event date changed
+      // We need to remove from old date and add to new date
+
+      // Convert to local time for date grouping
+      final localDateTime = updatedEvent.dateTime.toLocal();
+      final newDateKey = DateTime(
+        localDateTime.year,
+        localDateTime.month,
+        localDateTime.day,
       );
 
-      if (events.containsKey(dateKey) && events[dateKey] != null) {
-        final index = events[dateKey]!.indexWhere(
-          (e) => e.id == updatedEvent.id,
-        );
+      debugPrint('🔄 Updating event ${updatedEvent.id} in local state');
+      debugPrint('   New date key: $newDateKey');
+
+      // First, try to find and remove the event from its old location
+      DateTime? oldDateKey;
+      for (final entry in events.entries) {
+        final index = entry.value.indexWhere((e) => e.id == updatedEvent.id);
         if (index != -1) {
-          events[dateKey]![index] = updatedEvent;
-          events.refresh();
+          oldDateKey = entry.key;
+          debugPrint('   Found event in old date: $oldDateKey');
+
+          // Remove from old date
+          entry.value.removeAt(index);
+
+          // If that was the last event on that day, remove the day
+          if (entry.value.isEmpty) {
+            events.remove(entry.key);
+            debugPrint('   Removed empty date: $oldDateKey');
+          }
+          break;
         }
       }
+
+      // Now add to new date
+      if (!events.containsKey(newDateKey)) {
+        events[newDateKey] = [];
+      }
+
+      events[newDateKey]!.add(updatedEvent);
+
+      // Re-sort events for the new date
+      events[newDateKey]!.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+
+      debugPrint('   Added event to new date: $newDateKey');
+
+      // Trigger UI update
+      events.refresh();
 
       // Update in upcoming events
       final upcomingIndex = upcomingEvents.indexWhere(
@@ -451,6 +500,7 @@ class CalendarController extends GetxController {
       if (upcomingIndex != -1) {
         upcomingEvents[upcomingIndex] = updatedEvent;
         upcomingEvents.refresh();
+        debugPrint('   Updated in upcoming events list');
       }
     } catch (e) {
       debugPrint('⚠️ Error updating event in state: $e');
@@ -462,10 +512,11 @@ class CalendarController extends GetxController {
   void _removeEventFromState(EventModel event) {
     try {
       // Remove from events map
+      final localDateTime = event.dateTime.toLocal();
       final dateKey = DateTime(
-        event.dateTime.year,
-        event.dateTime.month,
-        event.dateTime.day,
+        localDateTime.year,
+        localDateTime.month,
+        localDateTime.day,
       );
 
       if (events.containsKey(dateKey) && events[dateKey] != null) {
@@ -509,7 +560,12 @@ class CalendarController extends GetxController {
   /// Navigate to health record form with pre-filled data
   void _navigateToHealthRecordForm(EventModel event) {
     debugPrint('🏥 Navigating to health record form...');
-    debugPrint('📦 Event data: petId=${event.petId}, title=${event.title}');
+    debugPrint('📦 Passing arguments:');
+    debugPrint('   - petId: ${event.petId}');
+    debugPrint('   - prefillDate: ${event.dateTime}');
+    debugPrint('   - prefillTitle: ${event.title}');
+    debugPrint('   - prefillLocation: ${event.location}');
+    debugPrint('   - prefillNotes: ${event.notes}');
 
     // Navigate to Health Records screen with pre-filled data
     Get.toNamed(
@@ -522,6 +578,8 @@ class CalendarController extends GetxController {
         'prefillNotes': event.notes,
       },
     );
+
+    debugPrint('✅ Navigation initiated to /health/add-record');
   }
 
   // ========================================================================

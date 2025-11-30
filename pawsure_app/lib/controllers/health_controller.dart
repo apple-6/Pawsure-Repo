@@ -144,34 +144,34 @@ class HealthController extends GetxController
     selectedFilter.value = filter;
   }
 
-  /// 🔧 ENHANCED: Add new health record with better error handling
+  /// 🔧 FIXED: Add new health record (no snackbars, just save)
   Future<void> addNewHealthRecord(
     Map<String, dynamic> payload,
     int petId,
   ) async {
     try {
-      debugPrint('➕ Adding health record for pet ID: $petId');
-      debugPrint('📤 Payload: $payload');
+      debugPrint('➕ HealthController: Adding health record for pet ID: $petId');
+      debugPrint('📤 HealthController: Payload: $payload');
 
       // Call API service
       final newRecord = await _apiService.addHealthRecord(petId, payload);
-      debugPrint('✅ Health record created with ID: ${newRecord.id}');
+      debugPrint('✅ HealthController: Record created with ID: ${newRecord.id}');
 
       // Add to local state immediately for instant feedback
       if (selectedPet.value?.id == petId) {
         healthRecords.add(newRecord);
         _updateFilteredRecords();
-        debugPrint('✅ Added record to local state');
+        debugPrint('✅ HealthController: Added record to local state');
       }
 
       // Refresh from server to ensure sync
       await _fetchHealthRecords(petId);
-      debugPrint('✅ Health records refreshed from server');
+      debugPrint('✅ HealthController: Health records refreshed from server');
 
-      // Note: Don't show snackbar here, let the screen handle it
-      // This allows the screen to control navigation timing
+      // 🔧 CRITICAL: Don't call Get.back() or show snackbar here!
+      // Let the screen handle all UI feedback and navigation
     } catch (e, stackTrace) {
-      debugPrint('❌ Error adding health record: $e');
+      debugPrint('❌ HealthController: Error adding health record: $e');
       debugPrint('Stack trace: $stackTrace');
 
       // Rethrow to let the screen handle the error
