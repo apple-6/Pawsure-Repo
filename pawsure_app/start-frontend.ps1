@@ -11,3 +11,4 @@ flutter pub get
 Write-Host "Running Flutter app..." -ForegroundColor Green
 flutter run
 
+
