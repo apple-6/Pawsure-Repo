@@ -27,7 +27,14 @@ let SitterController = class SitterController {
         return await this.sitterService.create(createSitterDto, req.user.id);
     }
     async findAll(minRating) {
-        return await this.sitterService.findAll(minRating);
+        let parsed;
+        if (minRating !== undefined && minRating !== null && minRating.trim() !== '') {
+            parsed = Number(minRating);
+            if (Number.isNaN(parsed)) {
+                throw new common_1.BadRequestException('minRating must be a numeric value');
+            }
+        }
+        return await this.sitterService.findAll(parsed);
     }
     async searchByAvailability(date) {
         return await this.sitterService.searchByAvailability(date);
@@ -58,9 +65,9 @@ __decorate([
 ], SitterController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
-    __param(0, (0, common_1.Query)('minRating', common_1.ParseFloatPipe)),
+    __param(0, (0, common_1.Query)('minRating')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], SitterController.prototype, "findAll", null);
 __decorate([

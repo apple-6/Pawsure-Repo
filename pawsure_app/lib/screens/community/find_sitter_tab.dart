@@ -1,8 +1,10 @@
 // lib/screens/community/find_sitter_tab.dart
 
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:pawsure_app/screens/community/sitter_model.dart';
+import 'package:pawsure_app/services/sitter_service.dart';
 
 class FindSitterTab extends StatefulWidget {
   final Function(String sitterId) onSitterClick;
@@ -14,61 +16,106 @@ class FindSitterTab extends StatefulWidget {
 }
 
 class _FindSitterTabState extends State<FindSitterTab> {
-  String selectedLocation = 'Johor Bahru';
+  String selectedLocation = '';
   DateTime? selectedDate;
   List<Sitter> availableSitters = [];
   bool isLoading = false;
+  String? errorMessage;
 
   final TextEditingController _locationController = TextEditingController();
+  final SitterService _sitterService = SitterService();
 
   @override
   void initState() {
     super.initState();
-    _locationController.text = selectedLocation;
+    // Start with an empty search field so all sitters are shown initially.
+    _locationController.text = '';
     _fetchAndFilterSitters();
   }
 
   @override
   void dispose() {
     _locationController.dispose();
+    _sitterService.dispose();
     super.dispose();
   }
 
   Future<void> _fetchAndFilterSitters() async {
     setState(() {
       isLoading = true;
+      errorMessage = null;
     });
 
-    // 1. Use the local mock data (No external dependency)
-    List<Sitter> allSitters = mockSitters;
-
-    // 2. Filter by Location
-    List<Sitter> locationFilteredSitters = allSitters.where((sitter) {
-      final search = selectedLocation.toLowerCase();
-      if (search.isEmpty || search == 'johor bahru') {
-        return true;
+    try {
+      final fetchedSitters = await _sitterService.fetchSitters(
+        date: selectedDate,
+      );
+      final filteredSitters = _applyFilters(fetchedSitters);
+      if (mounted) {
+        setState(() {
+          availableSitters = filteredSitters;
+        });
       }
-      return sitter.location.toLowerCase().contains(search);
-    }).toList();
-
-    // 3. Filter by Available Dates
-    List<Sitter> finalFilteredList = locationFilteredSitters.where((sitter) {
-      if (selectedDate == null) return true;
-      return !sitter.unavailableDates.any((unavailableDate) {
-        return unavailableDate.year == selectedDate!.year &&
-            unavailableDate.month == selectedDate!.month &&
-            unavailableDate.day == selectedDate!.day;
-      });
-    }).toList();
-
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    if (mounted) {
-      setState(() {
-        availableSitters = finalFilteredList;
-        isLoading = false;
-      });
+    } catch (e) {
+      final fallbackSitters = _applyFilters(mockSitters);
+      if (mounted) {
+        setState(() {
+          availableSitters = fallbackSitters;
+          errorMessage =
+              'Unable to load sitters from the server. Showing sample data instead.\n$e';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
+  }
+
+  List<Sitter> _applyFilters(List<Sitter> sitters) {
+    final search = selectedLocation.trim().toLowerCase();
+    var filtered = sitters;
+
+    // If there is any search text, always filter by it.
+    // Clearing the field will show all locations.
+    if (search.isNotEmpty) {
+      filtered = filtered
+          .where((sitter) => sitter.location.toLowerCase().contains(search))
+          .toList();
+    }
+
+    if (selectedDate == null) {
+      return filtered;
+    }
+
+    return filtered.where(_matchesSelectedDate).toList();
+  }
+
+  bool _matchesSelectedDate(Sitter sitter) {
+    if (selectedDate == null) return true;
+    final targetDate = DateTime(
+      selectedDate!.year,
+      selectedDate!.month,
+      selectedDate!.day,
+    );
+
+    if (sitter.availableDates.isNotEmpty) {
+      return sitter.availableDates.any((date) => _isSameDay(date, targetDate));
+    }
+
+    if (sitter.unavailableDates.isNotEmpty) {
+      return !sitter.unavailableDates.any(
+        (date) => _isSameDay(date, targetDate),
+      );
+    }
+
+    return true;
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -113,6 +160,17 @@ class _FindSitterTabState extends State<FindSitterTab> {
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
+          if (errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: Text(
+                errorMessage!,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontSize: 13,
+                ),
+              ),
+            ),
           isLoading
               ? const Center(child: CircularProgressIndicator())
               : availableSitters.isEmpty
@@ -294,7 +352,7 @@ class SitterCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 2),
@@ -391,70 +449,3 @@ class SitterCard extends StatelessWidget {
     );
   }
 }
-
-// -----------------------------------------------------------------------------
-// DATA MODELS & MOCK DATA (Added here to prevent crashes)
-// -----------------------------------------------------------------------------
-
-class Sitter {
-  final String id;
-  final String name;
-  final double rating;
-  final int reviewCount;
-  final String services;
-  final double price;
-  final String imageUrl;
-  final String location;
-  final List<DateTime> unavailableDates;
-
-  Sitter({
-    required this.id,
-    required this.name,
-    required this.rating,
-    required this.reviewCount,
-    required this.services,
-    required this.price,
-    required this.imageUrl,
-    required this.location,
-    required this.unavailableDates,
-  });
-}
-
-final List<Sitter> mockSitters = [
-  Sitter(
-    id: '1',
-    name: 'Sarah Jenkins',
-    rating: 4.9,
-    reviewCount: 124,
-    services: 'Boarding, House Sitting',
-    price: 45,
-    imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80',
-    location: 'Johor Bahru, Johor',
-    unavailableDates: [
-      DateTime.now().add(const Duration(days: 2)),
-      DateTime.now().add(const Duration(days: 3)),
-    ],
-  ),
-  Sitter(
-    id: '2',
-    name: 'Mike Ross',
-    rating: 4.7,
-    reviewCount: 89,
-    services: 'Dog Walking, Drop-in',
-    price: 30,
-    imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e',
-    location: 'Skudai, Johor',
-    unavailableDates: [],
-  ),
-  Sitter(
-    id: '3',
-    name: 'Jessica Pearson',
-    rating: 5.0,
-    reviewCount: 210,
-    services: 'Boarding, Grooming',
-    price: 60,
-    imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2',
-    location: 'Johor Bahru, Johor',
-    unavailableDates: [DateTime.now().add(const Duration(days: 5))],
-  ),
-];
