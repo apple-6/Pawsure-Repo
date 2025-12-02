@@ -43,8 +43,7 @@ dependencies:
 
   # To pick files from the device
   file_picker: ^10.3.3 
-  # To handle multi-part HTTP requests
-  http: ^1.6.0
+
 
 dev_dependencies:
   flutter_test:

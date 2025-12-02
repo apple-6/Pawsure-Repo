@@ -78,10 +78,9 @@ export class SitterService {
       idDocumentUrl: idDocumentUrl,
     });
 
-    const savedSitter = await this.sitterRepository.save(sitter);
-    // 2. CORRECT LOGIC for Single Table Inheritance: Apply ALL DTO fields 
-    // (user fields like phoneNumber + sitter fields like bio, rates) directly to the User object.
-    Object.assign(user, createSitterDto);
+    await this.sitterRepository.save(sitter);
+
+    
     user.role = 'sitter';
     // Save the updated User record (which holds all Sitter data).
     await this.userRepository.save(user);
@@ -91,16 +90,16 @@ export class SitterService {
     await this.userRepository.save(user);
 
     // 4. Fetch the record using the SitterRepository to return the correct Sitter type.
-    const savedSitter = await this.sitterRepository.findOne({ 
+    const finalSitter = await this.sitterRepository.findOne({ 
         where: { userId },
         relations: ['user'] 
     });
 
-    if (!savedSitter) {
+    if (!finalSitter) {
         throw new NotFoundException('Failed to retrieve Sitter profile after creation');
     }
 
-    return savedSitter;
+    return finalSitter;
   }
 
   async findAll(minRating?: number): Promise<Sitter[]> {
