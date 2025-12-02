@@ -50,3 +50,8 @@ app.*.map.json
 **/macos/flutter/** 
 **/windows/flutter/**   
 /web/
+
+/dist
+/pawsure_backend/dist
+/pawsure_backend/node_modules
+/node_modules
