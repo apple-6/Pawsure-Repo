@@ -19,12 +19,9 @@ import { CommentsModule } from './comments/comments.module';
 import { LikesModule } from './likes/likes.module';
 import { RoleModule } from './role/role.module';
 import { AuthModule } from './auth/auth.module';
-<<<<<<< HEAD
 import { FileService } from './file/file.service';
 import { FileModule } from './file/file.module';
-=======
 import { EventsModule } from './events/events.module'; // 👈 Correct Import
->>>>>>> fff8443f8b89299d113154623b7961e3a6d92706
 
 @Module({
   imports: [
@@ -58,15 +55,10 @@ import { EventsModule } from './events/events.module'; // 👈 Correct Import
     PostsModule,
     CommentsModule,
     LikesModule,
-<<<<<<< HEAD
-  RoleModule,
-  AuthModule,
-  FileModule,
-=======
+    FileModule,
     RoleModule,
     AuthModule,
     EventsModule, // 👈 Added here
->>>>>>> fff8443f8b89299d113154623b7961e3a6d92706
   ],
   controllers: [AppController],
   providers: [AppService, FileService],
