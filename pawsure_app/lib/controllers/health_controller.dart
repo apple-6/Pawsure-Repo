@@ -1,3 +1,4 @@
+// pawsure_app/lib/controllers/health_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/models/health_record_model.dart';
@@ -26,7 +27,7 @@ class HealthController extends GetxController
   @override
   void onInit() {
     super.onInit();
-    tabController = TabController(length: 4, vsync: this);
+    tabController = TabController(length: 3, vsync: this);
     _fetchPets();
 
     ever(selectedPet, (Pet? pet) {
@@ -143,37 +144,38 @@ class HealthController extends GetxController
     selectedFilter.value = filter;
   }
 
+  /// 🔧 FIXED: Add new health record (no snackbars, just save)
   Future<void> addNewHealthRecord(
     Map<String, dynamic> payload,
     int petId,
   ) async {
     try {
-      debugPrint('➕ Adding health record for pet ID: $petId');
+      debugPrint('➕ HealthController: Adding health record for pet ID: $petId');
+      debugPrint('📤 HealthController: Payload: $payload');
 
-      await _apiService.addHealthRecord(petId, payload);
-      debugPrint('✅ Health record added successfully');
+      // Call API service
+      final newRecord = await _apiService.addHealthRecord(petId, payload);
+      debugPrint('✅ HealthController: Record created with ID: ${newRecord.id}');
 
+      // Add to local state immediately for instant feedback
+      if (selectedPet.value?.id == petId) {
+        healthRecords.add(newRecord);
+        _updateFilteredRecords();
+        debugPrint('✅ HealthController: Added record to local state');
+      }
+
+      // Refresh from server to ensure sync
       await _fetchHealthRecords(petId);
+      debugPrint('✅ HealthController: Health records refreshed from server');
 
-      Get.back();
-      Get.snackbar(
-        'Success',
-        'Health record added successfully!',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
+      // 🔧 CRITICAL: Don't call Get.back() or show snackbar here!
+      // Let the screen handle all UI feedback and navigation
     } catch (e, stackTrace) {
-      debugPrint('❌ Error adding health record: $e');
+      debugPrint('❌ HealthController: Error adding health record: $e');
       debugPrint('Stack trace: $stackTrace');
 
-      Get.snackbar(
-        'Error',
-        'Failed to add record: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      // Rethrow to let the screen handle the error
+      rethrow;
     }
   }
 
@@ -185,6 +187,11 @@ class HealthController extends GetxController
     if (selectedPet.value != null) {
       await _fetchHealthRecords(selectedPet.value!.id);
     }
+  }
+
+  /// 🔧 ENHANCED: Fetch health records for a specific pet (used by prefill)
+  Future<void> fetchHealthRecords(int petId) async {
+    await _fetchHealthRecords(petId);
   }
 
   /// Reset controller state (call after logout)
@@ -205,5 +212,63 @@ class HealthController extends GetxController
 
     // Fetch fresh data
     _fetchPets();
+  }
+
+  /// 🆕 Update an existing health record
+  Future<void> updateHealthRecord(
+    int recordId,
+    Map<String, dynamic> payload,
+  ) async {
+    try {
+      debugPrint('🔄 HealthController: Updating health record $recordId...');
+      debugPrint('📤 HealthController: Payload: $payload');
+
+      // Call API service
+      final updatedRecord = await _apiService.updateHealthRecord(
+        recordId,
+        payload,
+      );
+      debugPrint(
+        '✅ HealthController: Record updated with ID: ${updatedRecord.id}',
+      );
+
+      // Update local state
+      final index = healthRecords.indexWhere((r) => r.id == recordId);
+      if (index != -1) {
+        healthRecords[index] = updatedRecord;
+        _updateFilteredRecords();
+        debugPrint('✅ HealthController: Updated record in local state');
+      }
+
+      // Refresh from server to ensure sync
+      if (selectedPet.value != null) {
+        await _fetchHealthRecords(selectedPet.value!.id);
+      }
+      debugPrint('✅ HealthController: Health records refreshed from server');
+    } catch (e, stackTrace) {
+      debugPrint('❌ HealthController: Error updating health record: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  /// 🆕 Delete a health record
+  Future<void> deleteHealthRecord(int recordId) async {
+    try {
+      debugPrint('🗑️ HealthController: Deleting health record $recordId...');
+
+      // Call API service
+      await _apiService.deleteHealthRecord(recordId);
+      debugPrint('✅ HealthController: Record deleted from server');
+
+      // Remove from local state
+      healthRecords.removeWhere((r) => r.id == recordId);
+      _updateFilteredRecords();
+      debugPrint('✅ HealthController: Removed record from local state');
+    } catch (e, stackTrace) {
+      debugPrint('❌ HealthController: Error deleting health record: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 }

@@ -57,6 +57,47 @@ let HealthRecordService = class HealthRecordService {
             order: { record_date: 'DESC' },
         });
     }
+    async update(id, dto) {
+        const record = await this.healthRecordRepository.findOne({
+            where: { id },
+            relations: ['pet']
+        });
+        if (!record) {
+            throw new common_1.NotFoundException(`Health record with ID ${id} not found`);
+        }
+        if (dto.record_type !== undefined) {
+            record.record_type = dto.record_type;
+        }
+        if (dto.record_date !== undefined) {
+            record.record_date = new Date(dto.record_date).toISOString().slice(0, 10);
+        }
+        if (dto.description !== undefined) {
+            record.description = dto.description;
+        }
+        if (dto.clinic !== undefined) {
+            record.clinic = dto.clinic;
+        }
+        if (dto.nextDueDate !== undefined) {
+            record.nextDueDate = dto.nextDueDate;
+        }
+        const savedRecord = await this.healthRecordRepository.save(record);
+        const reloadedRecord = await this.healthRecordRepository.findOne({
+            where: { id: savedRecord.id },
+        });
+        if (!reloadedRecord) {
+            throw new common_1.NotFoundException('Failed to reload updated health record');
+        }
+        return reloadedRecord;
+    }
+    async remove(id) {
+        const record = await this.healthRecordRepository.findOne({
+            where: { id }
+        });
+        if (!record) {
+            throw new common_1.NotFoundException(`Health record with ID ${id} not found`);
+        }
+        await this.healthRecordRepository.remove(record);
+    }
 };
 exports.HealthRecordService = HealthRecordService;
 exports.HealthRecordService = HealthRecordService = __decorate([

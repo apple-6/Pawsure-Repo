@@ -16,6 +16,7 @@ exports.HealthRecordController = void 0;
 const common_1 = require("@nestjs/common");
 const health_record_service_1 = require("./health-record.service");
 const create_health_record_dto_1 = require("./dto/create-health-record.dto");
+const update_health_record_dto_1 = require("./dto/update-health-record.dto");
 let HealthRecordController = class HealthRecordController {
     healthRecordService;
     constructor(healthRecordService) {
@@ -26,6 +27,13 @@ let HealthRecordController = class HealthRecordController {
     }
     findAllForPet(petId) {
         return this.healthRecordService.findAllForPet(petId);
+    }
+    update(id, updateHealthRecordDto) {
+        return this.healthRecordService.update(id, updateHealthRecordDto);
+    }
+    async remove(id) {
+        await this.healthRecordService.remove(id);
+        return { message: 'Health record deleted successfully' };
     }
 };
 exports.HealthRecordController = HealthRecordController;
@@ -45,6 +53,23 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", void 0)
 ], HealthRecordController.prototype, "findAllForPet", null);
+__decorate([
+    (0, common_1.Put)('/health-records/:id'),
+    (0, common_1.UsePipes)(new common_1.ValidationPipe({ transform: true })),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, update_health_record_dto_1.UpdateHealthRecordDto]),
+    __metadata("design:returntype", void 0)
+], HealthRecordController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)('/health-records/:id'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], HealthRecordController.prototype, "remove", null);
 exports.HealthRecordController = HealthRecordController = __decorate([
     (0, common_1.Controller)(),
     __metadata("design:paramtypes", [health_record_service_1.HealthRecordService])

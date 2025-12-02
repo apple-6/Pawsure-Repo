@@ -1,3 +1,4 @@
+// pawsure_app/lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'bindings/initial_bindings.dart';
@@ -6,6 +7,8 @@ import 'bindings/initial_bindings.dart';
 import 'screens/auth/onboarding_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/role_selection.dart';
+import 'screens/calendar/calendar_screen.dart';
+import 'screens/health/add_health_record_screen.dart'; // 👈 ADD THIS IMPORT
 import 'main_navigation.dart';
 
 void main() {
@@ -19,7 +22,7 @@ class PawsureApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('[DEBUG] PawsureApp: building GetMaterialApp with Onboarding');
+    debugPrint('[DEBUG] PawsureApp: building GetMaterialApp');
 
     return GetMaterialApp(
       title: 'Pawsure - Pet Care Companion',
@@ -34,7 +37,7 @@ class PawsureApp extends StatelessWidget {
       // Initial screen
       home: const OnboardingScreen(),
 
-      // ✅ UPDATED: Use getPages instead of routes for GetX navigation
+      // ✅ FIXED: Added all necessary routes including /health/add-record
       getPages: [
         GetPage(name: '/', page: () => const OnboardingScreen()),
         GetPage(name: '/onboarding', page: () => const OnboardingScreen()),
@@ -44,6 +47,11 @@ class PawsureApp extends StatelessWidget {
           page: () => const RoleSelectionScreen(),
         ),
         GetPage(name: '/home', page: () => const MainNavigation()),
+        GetPage(name: '/calendar', page: () => const CalendarScreen()),
+        GetPage(
+          name: '/health/add-record', // 👈 CRITICAL: This was missing!
+          page: () => const AddHealthRecordScreen(),
+        ),
       ],
 
       debugShowCheckedModeBanner: false,
