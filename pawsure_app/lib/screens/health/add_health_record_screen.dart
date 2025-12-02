@@ -295,6 +295,161 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
             onPressed: () => Get.offAllNamed('/home'),
           ),
         ),
+<<<<<<< HEAD
+      ),
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(16.0),
+                  children: [
+                    // Record Type Dropdown
+                    DropdownButtonFormField<HealthRecordType>(
+                      initialValue: _selectedType,
+                      decoration: const InputDecoration(
+                        labelText: 'Record Type',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: HealthRecordType.vaccination,
+                          child: Text('Vaccination'),
+                        ),
+                        DropdownMenuItem(
+                          value: HealthRecordType.vetVisit,
+                          child: Text('Vet Visit'),
+                        ),
+                        DropdownMenuItem(
+                          value: HealthRecordType.medication,
+                          child: Text('Medication'),
+                        ),
+                        DropdownMenuItem(
+                          value: HealthRecordType.allergy,
+                          child: Text('Allergy'),
+                        ),
+                        DropdownMenuItem(
+                          value: HealthRecordType.note,
+                          child: Text('Note'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() => _selectedType = val);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Record Date
+                    ListTile(
+                      title: const Text('Record Date'),
+                      subtitle: Text(
+                        '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.calendar_today),
+                      onTap: _pickDate,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(color: Colors.grey.shade400),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Description
+                    TextFormField(
+                      controller: _descriptionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Description (Optional)',
+                        border: OutlineInputBorder(),
+                        hintText: 'Enter details about this health record',
+                      ),
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Clinic (Optional)
+                    TextFormField(
+                      controller: _clinicController,
+                      decoration: const InputDecoration(
+                        labelText: 'Clinic/Hospital (Optional)',
+                        border: OutlineInputBorder(),
+                        hintText: 'Where was this performed?',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Next Due Date (Optional)
+                    ListTile(
+                      title: const Text('Next Due Date (Optional)'),
+                      subtitle: Text(
+                        _nextDueDate != null
+                            ? '${_nextDueDate!.day}/${_nextDueDate!.month}/${_nextDueDate!.year}'
+                            : 'Not set',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: _nextDueDate != null
+                              ? Colors.black
+                              : Colors.grey,
+                        ),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_nextDueDate != null)
+                            IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                setState(() {
+                                  _nextDueDate = null;
+                                });
+                              },
+                            ),
+                          const Icon(Icons.calendar_today),
+                        ],
+                      ),
+                      onTap: _pickNextDueDate,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(color: Colors.grey.shade400),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Submit Button
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _submitting ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.grey,
+                    ),
+                    child: _submitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Save Health Record',
+=======
         body: SafeArea(
           child: Form(
             key: _formKey,
@@ -313,6 +468,7 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                         Expanded(
                           child: Text(
                             'Form pre-filled from calendar event',
+>>>>>>> Sprint2-main
                             style: TextStyle(
                               color: Colors.blue[700],
                               fontWeight: FontWeight.w500,
