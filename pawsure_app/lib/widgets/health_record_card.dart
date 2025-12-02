@@ -1,3 +1,4 @@
+//pawsure_app\lib\widgets\health_record_card.dart
 import 'package:flutter/material.dart';
 import 'package:pawsure_app/models/health_record_model.dart';
 
@@ -5,11 +6,7 @@ class HealthRecordCard extends StatelessWidget {
   final HealthRecord record;
   final VoidCallback? onDelete;
 
-  const HealthRecordCard({
-    super.key,
-    required this.record,
-    this.onDelete,
-  });
+  const HealthRecordCard({super.key, required this.record, this.onDelete});
 
   Color _getRecordTypeColor(String? type) {
     switch (type?.toLowerCase()) {

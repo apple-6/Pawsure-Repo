@@ -1,3 +1,4 @@
+// pawsure_app/lib/controllers/home_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/models/pet_model.dart';
@@ -136,9 +137,9 @@ class HomeController extends GetxController {
 
   /// Log mood
   void logMood(String mood) {
-    if (mood == 'happy')
+    if (mood == 'happy') {
       currentMood.value = "😊";
-    else if (mood == 'neutral')
+    } else if (mood == 'neutral')
       currentMood.value = "😐";
     else if (mood == 'sad')
       currentMood.value = "😢";
