@@ -6,11 +6,7 @@ class Step4Rates extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final Map<String, dynamic> formData;
 
-  const Step4Rates({
-    super.key,
-    required this.formKey,
-    required this.formData,
-  });
+  const Step4Rates({super.key, required this.formKey, required this.formData});
 
   @override
   Widget build(BuildContext context) {
@@ -22,8 +18,8 @@ class Step4Rates extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Experience & Rates',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              'Step 4: Bio & Rates',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
@@ -81,7 +77,9 @@ class Step4Rates extends StatelessWidget {
                 prefixText: '',
               ),
               initialValue: formData['ratePerNight']?.toString(),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Rate is required';
@@ -95,7 +93,8 @@ class Step4Rates extends StatelessWidget {
                 return null;
               },
               // Save the value to the map as a double
-              onSaved: (value) => formData['ratePerNight'] = double.parse(value!),
+              onSaved: (value) =>
+                  formData['ratePerNight'] = double.parse(value!),
             ),
             const SizedBox(height: 8),
             Row(

@@ -1,9 +1,10 @@
+// pawsure_backend/src/app.module.ts
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule, ConfigService } from '@nestjs/config'; // Import ConfigModule and ConfigService
-import { TypeOrmModule } from '@nestjs/typeorm'; // Import TypeOrmModule
-import { AiModule } from './ai/ai.module'; // Import your existing AI module
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AiModule } from './ai/ai.module';
 import { UserModule } from './user/user.module';
 import { PetModule } from './pet/pet.module';
 import { SitterModule } from './sitter/sitter.module';
@@ -18,31 +19,33 @@ import { CommentsModule } from './comments/comments.module';
 import { LikesModule } from './likes/likes.module';
 import { RoleModule } from './role/role.module';
 import { AuthModule } from './auth/auth.module';
+<<<<<<< HEAD
 import { FileService } from './file/file.service';
 import { FileModule } from './file/file.module';
+=======
+import { EventsModule } from './events/events.module'; // 👈 Correct Import
+>>>>>>> fff8443f8b89299d113154623b7961e3a6d92706
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ // Configure ConfigModule first
-      isGlobal: true,      // Make config available globally
-      envFilePath: '.env', // Specify the .env file
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
     }),
-    
-    TypeOrmModule.forRootAsync({ // Configure TypeOrm asynchronously
-      imports: [ConfigModule],   // Import ConfigModule here
-      inject: [ConfigService],   // Inject ConfigService to read env vars
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        type: 'postgres', // Database type
-        url: configService.get<string>('DATABASE_URL'), // Get URL from .env
-        autoLoadEntities: true, // Automatically load your table models (Entities)
-        synchronize: false, // DEV ONLY: Auto-create/update tables (Disable in production!)
-        ssl: { // Required for Supabase/cloud connections
-          rejectUnauthorized: false
-        }
+        type: 'postgres',
+        url: configService.get<string>('DATABASE_URL'),
+        autoLoadEntities: true,
+        synchronize: true, // Set to false in production
+        ssl: {
+          rejectUnauthorized: false,
+        },
       }),
     }),
-  AiModule, // Include your AI module
-  // Add other feature modules here later (e.g., PetsModule, UsersModule)
+    AiModule,
     UserModule,
     PetModule,
     SitterModule,
@@ -55,9 +58,15 @@ import { FileModule } from './file/file.module';
     PostsModule,
     CommentsModule,
     LikesModule,
+<<<<<<< HEAD
   RoleModule,
   AuthModule,
   FileModule,
+=======
+    RoleModule,
+    AuthModule,
+    EventsModule, // 👈 Added here
+>>>>>>> fff8443f8b89299d113154623b7961e3a6d92706
   ],
   controllers: [AppController],
   providers: [AppService, FileService],

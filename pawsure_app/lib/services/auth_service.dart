@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import './storage_service.dart';
 
 class AuthService {
   // Determine base URL depending on platform so emulator can reach host machine.
@@ -19,7 +19,8 @@ class AuthService {
     // return 'http://10.202.109.35:3000';
   }
 
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  // Use file-based storage implementation
+  final StorageService _storage = FileStorageService();
 
   /// Login with email or phone number
   /// Automatically adds +60 prefix for phone numbers
@@ -39,12 +40,9 @@ class AuthService {
       if (isPhone && !emailOrPhone.startsWith('+')) {
         identifier = '+60$emailOrPhone';
       }
-      
+
       // Backend accepts 'identifier' which can be either email or phone
-      final body = {
-        'identifier': identifier,
-        'password': password,
-      };
+      final body = {'identifier': identifier, 'password': password};
 
       resp = await http
           .post(
@@ -74,8 +72,9 @@ class AuthService {
         if (profile != null && profile.containsKey('role')) {
           await _storage.write(key: 'user_role', value: profile['role']);
         }
-      } catch (_) {
-        // Ignore profile fetch errors
+      } catch (e) {
+        // ignore: avoid_print
+        print('⚠️ Failed to fetch profile after login: $e');
       }
 
       return token;
@@ -103,19 +102,42 @@ class AuthService {
     return _storage.read(key: 'user_role');
   }
 
+  /// Get current user profile
+  /// ✅ FIXED: Changed from /auth/me to /auth/profile
   Future<Map<String, dynamic>?> profile() async {
     final token = await getToken();
-    if (token == null) return null;
-    final uri = Uri.parse('$_baseUrl/auth/me');
+    if (token == null) {
+      // ignore: avoid_print
+      print('⚠️ No token available for profile request');
+      return null;
+    }
+
+    final uri = Uri.parse('$_baseUrl/auth/profile'); // ✅ Changed from /auth/me
+    // ignore: avoid_print
+    print('🔍 AuthService.profile -> GET $uri');
+
     try {
       final resp = await http
           .get(uri, headers: {'Authorization': 'Bearer $token'})
           .timeout(const Duration(seconds: 10));
+
+      // ignore: avoid_print
+      print('📦 Profile Response: ${resp.statusCode}');
+
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        // ignore: avoid_print
+        print('✅ Profile data received: ${data['name']}');
+        return data;
+      } else {
+        // ignore: avoid_print
+        print(
+          '⚠️ Profile endpoint returned: ${resp.statusCode} - ${resp.body}',
+        );
       }
-    } catch (_) {
-      // Ignore errors
+    } catch (e) {
+      // ignore: avoid_print
+      print('❌ AuthService.profile error: $e');
     }
     return null;
   }
@@ -138,16 +160,19 @@ class AuthService {
     try {
       // Add +60 prefix for phone numbers if provided and not already present
       String? formattedPhone = phoneNumber;
-      if (phoneNumber != null && phoneNumber.isNotEmpty && !phoneNumber.startsWith('+')) {
+      if (phoneNumber != null &&
+          phoneNumber.isNotEmpty &&
+          !phoneNumber.startsWith('+')) {
         formattedPhone = '+60$phoneNumber';
       }
-      
+
       final body = {
         'name': name,
         'email': email,
         'password': password,
         'role': role,
-        if (formattedPhone != null && formattedPhone.isNotEmpty) 'phone_number': formattedPhone,
+        if (formattedPhone != null && formattedPhone.isNotEmpty)
+          'phone_number': formattedPhone,
       };
 
       resp = await http
