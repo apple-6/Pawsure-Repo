@@ -21,7 +21,6 @@ class Step4Rates extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-<<<<<<< HEAD
             const Text(
               'Experience & Rates',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
@@ -47,17 +46,6 @@ class Step4Rates extends StatelessWidget {
                 ),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-=======
-            const Text('Step 4: Bio & Rates',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-
-            // --- Bio Text Field ---
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Brief Bio',
-                hintText: 'Tell owners a bit about yourself...',
->>>>>>> APPLE-21
               ),
               initialValue: formData['bio'],
               maxLines: 4, // Makes it a larger text box
@@ -72,7 +60,6 @@ class Step4Rates extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-<<<<<<< HEAD
             const Text('Rate per Night (RM)',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
@@ -92,13 +79,6 @@ class Step4Rates extends StatelessWidget {
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
                 prefixText: '',
-=======
-            // --- Rate Per Night Text Field ---
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Rate per Night',
-                prefixText: 'RM ',
->>>>>>> APPLE-21
               ),
               initialValue: formData['ratePerNight']?.toString(),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -117,7 +97,6 @@ class Step4Rates extends StatelessWidget {
               // Save the value to the map as a double
               onSaved: (value) => formData['ratePerNight'] = double.parse(value!),
             ),
-<<<<<<< HEAD
             const SizedBox(height: 8),
             Row(
               children: [
@@ -132,8 +111,6 @@ class Step4Rates extends StatelessWidget {
                 ),
               ],
             ),
-=======
->>>>>>> APPLE-21
           ],
         ),
       ),
