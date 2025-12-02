@@ -1,6 +1,10 @@
 class ApiEndpoints {
   static const String baseUrl = 'http://localhost:3000';
 
+  // Sitter Endpoints
+  static const String sitters = '/sitters';
+  static const String sitterSearch = '/sitters/search';
+
   // Auth Endpoints
   static const String login = '/auth/login';
   static const String logout = '/auth/logout';
