@@ -1,5 +1,6 @@
 //Pawsure-Repo\pawsure_app\lib\services\api_service.dart
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:pawsure_app/models/pet_model.dart';
@@ -8,10 +9,19 @@ import 'package:pawsure_app/models/event_model.dart'; // 🆕 IMPORT
 import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
 
-const String apiBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:3000',
-);
+// Detect platform and use appropriate localhost address
+// 10.0.2.2 is for Android emulator, localhost for Windows/Web/iOS
+String get apiBaseUrl {
+  const envUrl = String.fromEnvironment('API_BASE_URL');
+  if (envUrl.isNotEmpty) return envUrl;
+  
+  // Use 10.0.2.2 for Android emulator, localhost for other platforms
+  if (Platform.isAndroid) {
+    return 'http://10.0.2.2:3000';
+  } else {
+    return 'http://localhost:3000';
+  }
+}
 
 class ApiService {
   // Get authenticated headers with JWT token
