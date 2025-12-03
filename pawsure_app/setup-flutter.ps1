@@ -1,22 +1,52 @@
-# setup-flutter.ps1
-Write-Host "`n🎯 PAWSURE FLUTTER SETUP" -ForegroundColor Cyan
-Write-Host "================================`n" -ForegroundColor Cyan
+# setup-flutter.ps1 - Fixed version
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# Check Flutter
-Write-Host "📋 Checking Flutter installation..." -ForegroundColor Yellow
-flutter --version
+Write-Host "`n==================================" -ForegroundColor Cyan
+Write-Host "  PAWSURE FLUTTER SETUP" -ForegroundColor Cyan
+Write-Host "==================================`n" -ForegroundColor Cyan
 
-# Clean
-Write-Host "`n🧹 Cleaning Flutter build files..." -ForegroundColor Yellow
+# ========================================
+# STEP 1: Check Flutter Installation
+# ========================================
+Write-Host "Checking Flutter installation...`n" -ForegroundColor Yellow
+
+$flutterVersion = (flutter --version 2>$null)
+if (-not $flutterVersion) {
+    Write-Host "ERROR: Flutter not found!" -ForegroundColor Red
+    Write-Host "Please install Flutter from: https://flutter.dev/`n" -ForegroundColor Yellow
+    exit 1
+}
+
+Write-Host $flutterVersion -ForegroundColor Gray
+Write-Host ""
+
+# ========================================
+# STEP 2: Clean Old Build Files
+# ========================================
+Write-Host "Cleaning Flutter build files..." -ForegroundColor Yellow
 flutter clean
+Write-Host ""
 
-# Regenerate Windows platform files
-Write-Host "`n🪟 Regenerating Windows platform files..." -ForegroundColor Cyan
+# ========================================
+# STEP 3: Regenerate Windows Platform Files
+# ========================================
+Write-Host "Regenerating Windows platform files..." -ForegroundColor Cyan
 flutter create --platforms=windows .
+Write-Host ""
 
-# Get dependencies
-Write-Host "`n📦 Getting Flutter dependencies..." -ForegroundColor Cyan
+# ========================================
+# STEP 4: Get Dependencies
+# ========================================
+Write-Host "Getting Flutter dependencies...`n" -ForegroundColor Cyan
 flutter pub get
 
-Write-Host "`n✅ Setup complete!" -ForegroundColor Green
-Write-Host "`nRun 'flutter run -d windows' to start the app`n" -ForegroundColor White
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "`n==================================" -ForegroundColor Green
+    Write-Host "  Setup Complete!" -ForegroundColor Green
+    Write-Host "==================================`n" -ForegroundColor Green
+    Write-Host "To start the app, run:" -ForegroundColor Cyan
+    Write-Host "  flutter run -d windows`n" -ForegroundColor White
+} else {
+    Write-Host "`nFlutter setup failed. Check errors above.`n" -ForegroundColor Red
+    exit 1
+}
