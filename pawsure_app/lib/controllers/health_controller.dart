@@ -271,4 +271,47 @@ class HealthController extends GetxController
       rethrow;
     }
   }
+
+    // Inside the HealthController class
+
+  /// Loads pets from the database and ensures the selected pet is still valid.
+  Future<void> loadPets() async { // 🔑 PUBLIC METHOD
+    try {
+      isLoadingPets.value = true;
+      debugPrint('🔍 HealthController: Loading pets for refresh...');
+
+      final fetchedPets = await _apiService.getPets();
+      debugPrint('📦 HealthController: Fetched ${fetchedPets.length} pets');
+
+      if (fetchedPets.isNotEmpty) {
+        pets.assignAll(fetchedPets);
+
+        // Check if the current selected pet was deleted
+        final currentSelectedId = selectedPet.value?.id;
+        final isSelectedPetStillAvailable = currentSelectedId != null && 
+                                          fetchedPets.any((p) => p.id == currentSelectedId);
+
+        if (!isSelectedPetStillAvailable) {
+          // If the old pet is gone, select the first one
+          selectedPet.value = fetchedPets.first;
+        }
+        // If the selected pet is still available, the selection remains the same.
+        
+        // Load health records for the newly selected/kept pet
+        if (selectedPet.value != null) {
+            _fetchHealthRecords(selectedPet.value!.id);
+        }
+
+      } else {
+        pets.clear();
+        selectedPet.value = null; // No pets left
+        healthRecords.clear();
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ HealthController: Error loading pets: $e');
+      // ... error handling ...
+    } finally {
+      isLoadingPets.value = false;
+    }
+  }
 }

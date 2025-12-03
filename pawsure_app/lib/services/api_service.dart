@@ -165,6 +165,41 @@ class ApiService {
     }
   }
 
+
+  /// DELETE /pets/:petId - Delete a pet
+  Future<void> deletePet(int petId) async {
+    try {
+      // ⚠️ NOTE: Ensure 'apiBaseUrl' is correctly defined in this file
+      debugPrint('🗑️ API: DELETE $apiBaseUrl/pets/$petId');
+
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse('$apiBaseUrl/pets/$petId'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      // Assuming your backend returns 200 (OK) or 204 (No Content) on success
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        if (response.statusCode == 401) {
+          throw Exception('Authentication failed. Please log in again.');
+        }
+        throw Exception(
+          'Failed to delete pet (${response.statusCode}): ${response.body}',
+        );
+      }
+
+      debugPrint('✅ Pet deleted successfully from database');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in deletePet: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+// --------------------------------------------------------------------------
+
   // ========================================================================
   // HEALTH RECORDS API
   // ========================================================================

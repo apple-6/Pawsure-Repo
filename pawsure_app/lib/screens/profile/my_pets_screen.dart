@@ -5,6 +5,7 @@ import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/services/api_service.dart';
 import 'package:pawsure_app/controllers/navigation_controller.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
+import 'package:pawsure_app/controllers/home_controller.dart'; // 🔑 New: Import HomeController
 
 class MyPetsScreen extends StatefulWidget {
   const MyPetsScreen({super.key});
@@ -59,12 +60,28 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
     }
   }
 
+  // 🆕 NEW: Helper function to trigger data refresh in other screens
+  void _refreshGlobalControllers() {
+    // 1. Refresh Home Screen data
+    if (Get.isRegistered<HomeController>()) {
+      final HomeController homeController = Get.find<HomeController>();
+      homeController.loadPets(); 
+    }
+    
+    // 2. Refresh Health Screen data
+    if (Get.isRegistered<HealthController>()) {
+      final HealthController healthController = Get.find<HealthController>();
+      healthController.loadPets(); 
+    }
+  }
+
   void _toggleEditMode() {
     setState(() {
       _isEditMode = !_isEditMode;
     });
   }
 
+  /// Handles the confirmation and removal of a pet, calling the API.
   Future<void> _handleRemovePet(int petId, String petName) async {
     // Show confirmation dialog
     final shouldDelete = await showDialog<bool>(
@@ -90,9 +107,13 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
 
     if (shouldDelete == true) {
       try {
-        // TODO: Call API to delete pet
-        // await _apiService.deletePet(petId);
+        // 1. Call API to delete pet from the database
+        await _apiService.deletePet(petId);
 
+        // 2. 🔑 FIX: Refresh the global state (Home and Health screens)
+        _refreshGlobalControllers();
+
+        // 3. Remove locally from MyPetsScreen list
         setState(() {
           _pets.removeWhere((pet) => pet.id == petId);
         });
@@ -125,8 +146,8 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
           Get.find<NavigationController>();
       final HealthController healthController =
           Get.isRegistered<HealthController>()
-          ? Get.find<HealthController>()
-          : Get.put(HealthController());
+              ? Get.find<HealthController>()
+              : Get.put(HealthController());
 
       // Select the pet in HealthController
       healthController.selectPet(pet);
@@ -156,6 +177,8 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
     // Refresh the pet list if a new pet was added
     if (result == true) {
       _loadPets();
+      // Also refresh global state if a pet was added
+      _refreshGlobalControllers();
     }
   }
 
@@ -286,7 +309,13 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
     );
   }
 
+  /// Builds the Pet Card with improved image loading and fallback logic.
   Widget _buildPetCard(BuildContext context, Pet pet) {
+    // Check if the URL is valid/present to decide the image source
+    final bool hasValidPhotoUrl = pet.photoUrl?.isNotEmpty == true &&
+        !pet.photoUrl!.contains('your-supabase-url') &&
+        !pet.photoUrl!.contains('undefined');
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Card(
@@ -301,22 +330,26 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
             padding: const EdgeInsets.all(12.0),
             child: Row(
               children: [
-                // Pet Photo/Avatar
+                // Pet Photo/Avatar with Fallback
                 CircleAvatar(
                   radius: 36,
-                  backgroundColor: pet.photoUrl == null || pet.photoUrl!.isEmpty
-                      ? Colors.green.shade100
-                      : Colors.transparent,
-                  backgroundImage:
-                      pet.photoUrl != null && pet.photoUrl!.isNotEmpty
+                  // Use default color for the text initial
+                  backgroundColor: Colors.green.shade100,
+                  
+                  // Use NetworkImage only if a valid URL exists
+                  backgroundImage: hasValidPhotoUrl
                       ? NetworkImage(pet.photoUrl!)
                       : null,
-                  onBackgroundImageError: pet.photoUrl != null
+                  
+                  // Logging for debugging network errors
+                  onBackgroundImageError: hasValidPhotoUrl
                       ? (exception, stackTrace) {
-                          debugPrint('Error loading image: $exception');
+                            debugPrint('Error loading image: $exception');
                         }
                       : null,
-                  child: pet.photoUrl == null || pet.photoUrl!.isEmpty
+                  
+                  // Show text initial if NO valid URL is present
+                  child: !hasValidPhotoUrl
                       ? Text(
                           pet.name.isNotEmpty ? pet.name[0].toUpperCase() : 'P',
                           style: TextStyle(
@@ -348,10 +381,10 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
                                 pet.breed?.isNotEmpty == true
                             ? '${pet.species} • ${pet.breed}'
                             : pet.species?.isNotEmpty == true
-                            ? pet.species!
-                            : pet.breed?.isNotEmpty == true
-                            ? pet.breed!
-                            : 'Pet',
+                                ? pet.species!
+                                : pet.breed?.isNotEmpty == true
+                                    ? pet.breed!
+                                    : 'Pet',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade600,

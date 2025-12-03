@@ -1,5 +1,3 @@
-// src/pet/pet.controller.ts
-
 import { 
   Controller, 
   Post, 
@@ -10,22 +8,31 @@ import {
   UseGuards,
   Get,
   Param,
+  // 🔑 ADDED: Import the Delete decorator
+  Delete, 
+  HttpCode, // Added for explicit status code control
+  HttpStatus, // Added for status code constants
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PetService } from './pet.service';
 import { CreatePetDto } from './dto/create-pet.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
+// Base route is '/pets'
 @Controller('pets')
 export class PetController {
   constructor(private readonly petService: PetService) {}
 
+  // ========================================================================
+  // READ (GET) ENDPOINTS
+  // ========================================================================
+  
   // ✅ MAIN ENDPOINT - Get pets for authenticated user
   @Get()
   @UseGuards(JwtAuthGuard)
   async getMyPets(@Request() req) {
     console.log('🔍 JWT User from token:', req.user);
-    const userId = req.user.id; // Changed from req.user.sub to req.user.id
+    const userId = req.user.id;
     console.log('🔍 Fetching pets for user ID:', userId);
     
     const pets = await this.petService.findByOwner(userId);
@@ -59,7 +66,11 @@ export class PetController {
     return this.petService.findByOwner(Number(ownerId));
   }
 
-  // Create a new pet
+  // ========================================================================
+  // WRITE (POST) ENDPOINTS
+  // ========================================================================
+  
+  // Create a new pet (Handles photo upload via FileInterceptor)
   @Post()
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('photo'))
@@ -69,13 +80,36 @@ export class PetController {
     @Request() req,
   ) {
     console.log('➕ Creating pet for user:', req.user.id);
-    const ownerId = req.user.id; // Changed from req.user?.id || 1
+    const ownerId = req.user.id;
     createPetDto.ownerId = ownerId;
 
     if (file) {
-      createPetDto.photoUrl = `https://your-supabase-url/storage/photos/${file.filename}`;
+      // ⚠️ IMPORTANT: Replace 'your-supabase-url' with the actual Supabase host!
+      createPetDto.photoUrl = `https://YOUR-SUPABASE-URL/storage/photos/${file.filename}`;
     }
 
     return this.petService.create(createPetDto);
+  }
+
+  // ========================================================================
+  // DELETE ENDPOINT (THE FIX)
+  // ========================================================================
+
+  /**
+   * Deletes a pet by ID, ensuring the requesting user is the owner.
+   * Route: DELETE /pets/:id
+   */
+  @Delete(':id') 
+  @UseGuards(JwtAuthGuard)
+  // Use 204 No Content for successful deletion (standard REST practice)
+  @HttpCode(HttpStatus.NO_CONTENT) 
+  async removePet(@Param('id') id: string, @Request() req) {
+    const petId = Number(id);
+    const userId = req.user.id;
+    
+    console.log(`🗑️ Deleting Pet ID: ${petId} by User ID: ${userId}`);
+    
+    // Calls the PetService.remove method which includes owner check and database deletion
+    await this.petService.remove(petId, userId);
   }
 }
