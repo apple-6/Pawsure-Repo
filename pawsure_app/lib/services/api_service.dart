@@ -90,6 +90,81 @@ class ApiService {
     }
   }
 
+  /// POST /pets - Create a new pet with optional photo upload
+  Future<Pet> createPet({
+    required String name,
+    required String breed,
+    String? species,
+    String? dob,
+    String? photoPath,
+  }) async {
+    try {
+      debugPrint('➕ API: POST $apiBaseUrl/pets');
+      debugPrint('📤 Creating pet: $name, breed: $breed');
+
+      final headers = await _getHeaders();
+      // Remove Content-Type for multipart - it will be set automatically
+      headers.remove('Content-Type');
+
+      final request = http.MultipartRequest('POST', Uri.parse('$apiBaseUrl/pets'));
+
+      // Add headers (including auth token)
+      request.headers.addAll(headers);
+
+      // Add text fields
+      request.fields['name'] = name;
+      request.fields['breed'] = breed;
+      if (species != null && species.isNotEmpty) {
+        request.fields['species'] = species;
+      }
+      if (dob != null && dob.isNotEmpty) {
+        // Convert mm/dd/yyyy to ISO format if needed
+        request.fields['dob'] = dob;
+      }
+
+      // Add photo file if provided
+      if (photoPath != null && photoPath.isNotEmpty) {
+        try {
+          final photoFile = await http.MultipartFile.fromPath(
+            'photo',
+            photoPath,
+          );
+          request.files.add(photoFile);
+          debugPrint('📸 Added photo file: $photoPath');
+        } catch (e) {
+          debugPrint('⚠️ Error adding photo file: $e');
+          // Continue without photo
+        }
+      }
+
+      // Send request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final Map<String, dynamic> json =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        final pet = Pet.fromJson(json);
+
+        debugPrint('✅ Pet created successfully: ${pet.name}');
+        return pet;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to create pet (${response.statusCode}): ${response.body}',
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in createPet: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
   // ========================================================================
   // HEALTH RECORDS API
   // ========================================================================
