@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:pawsure_app/screens/profile/create_pet_profile_screen.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/services/api_service.dart';
+import 'package:pawsure_app/controllers/navigation_controller.dart';
+import 'package:pawsure_app/controllers/health_controller.dart';
 
 class MyPetsScreen extends StatefulWidget {
   const MyPetsScreen({super.key});
@@ -118,13 +120,29 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
 
   void _handlePetClick(Pet pet) {
     if (!_isEditMode) {
-      // Navigate back and pass the selected pet
-      Navigator.of(context).pop(pet);
+      // Get controllers
+      final NavigationController navController =
+          Get.find<NavigationController>();
+      final HealthController healthController =
+          Get.isRegistered<HealthController>()
+          ? Get.find<HealthController>()
+          : Get.put(HealthController());
 
+      // Select the pet in HealthController
+      healthController.selectPet(pet);
+
+      // Navigate to Health tab (index 1)
+      navController.changePage(1);
+
+      // Close the My Pets screen
+      Navigator.of(context).pop();
+
+      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Switched to ${pet.name}\'s profile'),
+          content: Text('Viewing ${pet.name}\'s health records'),
           duration: const Duration(seconds: 2),
+          backgroundColor: Colors.green,
         ),
       );
     }
