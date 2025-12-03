@@ -46,7 +46,12 @@ app.*.map.json
 /android/app/release
 
 # Platform-specific build files
-/linux/
-/macos/
-/windows/
+**/linux/flutter/** 
+**/macos/flutter/** 
+**/windows/flutter/**   
 /web/
+
+/dist
+/pawsure_backend/dist
+/pawsure_backend/node_modules
+/node_modules

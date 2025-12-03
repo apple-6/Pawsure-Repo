@@ -1,4 +1,7 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:pawsure_app/screens/auth/login_screen.dart';
+import 'package:pawsure_app/screens/auth/register_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -10,11 +13,16 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _controller = PageController();
   int _page = 0;
+  late TapGestureRecognizer _loginTap;
 
   @override
   void initState() {
     super.initState();
     debugPrint('[DEBUG] OnboardingScreen: initState called');
+    _loginTap = TapGestureRecognizer()
+      ..onTap = () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const LoginScreen()));
   }
 
   final List<Map<String, String>> _pages = [
@@ -27,7 +35,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'title': 'All-in-One Pet Health Hub',
       'subtitle':
           'Track vaccines, appointments, and sterilization info — all in one place.',
-      'image': 'assets/images/second_backgroundpage.jpg',
+      // file in assets is a PNG (second_backgroundpage.png)
+      'image': 'assets/images/second_backgroundpage.png',
     },
     {
       'title': 'Smarter Care with AI',
@@ -50,13 +59,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      // finished onboarding -> go to role selection
-      Navigator.of(context).pushReplacementNamed('/role-selection');
+      // finished onboarding -> go to register screen
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const RegisterScreen()),
+      );
     }
   }
 
   @override
   void dispose() {
+    _loginTap.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -226,6 +238,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
 
                           const SizedBox(height: 8),
+                          // On the last page show the login prompt below the button
+                          if (index == _pages.length - 1)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: RichText(
+                                textAlign: TextAlign.center,
+                                text: TextSpan(
+                                  children: [
+                                    const TextSpan(
+                                      text: 'Already have an account? ',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: 'Login',
+                                      style: const TextStyle(
+                                        color: Color(0xFF4CAF50),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      recognizer: _loginTap,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ],

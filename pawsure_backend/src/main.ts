@@ -4,19 +4,9 @@ import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true, // Automatically strip properties that are not in the DTO
-      transform: true,  // Automatically transform payloads to DTO class instances
-    }),
-  );  
-
+  // Enable CORS to allow frontend requests
+  app.enableCors({ origin: true, credentials: true });
   await app.listen(process.env.PORT ?? 3000);
-  // --- ADD THIS LINE ---
-  // This allows your frontend (e.g., http://localhost:5173)
-  // to make requests to your backend (http://localhost:3000)
-  app.enableCors();
-  // ---------------------
+  console.log(`Application is running on: http://localhost:${process.env.PORT ?? 3000}`);
 }
 bootstrap();
