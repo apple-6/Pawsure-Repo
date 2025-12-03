@@ -67,8 +67,8 @@ export class SitterService {
       .where('sitter.deleted_at IS NULL')
       .orderBy('sitter.rating', 'DESC');
 
-    if (minRating) {
-      query.where('sitter.rating >= :minRating', { minRating });
+    if (minRating !== undefined && minRating !== null) {
+      query.andWhere('sitter.rating >= :minRating', { minRating });
     }
 
     return await query.getMany();
@@ -165,11 +165,40 @@ export class SitterService {
   }
 
   async searchByAvailability(date: string): Promise<Sitter[]> {
-    return await this.sitterRepository
-      .createQueryBuilder('sitter')
-      .leftJoinAndSelect('sitter.user', 'user')
-      .where(':date = ANY(sitter.available_dates)', { date })
-      .orderBy('sitter.rating', 'DESC')
-      .getMany();
+    if (!date || date.trim() === '') {
+      // If no date provided, return all sitters
+      return await this.findAll();
+    }
+
+    try {
+      // Get all sitters first, then filter in memory
+      // This is more reliable than complex PostgreSQL array queries
+      const allSitters = await this.findAll();
+      
+      // Filter sitters that have the date in their available_dates array
+      const filteredSitters = allSitters.filter((sitter) => {
+        // Skip if no available_dates
+        if (!sitter.available_dates || sitter.available_dates.length === 0) {
+          return false;
+        }
+        
+        // Check if the date string is in the array
+        // TypeORM simple-array stores as string[], so we can use includes
+        return sitter.available_dates.some((availableDate) => {
+          // Normalize dates for comparison (remove time if present)
+          const normalizedAvailable = availableDate.split('T')[0];
+          const normalizedSearch = date.split('T')[0];
+          return normalizedAvailable === normalizedSearch;
+        });
+      });
+      
+      // Sort by rating (already sorted from findAll, but ensure it)
+      return filteredSitters.sort((a, b) => b.rating - a.rating);
+    } catch (error) {
+      console.error('Error in searchByAvailability:', error);
+      console.error('Error details:', error.message || error);
+      // If anything fails, return all sitters as fallback
+      return await this.findAll();
+    }
   }
 }

@@ -56,8 +56,8 @@ let SitterService = class SitterService {
             .leftJoinAndSelect('sitter.user', 'user')
             .where('sitter.deleted_at IS NULL')
             .orderBy('sitter.rating', 'DESC');
-        if (minRating) {
-            query.where('sitter.rating >= :minRating', { minRating });
+        if (minRating !== undefined && minRating !== null) {
+            query.andWhere('sitter.rating >= :minRating', { minRating });
         }
         return await query.getMany();
     }
@@ -121,12 +121,28 @@ let SitterService = class SitterService {
         return await this.sitterRepository.save(sitter);
     }
     async searchByAvailability(date) {
-        return await this.sitterRepository
-            .createQueryBuilder('sitter')
-            .leftJoinAndSelect('sitter.user', 'user')
-            .where(':date = ANY(sitter.available_dates)', { date })
-            .orderBy('sitter.rating', 'DESC')
-            .getMany();
+        if (!date || date.trim() === '') {
+            return await this.findAll();
+        }
+        try {
+            const allSitters = await this.findAll();
+            const filteredSitters = allSitters.filter((sitter) => {
+                if (!sitter.available_dates || sitter.available_dates.length === 0) {
+                    return false;
+                }
+                return sitter.available_dates.some((availableDate) => {
+                    const normalizedAvailable = availableDate.split('T')[0];
+                    const normalizedSearch = date.split('T')[0];
+                    return normalizedAvailable === normalizedSearch;
+                });
+            });
+            return filteredSitters.sort((a, b) => b.rating - a.rating);
+        }
+        catch (error) {
+            console.error('Error in searchByAvailability:', error);
+            console.error('Error details:', error.message || error);
+            return await this.findAll();
+        }
     }
 };
 exports.SitterService = SitterService;

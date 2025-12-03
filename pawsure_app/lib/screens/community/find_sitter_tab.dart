@@ -47,22 +47,32 @@ class _FindSitterTabState extends State<FindSitterTab> {
     });
 
     try {
+      debugPrint('🔍 Fetching sitters with date: ${selectedDate?.toIso8601String()}');
       final fetchedSitters = await _sitterService.fetchSitters(
         date: selectedDate,
       );
+      debugPrint('✅ Fetched ${fetchedSitters.length} sitters from API');
+      
       final filteredSitters = _applyFilters(fetchedSitters);
+      debugPrint('✅ After filtering: ${filteredSitters.length} sitters');
+      
       if (mounted) {
         setState(() {
           availableSitters = filteredSitters;
+          errorMessage = null; // Clear any previous errors
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error fetching sitters: $e');
+      debugPrint('Stack trace: $stackTrace');
+      
+      // Show fallback data but with a clear error message
       final fallbackSitters = _applyFilters(mockSitters);
       if (mounted) {
         setState(() {
           availableSitters = fallbackSitters;
           errorMessage =
-              'Unable to load sitters from the server. Showing sample data instead.\n$e';
+              'Unable to load sitters from the server. Showing sample data instead.\nError: ${e.toString()}';
         });
       }
     } finally {

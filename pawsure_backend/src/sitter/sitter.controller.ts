@@ -32,22 +32,35 @@ export class SitterController {
 
   @Get()
   async findAll(@Query('minRating') minRating?: string) {
-    let parsed: number | undefined;
+    try {
+      let parsed: number | undefined;
 
-    if (minRating !== undefined && minRating !== null && minRating.trim() !== '') {
-      parsed = Number(minRating);
+      if (minRating !== undefined && minRating !== null && minRating.trim() !== '') {
+        parsed = Number(minRating);
 
-      if (Number.isNaN(parsed)) {
-        throw new BadRequestException('minRating must be a numeric value');
+        if (Number.isNaN(parsed)) {
+          throw new BadRequestException('minRating must be a numeric value');
+        }
       }
-    }
 
-    return await this.sitterService.findAll(parsed);
+      return await this.sitterService.findAll(parsed);
+    } catch (error) {
+      console.error('Error in findAll:', error);
+      throw error;
+    }
   }
 
   @Get('search')
-  async searchByAvailability(@Query('date') date: string) {
-    return await this.sitterService.searchByAvailability(date);
+  async searchByAvailability(@Query('date') date?: string) {
+    try {
+      console.log('🔍 Searching sitters by availability, date:', date);
+      const result = await this.sitterService.searchByAvailability(date || '');
+      console.log('✅ Found', result.length, 'sitters');
+      return result;
+    } catch (error) {
+      console.error('❌ Error in searchByAvailability:', error);
+      throw error;
+    }
   }
 
   @Get('my-profile')

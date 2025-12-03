@@ -27,17 +27,32 @@ let SitterController = class SitterController {
         return await this.sitterService.create(createSitterDto, req.user.id);
     }
     async findAll(minRating) {
-        let parsed;
-        if (minRating !== undefined && minRating !== null && minRating.trim() !== '') {
-            parsed = Number(minRating);
-            if (Number.isNaN(parsed)) {
-                throw new common_1.BadRequestException('minRating must be a numeric value');
+        try {
+            let parsed;
+            if (minRating !== undefined && minRating !== null && minRating.trim() !== '') {
+                parsed = Number(minRating);
+                if (Number.isNaN(parsed)) {
+                    throw new common_1.BadRequestException('minRating must be a numeric value');
+                }
             }
+            return await this.sitterService.findAll(parsed);
         }
-        return await this.sitterService.findAll(parsed);
+        catch (error) {
+            console.error('Error in findAll:', error);
+            throw error;
+        }
     }
     async searchByAvailability(date) {
-        return await this.sitterService.searchByAvailability(date);
+        try {
+            console.log('🔍 Searching sitters by availability, date:', date);
+            const result = await this.sitterService.searchByAvailability(date || '');
+            console.log('✅ Found', result.length, 'sitters');
+            return result;
+        }
+        catch (error) {
+            console.error('❌ Error in searchByAvailability:', error);
+            throw error;
+        }
     }
     async getMyProfile(req) {
         return await this.sitterService.findByUserId(req.user.id);
