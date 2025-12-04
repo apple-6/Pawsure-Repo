@@ -6,18 +6,22 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Param,
-  ParseIntPipe,
-  Patch,
+  ParseFloatPipe,
+  UseInterceptors, // <-- FIX 1: Add UseInterceptors
+  UploadedFile,
   Post,
   Query,
-  Request,
+  Request, 
+  Param, 
+  Patch, 
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { SitterService } from './sitter.service';
 import { CreateSitterDto } from './dto/create-sitter.dto';
 import { UpdateSitterDto } from './dto/update-sitter.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('sitters')
 export class SitterController {
@@ -26,8 +30,13 @@ export class SitterController {
   @Post('setup')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() createSitterDto: CreateSitterDto, @Request() req) {
-    return await this.sitterService.create(createSitterDto, req.user.id);
+  @UseInterceptors(FileInterceptor('idDocumentFile'))
+  async create(
+    @UploadedFile() file: any,
+    @Body() createSitterDto: CreateSitterDto,
+    @Request() req,
+  ) {
+    return await this.sitterService.create(createSitterDto, req.user.id, file);
   }
 
   @Get()

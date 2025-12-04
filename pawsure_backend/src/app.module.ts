@@ -19,6 +19,8 @@ import { CommentsModule } from './comments/comments.module';
 import { LikesModule } from './likes/likes.module';
 import { RoleModule } from './role/role.module';
 import { AuthModule } from './auth/auth.module';
+import { FileService } from './file/file.service';
+import { FileModule } from './file/file.module';
 import { EventsModule } from './events/events.module'; // 👈 Correct Import
 
 @Module({
@@ -53,11 +55,12 @@ import { EventsModule } from './events/events.module'; // 👈 Correct Import
     PostsModule,
     CommentsModule,
     LikesModule,
+    FileModule,
     RoleModule,
     AuthModule,
     EventsModule, // 👈 Added here
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, FileService],
 })
 export class AppModule {}
