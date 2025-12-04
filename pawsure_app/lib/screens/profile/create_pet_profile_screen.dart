@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'dart:io'; // ⬅️ ADDED: Required for File access (e.g., displaying the image)
 import 'package:image_picker/image_picker.dart'; // ⬅️ ADDED: Required for photo picking logic
-
-const String _apiBaseUrl = 'http://10.0.2.2:3000';
+import 'package:get/get.dart';
+import 'package:pawsure_app/services/api_service.dart';
 
 // Enum to manage the selected animal type
 enum AnimalType { dog, cat }
@@ -27,6 +25,9 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
   // 📸 IMAGE PICKER STATE
   XFile? _pickedFile; // Holds the selected image file
   final ImagePicker _picker = ImagePicker(); // Instance of the image picker
+
+  // API Service
+  final ApiService _apiService = Get.find<ApiService>();
 
   // Placeholder for breed options
   final List<String> _dogBreeds = [
@@ -87,96 +88,87 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     }
   }
 
-  // 💾 YOUR EXISTING (and now unified) _createProfile function
+  // 💾 Updated _createProfile function using ApiService
   Future<void> _createProfile() async {
     if (!_formKey.currentState!.validate()) {
       return; // Exit if the form is not valid
     }
 
+    if (_selectedAnimalType == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select an animal type (Dog or Cat)'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedBreed == null || _selectedBreed!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a breed'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
-    // 1. Setup the Multipart Request (This replaces the old JSON POST)
-    final uri = Uri.parse('$_apiBaseUrl/pets');
-    final request = http.MultipartRequest('POST', uri);
-
-    // 2. Add all text fields
-    request.fields['name'] = _nameController.text;
-    request.fields['breed'] = _selectedBreed ?? '';
-
-    if (_selectedAnimalType != null) {
-      request.fields['species'] = _selectedAnimalType!.name;
-    }
-    if (_dobController.text.isNotEmpty) {
-      request.fields['dob'] = _dobController.text;
-    }
-
-    // 3. Conditionally Add the Photo File
-    if (_pickedFile != null) {
-      try {
-        final photoFile = await http.MultipartFile.fromPath(
-          'photo', // ⬅️ CRITICAL: This MUST match the field name your NestJS backend expects
-          _pickedFile!.path,
-          filename: _pickedFile!.name,
-        );
-        if (!mounted) return;
-        request.files.add(photoFile);
-        scaffoldMessenger.showSnackBar(
-          const SnackBar(content: Text('Preparing photo for upload...')),
-        );
-      } catch (e) {
-        if (!mounted) return;
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error reading photo file: $e. Sending text profile only.',
-            ),
-          ),
-        );
-      }
-    }
-
     if (!mounted) return;
     scaffoldMessenger.showSnackBar(
-      const SnackBar(content: Text('Attempting to create Pet Profile...')),
+      const SnackBar(content: Text('Creating pet profile...')),
     );
 
-    // 4. Send the Request and Handle Response
     try {
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
+      // Convert date format from mm/dd/yyyy to ISO format (yyyy-mm-dd)
+      String? formattedDob;
+      if (_dobController.text.isNotEmpty) {
+        try {
+          final parts = _dobController.text.split('/');
+          if (parts.length == 3) {
+            // Convert mm/dd/yyyy to yyyy-mm-dd
+            final month = parts[0].padLeft(2, '0');
+            final day = parts[1].padLeft(2, '0');
+            final year = parts[2];
+            formattedDob = '$year-$month-$day';
+          } else {
+            // Assume it's already in ISO format or try to parse it
+            formattedDob = _dobController.text;
+          }
+        } catch (e) {
+          debugPrint('⚠️ Error formatting date: $e');
+          formattedDob = _dobController.text;
+        }
+      }
+
+      // Use ApiService to create pet with authentication
+      final createdPet = await _apiService.createPet(
+        name: _nameController.text.trim(),
+        breed: _selectedBreed!,
+        species: _selectedAnimalType!.name,
+        dob: formattedDob,
+        photoPath: _pickedFile?.path,
+      );
 
       if (!mounted) return;
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        final createdPet = jsonDecode(response.body);
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Success! Profile for ${createdPet.name} created.'),
+          backgroundColor: Colors.green,
+        ),
+      );
 
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              'Success! Profile for ${createdPet['name']} created.',
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-        // Navigate back and signal a refresh
-        navigator.pop(true);
-      } else {
-        // Failure
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to create pet. Status: ${response.statusCode}. Body: ${response.body}',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      // Navigate back and signal a refresh
+      navigator.pop(true);
     } catch (e) {
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
         SnackBar(
-          content: Text('Network Error during unified upload: $e'),
+          content: Text('Failed to create pet: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );

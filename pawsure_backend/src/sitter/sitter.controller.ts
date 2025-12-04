@@ -1,20 +1,21 @@
 import {
-  Controller,
-  Get,
-  Post,
+  BadRequestException,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
-  UseGuards,
-  Request,
-  Query,
-  ParseIntPipe,
+  Get,
   HttpCode,
   HttpStatus,
   ParseFloatPipe,
   UseInterceptors, // <-- FIX 1: Add UseInterceptors
   UploadedFile,
+  Post,
+  Query,
+  Request, 
+  Param, 
+  Patch, 
+  UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { SitterService } from './sitter.service';
 import { CreateSitterDto } from './dto/create-sitter.dto';
@@ -39,8 +40,18 @@ export class SitterController {
   }
 
   @Get()
-  async findAll(@Query('minRating', ParseFloatPipe) minRating?: number) {
-    return await this.sitterService.findAll(minRating);
+  async findAll(@Query('minRating') minRating?: string) {
+    let parsed: number | undefined;
+
+    if (minRating !== undefined && minRating !== null && minRating.trim() !== '') {
+      parsed = Number(minRating);
+
+      if (Number.isNaN(parsed)) {
+        throw new BadRequestException('minRating must be a numeric value');
+      }
+    }
+
+    return await this.sitterService.findAll(parsed);
   }
 
   @Get('search')

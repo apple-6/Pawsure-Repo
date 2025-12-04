@@ -1,6 +1,11 @@
 {
   "name": "pawsure-backend",
   "version": "0.0.1",
+  "engines": {
+    "node": "22.21.0",
+    "npm": ">=10.0.0"
+  },
+  "engineStrict": true,
   "description": "",
   "author": "",
   "private": true,
@@ -8,17 +13,15 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
+    "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "typeorm": "dotenv -- ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js -d ./src/data-source.ts",
-
     "migration:run": "npm run typeorm -- migration:run",
     "migration:generate": "npm run typeorm -- migration:generate ./src/migrations/$npm_config_name",
     "migration:create": "npm run typeorm -- migration:create ./src/migrations/$npm_config_name",
-
     "test:env": "dotenv -- node -e \"console.log('DB_HOST is:', process.env.DB_HOST)\"",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -61,7 +64,9 @@
     "@types/multer": "^2.0.0",
     "@types/node": "^22.10.7",
     "@types/passport-jwt": "^4.0.1",
-    "eslint": "^9.18.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "8.57.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
@@ -73,9 +78,7 @@
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.3.2",
-    "@typescript-eslint/eslint-plugin": "^6.13.2",
-    "@typescript-eslint/parser": "^6.13.2"
+    "typescript": "^5.3.2"
   },
   "jest": {
     "moduleFileExtensions": [

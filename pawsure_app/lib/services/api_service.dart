@@ -1,5 +1,6 @@
 //Pawsure-Repo\pawsure_app\lib\services\api_service.dart
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:pawsure_app/models/pet_model.dart';
@@ -8,10 +9,19 @@ import 'package:pawsure_app/models/event_model.dart'; // 🆕 IMPORT
 import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
 
-const String apiBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:3000',
-);
+// Detect platform and use appropriate localhost address
+// 10.0.2.2 is for Android emulator, localhost for Windows/Web/iOS
+String get apiBaseUrl {
+  const envUrl = String.fromEnvironment('API_BASE_URL');
+  if (envUrl.isNotEmpty) return envUrl;
+  
+  // Use 10.0.2.2 for Android emulator, localhost for other platforms
+  if (Platform.isAndroid) {
+    return 'http://10.0.2.2:3000';
+  } else {
+    return 'http://localhost:3000';
+  }
+}
 
 class ApiService {
   // Get authenticated headers with JWT token
@@ -79,6 +89,116 @@ class ApiService {
       rethrow;
     }
   }
+
+  /// POST /pets - Create a new pet with optional photo upload
+  Future<Pet> createPet({
+    required String name,
+    required String breed,
+    String? species,
+    String? dob,
+    String? photoPath,
+  }) async {
+    try {
+      debugPrint('➕ API: POST $apiBaseUrl/pets');
+      debugPrint('📤 Creating pet: $name, breed: $breed');
+
+      final headers = await _getHeaders();
+      // Remove Content-Type for multipart - it will be set automatically
+      headers.remove('Content-Type');
+
+      final request = http.MultipartRequest('POST', Uri.parse('$apiBaseUrl/pets'));
+
+      // Add headers (including auth token)
+      request.headers.addAll(headers);
+
+      // Add text fields
+      request.fields['name'] = name;
+      request.fields['breed'] = breed;
+      if (species != null && species.isNotEmpty) {
+        request.fields['species'] = species;
+      }
+      if (dob != null && dob.isNotEmpty) {
+        // Convert mm/dd/yyyy to ISO format if needed
+        request.fields['dob'] = dob;
+      }
+
+      // Add photo file if provided
+      if (photoPath != null && photoPath.isNotEmpty) {
+        try {
+          final photoFile = await http.MultipartFile.fromPath(
+            'photo',
+            photoPath,
+          );
+          request.files.add(photoFile);
+          debugPrint('📸 Added photo file: $photoPath');
+        } catch (e) {
+          debugPrint('⚠️ Error adding photo file: $e');
+          // Continue without photo
+        }
+      }
+
+      // Send request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final Map<String, dynamic> json =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        final pet = Pet.fromJson(json);
+
+        debugPrint('✅ Pet created successfully: ${pet.name}');
+        return pet;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to create pet (${response.statusCode}): ${response.body}',
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in createPet: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+
+  /// DELETE /pets/:petId - Delete a pet
+  Future<void> deletePet(int petId) async {
+    try {
+      // ⚠️ NOTE: Ensure 'apiBaseUrl' is correctly defined in this file
+      debugPrint('🗑️ API: DELETE $apiBaseUrl/pets/$petId');
+
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse('$apiBaseUrl/pets/$petId'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      // Assuming your backend returns 200 (OK) or 204 (No Content) on success
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        if (response.statusCode == 401) {
+          throw Exception('Authentication failed. Please log in again.');
+        }
+        throw Exception(
+          'Failed to delete pet (${response.statusCode}): ${response.body}',
+        );
+      }
+
+      debugPrint('✅ Pet deleted successfully from database');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in deletePet: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+// --------------------------------------------------------------------------
 
   // ========================================================================
   // HEALTH RECORDS API
