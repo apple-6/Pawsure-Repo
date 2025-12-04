@@ -52,9 +52,22 @@ export class AuthService {
       role: role || 'owner', // Default to 'owner' if not provided
     });
 
+    const payload = {
+        sub: newUser.id,
+        email: newUser.email,
+        phone_number: newUser.phone_number,
+        role: newUser.role,
+    };
+
+    // 2. Generate the Access Token
+    const accessToken = this.jwtService.sign(payload);
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...result } = newUser;
-    return result;
+    return {
+      result, // Return all user details (id, name, email, etc.)
+      access_token: accessToken,
+    };
   }
 
   // --- LOGIN FUNCTION ---

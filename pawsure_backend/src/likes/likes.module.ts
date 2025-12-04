@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { LikesService } from './likes.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Like } from './likes.entity';
+import { LikesService } from './likes.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Like])],
@@ -9,3 +9,13 @@ import { Like } from './likes.entity';
   exports: [LikesService]
 })
 export class LikesModule {}
+
+
+
+
+
+
+
+
+
+

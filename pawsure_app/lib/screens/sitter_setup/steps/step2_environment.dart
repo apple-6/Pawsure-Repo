@@ -39,7 +39,6 @@ class _Step2EnvironmentState extends State<Step2Environment> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 16),
-
             const Text('House Type',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
@@ -61,13 +60,11 @@ class _Step2EnvironmentState extends State<Step2Environment> {
               ),
               initialValue: _houseTypeText,
               onChanged: (v) => _houseTypeText = v,
-              validator: (v) => (v == null || v.isEmpty)
-                  ? 'Please enter a house type'
-                  : null,
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? 'Please enter a house type' : null,
               onSaved: (v) => widget.formData['houseType'] = v,
             ),
             const SizedBox(height: 16),
-
             const Text('Do you have a garden?',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
@@ -94,7 +91,6 @@ class _Step2EnvironmentState extends State<Step2Environment> {
                 ),
               ],
             ),
-
             const SizedBox(height: 16),
             const Text('Do you have other pets at home?',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
@@ -133,7 +129,8 @@ class _ChoiceButton extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _ChoiceButton({required this.label, required this.selected, required this.onTap});
+  const _ChoiceButton(
+      {required this.label, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

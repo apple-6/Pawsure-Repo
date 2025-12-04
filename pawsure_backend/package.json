@@ -1,6 +1,11 @@
 {
   "name": "pawsure-backend",
   "version": "0.0.1",
+  "engines": {
+    "node": "22.21.0",
+    "npm": ">=10.0.0"
+  },
+  "engineStrict": true,
   "description": "",
   "author": "",
   "private": true,
@@ -8,17 +13,15 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
+    "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "typeorm": "dotenv -- ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js -d ./src/data-source.ts",
-
     "migration:run": "npm run typeorm -- migration:run",
     "migration:generate": "npm run typeorm -- migration:generate ./src/migrations/$npm_config_name",
     "migration:create": "npm run typeorm -- migration:create ./src/migrations/$npm_config_name",
-
     "test:env": "dotenv -- node -e \"console.log('DB_HOST is:', process.env.DB_HOST)\"",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -28,15 +31,14 @@
   },
   "dependencies": {
     "@google-cloud/vision": "^5.3.4",
-    "@nestjs/common": "^11.0.1",
+    "@nestjs/common": "^11.1.8",
     "@nestjs/config": "^4.0.2",
-    "@nestjs/core": "^11.0.1",
+    "@nestjs/core": "^11.1.8",
     "@nestjs/jwt": "^11.0.1",
     "@nestjs/mapped-types": "^2.1.0",
     "@nestjs/passport": "^11.0.5",
-    "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-express": "^11.1.8",
     "@nestjs/typeorm": "^11.0.0",
-    "@types/multer": "^2.0.0",
     "@types/supertest": "^6.0.3",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
@@ -45,10 +47,10 @@
     "dotenv-cli": "^11.0.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
-    "pg": "^8.16.3",
-    "reflect-metadata": "^0.2.2",
+    "pg": "^8.11.3",
+    "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.27"
+    "typeorm": "^0.3.17"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -57,24 +59,26 @@
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
     "@types/bcrypt": "^6.0.0",
-    "@types/express": "^5.0.0",
+    "@types/express": "^5.0.5",
     "@types/jest": "^30.0.0",
+    "@types/multer": "^2.0.0",
     "@types/node": "^22.10.7",
     "@types/passport-jwt": "^4.0.1",
-    "eslint": "^9.18.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "8.57.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
     "jest": "^30.0.0",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
-    "supertest": "^7.0.0",
-    "ts-jest": "^29.2.5",
-    "ts-loader": "^9.5.2",
+    "supertest": "^7.1.3",
+    "ts-jest": "^29.1.1",
+    "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0"
+    "typescript": "^5.3.2"
   },
   "jest": {
     "moduleFileExtensions": [

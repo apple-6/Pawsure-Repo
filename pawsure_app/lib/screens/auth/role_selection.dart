@@ -21,9 +21,7 @@ class RoleSelectionScreen extends StatefulWidget {
   });
 
   bool get isRegistrationFlow =>
-      registerName != null &&
-      registerEmail != null &&
-      registerPassword != null;
+      registerName != null && registerEmail != null && registerPassword != null;
 
   @override
   State<RoleSelectionScreen> createState() => _RoleSelectionScreenState();
@@ -93,9 +91,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   void _handleLoginFlow(UserRole role) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => LoginScreen(role: role),
-      ),
+      MaterialPageRoute(builder: (_) => LoginScreen(role: role)),
     );
   }
 
@@ -119,8 +115,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                   Row(
                     children: [
                       IconButton(
-                        onPressed:
-                            _isLoading ? null : () => Navigator.pop(context),
+                        onPressed: _isLoading
+                            ? null
+                            : () => Navigator.pop(context),
                         icon: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
@@ -138,7 +135,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                   const SizedBox(height: 20),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 16),
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.95),
                       borderRadius: BorderRadius.circular(16),
@@ -156,10 +155,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                         SizedBox(height: 8),
                         Text(
                           'Select how you want to use Pawsure',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                       ],
                     ),
@@ -253,11 +249,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     ),
                   ),
                 if (widget.isRegistrationFlow) ...[
-                  Icon(
-                    icon,
-                    size: 40,
-                    color: const Color(0xFF4CAF50),
-                  ),
+                  Icon(icon, size: 40, color: const Color(0xFF4CAF50)),
                   const SizedBox(height: 16),
                 ],
                 Text(

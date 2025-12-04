@@ -41,7 +41,7 @@ class _ProgressBarStep extends StatelessWidget {
           // Set the color based on the 'isActive' state
           color: isActive
               ? const Color(0xFF1CCA5B) // Your app's green color
-              : Colors.grey.shade300,  // Light grey for inactive
+              : Colors.grey.shade300, // Light grey for inactive
           borderRadius: BorderRadius.circular(10), // Rounded corners
         ),
       ),
