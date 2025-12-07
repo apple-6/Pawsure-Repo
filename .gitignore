@@ -1,37 +1,43 @@
 # =========================================================
-# 📦 1. BUILD/OUTPUT ARTIFACTS (NODE/NESTJS)
+# 📦 BUILD/OUTPUT ARTIFACTS (NODE/NESTJS)
 # =========================================================
-/dist
-/pawsure_backend/dist
-/build
-/coverage
-/.nyc_output
+# Catch dist and build folders anywhere
+**/dist/
+**/build/
+dist/
+build/
+coverage/
+.nyc_output/
 *.tsbuildinfo
 
 # =========================================================
-# 💾 2. DEPENDENCIES & PACKAGE MANAGEMENT
+# 💾 DEPENDENCIES & PACKAGE MANAGEMENT
 # =========================================================
-# Node dependencies
-/node_modules
-/pawsure_backend/node_modules
+# Node dependencies - catch anywhere in project
+**/node_modules/
+node_modules/
 
-# Flutter dependencies (usually managed inside build/ directories, but here for redundancy)
+# Flutter dependencies
 .dart_tool/
 .packages
 .pub-cache/
+.pub/
+
+# Flutter generated plugin files
+.flutter-plugins
+.flutter-plugins-dependencies
 
 # =========================================================
-# 💻 3. IDEs, EDITORS, and OS FILES
+# 💻 IDEs, EDITORS, and OS FILES
 # =========================================================
-.DS_Store               # macOS system files
-/.idea                  # IntelliJ/Android Studio project settings
+.DS_Store
+.idea/
 .project
 .classpath
 .c9/
 *.sublime-workspace
 .settings/
 *.launch
-*.sublime-workspace
 
 # VSCode (keep certain settings, ignore the rest)
 .vscode/*
@@ -41,7 +47,7 @@
 !.vscode/extensions.json
 
 # =========================================================
-# 🔑 4. ENVIRONMENT VARIABLES & SENSITIVE DATA
+# 🔑 ENVIRONMENT VARIABLES & SENSITIVE DATA
 # =========================================================
 # Secret keys and credentials
 google-credentials.json
@@ -59,11 +65,13 @@ pawsure-app-*.json
 .env.test.local
 .env.production.local
 
+# But keep .env.example
+!.env.example
+
 # =========================================================
-# ⚙️ 5. LOGS, TEMP, AND RUNTIME DATA
+# ⚙️ LOGS, TEMP, AND RUNTIME DATA
 # =========================================================
-# Logs
-logs
+logs/
 *.log
 npm-debug.log*
 pnpm-debug.log*
@@ -72,56 +80,76 @@ yarn-error.log*
 lerna-debug.log*
 
 # Runtime / Temp
-pids
+pids/
 *.pid
 *.seed
 *.pid.lock
-.temp
-.tmp
+.temp/
+.tmp/
 
 # Diagnostic reports
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # =========================================================
-# 📱 6. FLUTTER / MOBILE BUILD ARTIFACTS
+# 📱 FLUTTER BUILD ARTIFACTS (ALL PLATFORMS)
 # =========================================================
-# Android
-/android/build/
-/android/.gradle/
-/android/local.properties
-/android/*.apk
-/android/*.aab
 
-# iOS / macOS ephemeral and generated files
-/ios/Flutter/GeneratedPluginRegistrant.swift
-/ios/Flutter/GeneratedPluginRegistrant.h
-/ios/Flutter/GeneratedPluginRegistrant.m
-/macos/Flutter/GeneratedPluginRegistrant.swift
-/macos/build/
-/macos/Flutter/GeneratedPluginRegistrant.h
-/macos/Flutter/GeneratedPluginRegistrant.m
+# Android build artifacts - anywhere in project
+**/android/build/
+**/android/.gradle/
+**/android/local.properties
+**/android/app/build/
+**/android/captures/
+**/android/.externalNativeBuild/
+*.apk
+*.ap_
+*.aab
 
-# Windows / Linux
-/windows/build/
-/linux/build/
+# iOS build artifacts - anywhere in project
+**/ios/build/
+**/ios/.symlinks/
+**/ios/Pods/
+**/ios/Runner.xcworkspace/xcuserdata/
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/flutter_export_environment.sh
+*.ipa
 
-# Git Metadata
-# Ignore files related to merge conflicts that Git generates
-my_conflicts.txt
-# Environment variables
-.env
-.env.local
-.env.development
-.env.production
-# Ignore built artifacts
-pawsure_backend/dist/
-/pawsure_backend/node_modules
+# Windows build artifacts
+**/windows/build/
+**/windows/flutter/ephemeral/
+
+# Linux build artifacts
+**/linux/build/
+**/linux/flutter/ephemeral/
+
+# macOS build artifacts
+**/macos/build/
+**/macos/Flutter/ephemeral/
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/macos/Flutter/GeneratedPluginRegistrant.h
+**/macos/Flutter/GeneratedPluginRegistrant.m
+
+# Web build artifacts
+**/web/build/
+
+# =========================================================
+# 🗑️ TEMP/MISC FILES
+# =========================================================
 my_conflicts.txt
 output.txt
 tree.txt
 
-
-# Flutter
-**/linux/flutter/**
-**/macos/Flutter/**
-**/windows/flutter/**
+# =========================================================
+# ✅ IMPORTANT: THESE SHOULD STAY IN GIT
+# =========================================================
+# DO NOT ignore these files (they should be tracked):
+# - package.json
+# - package-lock.json (for consistent dependencies)
+# - pubspec.yaml
+# - pubspec.lock (for consistent Flutter dependencies)
+# - .metadata (Flutter version tracking)
+# - Platform folders (android/, ios/, windows/, etc.) - just not their build/ subfolders
