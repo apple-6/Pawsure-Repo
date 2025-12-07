@@ -49,7 +49,7 @@ $foldersToDelete = @(
 foreach ($folder in $foldersToDelete) {
     if (Test-Path $folder) {
         Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $folder
-        Write-Host "    ✓ Deleted: $folder" -ForegroundColor DarkGray
+        Write-Host "    * Deleted: $folder" -ForegroundColor DarkGray
     }
 }
 
@@ -64,7 +64,7 @@ $filesToDelete = @(
 foreach ($file in $filesToDelete) {
     if (Test-Path $file) {
         Remove-Item -Force -ErrorAction SilentlyContinue $file
-        Write-Host "    ✓ Deleted: $file" -ForegroundColor DarkGray
+        Write-Host "    * Deleted: $file" -ForegroundColor DarkGray
     }
 }
 
@@ -106,13 +106,12 @@ flutter pub get
 # STEP 5: Verify Setup
 # ========================================
 Write-Host "`nVerifying setup..." -ForegroundColor Yellow
-$buildExists = Test-Path "build"
 $dartToolExists = Test-Path ".dart_tool"
 
 if ($dartToolExists) {
-    Write-Host "  ✓ .dart_tool regenerated" -ForegroundColor Green
+    Write-Host "  * .dart_tool regenerated" -ForegroundColor Green
 } else {
-    Write-Host "  ⚠ Warning: .dart_tool not found" -ForegroundColor Yellow
+    Write-Host "  ! Warning: .dart_tool not found" -ForegroundColor Yellow
 }
 
 # ========================================
@@ -123,10 +122,10 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "  Setup Complete!" -ForegroundColor Green
     Write-Host "==================================`n" -ForegroundColor Green
     Write-Host "You can now run on any platform:" -ForegroundColor Cyan
-    Write-Host "  • Windows:  flutter run -d windows" -ForegroundColor White
-    Write-Host "  • Chrome:   flutter run -d chrome" -ForegroundColor White
-    Write-Host "  • Android:  flutter run -d android" -ForegroundColor White
-    Write-Host "  • Emulator: flutter run`n" -ForegroundColor White
+    Write-Host "  - Windows:  flutter run -d windows" -ForegroundColor White
+    Write-Host "  - Chrome:   flutter run -d chrome" -ForegroundColor White
+    Write-Host "  - Android:  flutter run -d android" -ForegroundColor White
+    Write-Host "  - Emulator: flutter run`n" -ForegroundColor White
 } else {
     Write-Host "`nFlutter setup failed. Check errors above.`n" -ForegroundColor Red
     exit 1
