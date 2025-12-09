@@ -1,23 +1,27 @@
 import {
-  Controller,
-  Get,
-  Post,
+  BadRequestException,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
-  UseGuards,
-  Request,
-  Query,
-  ParseIntPipe,
+  Get,
   HttpCode,
   HttpStatus,
   ParseFloatPipe,
+  UseInterceptors, // <-- FIX 1: Add UseInterceptors
+  UploadedFile,
+  Post,
+  Query,
+  Request, 
+  Param, 
+  Patch, 
+  UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { SitterService } from './sitter.service';
 import { CreateSitterDto } from './dto/create-sitter.dto';
 import { UpdateSitterDto } from './dto/update-sitter.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('sitters')
 export class SitterController {
@@ -26,13 +30,28 @@ export class SitterController {
   @Post('setup')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() createSitterDto: CreateSitterDto, @Request() req) {
-    return await this.sitterService.create(createSitterDto, req.user.id);
+  @UseInterceptors(FileInterceptor('idDocumentFile'))
+  async create(
+    @UploadedFile() file: any,
+    @Body() createSitterDto: CreateSitterDto,
+    @Request() req,
+  ) {
+    return await this.sitterService.create(createSitterDto, req.user.id, file);
   }
 
   @Get()
-  async findAll(@Query('minRating', ParseFloatPipe) minRating?: number) {
-    return await this.sitterService.findAll(minRating);
+  async findAll(@Query('minRating') minRating?: string) {
+    let parsed: number | undefined;
+
+    if (minRating !== undefined && minRating !== null && minRating.trim() !== '') {
+      parsed = Number(minRating);
+
+      if (Number.isNaN(parsed)) {
+        throw new BadRequestException('minRating must be a numeric value');
+      }
+    }
+
+    return await this.sitterService.findAll(parsed);
   }
 
   @Get('search')

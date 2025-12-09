@@ -1,12 +1,77 @@
-# compiled output
-/dist
-/pawsure_backend/dist
-/pawsure_backend/node_modules
-/node_modules
-/build
+# =========================================================
+# 📦 BUILD/OUTPUT ARTIFACTS (NODE/NESTJS)
+# =========================================================
+# Catch dist and build folders anywhere
+**/dist/
+**/build/
+dist/
+build/
+coverage/
+.nyc_output/
+*.tsbuildinfo
 
-# Logs
-logs
+# =========================================================
+# 💾 DEPENDENCIES & PACKAGE MANAGEMENT
+# =========================================================
+# Node dependencies - catch anywhere in project
+**/node_modules/
+node_modules/
+
+# Flutter dependencies
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+
+# Flutter generated plugin files
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# =========================================================
+# 💻 IDEs, EDITORS, and OS FILES
+# =========================================================
+.DS_Store
+.idea/
+.project
+.classpath
+.c9/
+*.sublime-workspace
+.settings/
+*.launch
+
+# VSCode (keep certain settings, ignore the rest)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# =========================================================
+# 🔑 ENVIRONMENT VARIABLES & SENSITIVE DATA
+# =========================================================
+# Secret keys and credentials
+google-credentials.json
+*-credentials.json
+*-key.json
+service-account*.json
+pawsure-app-*.json
+
+# .env files (containing secrets/database URLs)
+.env
+.env.local
+.env.development
+.env.production
+.env.development.local
+.env.test.local
+.env.production.local
+
+# But keep .env.example
+!.env.example
+
+# =========================================================
+# ⚙️ LOGS, TEMP, AND RUNTIME DATA
+# =========================================================
+logs/
 *.log
 npm-debug.log*
 pnpm-debug.log*
@@ -14,65 +79,77 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
-# OS
-.DS_Store
-
-# Tests
-/coverage
-/.nyc_output
-
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
-
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-
-# temp directory
-.temp
-.tmp
-
-# Runtime data
-pids
+# Runtime / Temp
+pids/
 *.pid
 *.seed
 *.pid.lock
+.temp/
+.tmp/
 
-# Diagnostic reports (https://nodejs.org/api/report.html)
+# Diagnostic reports
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
-# Google Cloud Credentials
-google-credentials.json
-*-credentials.json
-*-key.json
-service-account*.json
-pawsure-app-*.json
+# =========================================================
+# 📱 FLUTTER BUILD ARTIFACTS (ALL PLATFORMS)
+# =========================================================
 
-# Environment variables
-.env
-.env.local
-.env.development
-.env.production
-# Ignore built artifacts
-pawsure_backend/dist/
+# Android build artifacts - anywhere in project
+**/android/build/
+**/android/.gradle/
+**/android/local.properties
+**/android/app/build/
+**/android/captures/
+**/android/.externalNativeBuild/
+*.apk
+*.ap_
+*.aab
 
-# Flutter
-**/linux/flutter/**
-**/macos/Flutter/**
-**/windows/flutter/**
+# iOS build artifacts - anywhere in project
+**/ios/build/
+**/ios/.symlinks/
+**/ios/Pods/
+**/ios/Runner.xcworkspace/xcuserdata/
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/flutter_export_environment.sh
+*.ipa
+
+# Windows build artifacts
+**/windows/build/
+**/windows/flutter/ephemeral/
+
+# Linux build artifacts
+**/linux/build/
+**/linux/flutter/ephemeral/
+
+# macOS build artifacts
+**/macos/build/
+**/macos/Flutter/ephemeral/
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/macos/Flutter/GeneratedPluginRegistrant.h
+**/macos/Flutter/GeneratedPluginRegistrant.m
+
+# Web build artifacts
+**/web/build/
+
+# =========================================================
+# 🗑️ TEMP/MISC FILES
+# =========================================================
+my_conflicts.txt
+output.txt
+tree.txt
+
+# =========================================================
+# ✅ IMPORTANT: THESE SHOULD STAY IN GIT
+# =========================================================
+# DO NOT ignore these files (they should be tracked):
+# - package.json
+# - package-lock.json (for consistent dependencies)
+# - pubspec.yaml
+# - pubspec.lock (for consistent Flutter dependencies)
+# - .metadata (Flutter version tracking)
+# - Platform folders (android/, ios/, windows/, etc.) - just not their build/ subfolders
