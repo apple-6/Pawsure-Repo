@@ -9,6 +9,8 @@ build/
 coverage/
 .nyc_output/
 *.tsbuildinfo
+.vscode/settings.json
+/.metadata
 
 # =========================================================
 # 💾 DEPENDENCIES & PACKAGE MANAGEMENT

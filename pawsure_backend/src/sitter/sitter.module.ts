@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { SitterService } from './sitter.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Sitter } from './sitter.entity';
-import { SitterController } from './sitter.controller';
 import { UserModule } from 'src/user/user.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { FileModule } from '../file/file.module';
@@ -15,7 +14,7 @@ import { User } from 'src/user/user.entity';
     AuthModule,
     FileModule,
   ],
-  controllers: [SitterController],
+  controllers: [],
   providers: [SitterService],
   exports: [SitterService],
 })
