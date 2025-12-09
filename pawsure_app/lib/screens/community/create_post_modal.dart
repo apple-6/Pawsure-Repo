@@ -1,17 +1,9 @@
 import 'package:flutter/material.dart';
 
-class CreatePostModal extends StatefulWidget {
+class CreatePostModal extends StatelessWidget {
   final VoidCallback onPostCreated;
 
   const CreatePostModal({super.key, required this.onPostCreated});
-
-  @override
-  State<CreatePostModal> createState() => _CreatePostModalState();
-}
-
-class _CreatePostModalState extends State<CreatePostModal> {
-  // State to manage the urgent toggle
-  bool isUrgent = false;
 
   @override
   Widget build(BuildContext context) {
@@ -42,23 +34,6 @@ class _CreatePostModalState extends State<CreatePostModal> {
               maxLines: 5,
             ),
             const SizedBox(height: 16),
-            
-            // --- NEW: Urgent Toggle ---
-            SwitchListTile(
-              title: const Text('Mark as Urgent (Lost Pet, Blood Need, etc.)'),
-              subtitle: const Text('This post will appear in the Urgent tab.'),
-              value: isUrgent,
-              onChanged: (bool value) {
-                setState(() {
-                  isUrgent = value;
-                });
-              },
-              activeColor: Colors.red,
-              contentPadding: EdgeInsets.zero,
-            ),
-            // --- END NEW ---
-
-            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -69,12 +44,9 @@ class _CreatePostModalState extends State<CreatePostModal> {
                 const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: () {
-                    // TODO: Here you would call an API to create the post
-                    // and pass the `isUrgent` status.
-                    
                     // Simulate post creation logic
                     Navigator.pop(context);
-                    widget.onPostCreated();
+                    onPostCreated();
                   },
                   child: const Text('Post'),
                 ),

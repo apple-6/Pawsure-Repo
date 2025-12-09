@@ -17,9 +17,6 @@ class PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Determine if the post is urgent for the top border/highlight
-    final bool isUrgent = post.isLostPetAlert || post.isUrgentAlert;
-
     return Card(
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
@@ -27,21 +24,12 @@ class PostCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Highlight Bar for Urgent Posts
-          if (isUrgent)
-            Container(
-              height: 4.0,
-              color: post.isLostPetAlert ? Colors.red.shade600 : Colors.orange.shade600,
-            ),
-
           // User Header
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: Row(
               children: [
-                CircleAvatar(
-                  backgroundImage: NetworkImage(post.userAvatar),
-                ),
+                CircleAvatar(backgroundImage: NetworkImage(post.userAvatar)),
                 const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,7 +41,10 @@ class PostCard extends StatelessWidget {
                     if (post.location != null)
                       Text(
                         post.location!,
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                       ),
                   ],
                 ),
@@ -61,7 +52,7 @@ class PostCard extends StatelessWidget {
             ),
           ),
 
-          // Post Image (remains the same)
+          // Post Image
           Image.network(
             post.image,
             fit: BoxFit.cover,
@@ -71,8 +62,10 @@ class PostCard extends StatelessWidget {
               if (loadingProgress == null) return child;
               return const Center(child: CircularProgressIndicator());
             },
-            errorBuilder: (context, error, stackTrace) =>
-                const SizedBox(height: 250, child: Center(child: Text('Image Load Error'))),
+            errorBuilder: (context, error, stackTrace) => const SizedBox(
+              height: 250,
+              child: Center(child: Text('Image Load Error')),
+            ),
           ),
 
           // Caption
@@ -81,7 +74,7 @@ class PostCard extends StatelessWidget {
             child: Text(post.caption),
           ),
 
-          // Action Buttons (remains the same)
+          // Action Buttons
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: Row(
@@ -98,7 +91,10 @@ class PostCard extends StatelessWidget {
                     ),
                     Text('${post.likes}'),
                     IconButton(
-                      icon: const Icon(Icons.comment_outlined, color: Colors.grey),
+                      icon: const Icon(
+                        Icons.comment_outlined,
+                        color: Colors.grey,
+                      ),
                       onPressed: () => onComment(post.id),
                     ),
                     Text('${post.comments}'),
@@ -111,28 +107,28 @@ class PostCard extends StatelessWidget {
               ],
             ),
           ),
-          
-          // Dedicated Urgent/Lost Pet Details Block
-          if (isUrgent)
+          if (post.isLostPetAlert)
             Container(
-              color: post.isLostPetAlert ? Colors.red.shade50 : Colors.orange.shade50, // Lighter background color
+              color: Colors.orange.shade100,
               padding: const EdgeInsets.all(12.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    post.isLostPetAlert ? '🚨 LOST PET ALERT' : '🔥 URGENT COMMUNITY NEED',
+                  const Text(
+                    '🚨 Lost Pet Alert',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: post.isLostPetAlert ? Colors.red.shade700 : Colors.deepOrange.shade700,
+                      color: Colors.deepOrange,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  if (post.isLostPetAlert && post.lostPetDetails != null) ...[
-                    Text('Last Seen: ${post.lostPetDetails!['lastSeenLocation']} at ${post.lostPetDetails!['lastSeenTime']}', style: const TextStyle(fontSize: 12)),
-                    Text('Contact: ${post.lostPetDetails!['contactInfo']}', style: const TextStyle(fontSize: 12)),
-                  ] else if (post.isUrgentAlert)
-                    Text(post.caption, style: const TextStyle(fontSize: 14)), // Display caption if it's a general urgent post
+                  Text(
+                    'Last Seen: ${post.lostPetDetails!['lastSeenLocation']} at ${post.lostPetDetails!['lastSeenTime']}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  Text(
+                    'Contact: ${post.lostPetDetails!['contactInfo']}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ],
               ),
             ),
