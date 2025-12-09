@@ -1,346 +1,451 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'review_screen.dart';
 
-// CRITICAL: We import the tab file because that is where the "Sitter" class is
-import 'find_sitter_tab.dart';
+class SitterDetailsScreen extends StatefulWidget {
+  // Changed: We accept an ID instead of a Model Object
+  final int sitterId;
 
-class SitterDetailsScreen extends StatelessWidget {
-  final Sitter sitter;
+  const SitterDetailsScreen({super.key, required this.sitterId});
 
-  const SitterDetailsScreen({super.key, required this.sitter});
+  @override
+  State<SitterDetailsScreen> createState() => _SitterDetailsScreenState();
+}
+
+class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
+  late Future<Map<String, dynamic>> _sitterFuture;
+
+  // CONNECTION SETTINGS
+  // Use 10.0.2.2 for Android Emulator, localhost for iOS Simulator
+  final String baseUrl = 'http://10.0.2.2:3000';
+
+  @override
+  void initState() {
+    super.initState();
+    _sitterFuture = _fetchSitterData();
+  }
+
+  Future<Map<String, dynamic>> _fetchSitterData() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/sitters/${widget.sitterId}'),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to load sitter data');
+      }
+    } catch (e) {
+      throw Exception('Error connecting to server: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- 1. Top Image & Back Button ---
-            Stack(
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _sitterFuture,
+        builder: (context, snapshot) {
+          // 1. Loading State
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF34D399)),
+            );
+          }
+
+          // 2. Error State
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(child: Text("Sitter not found"));
+          }
+
+          // 3. Data Loaded - Map JSON to your existing UI variables
+          final data = snapshot.data!;
+          final user = data['user'] ?? {};
+          final List<dynamic> reviewsData = data['reviews'] ?? [];
+
+          // MAPPING BACKEND DATA TO UI
+          // Using your exact field names and fallback logic
+          final String imageUrl =
+              data['photo_gallery'] ?? 'https://via.placeholder.com/400';
+          final bool isVerified = data['status'] == 'approved';
+          final String name =
+              user['name'] ?? 'Sitter Name'; // Ensure User entity has name
+          final double rating = (data['rating'] ?? 0).toDouble();
+          final int reviewCount = data['reviews_count'] ?? 0;
+          final String location = data['address'] ?? 'Unknown Location';
+          final double price =
+              double.tryParse(data['ratePerNight'].toString()) ?? 0.0;
+          final String bio = data['bio'] ?? 'No bio available';
+          final String houseType = data['houseType'] ?? 'Apartment';
+
+          // Logic for bookings (assuming bookings array exists in relation)
+          final int bookingsLen = (data['bookings'] as List? ?? []).length;
+          final String bookingsCompleted = "$bookingsLen+ bookings";
+
+          // Placeholder for array fields not yet in your Entity
+          final String servicesString = "House Sitting,Dog Walking";
+          final List<String> petTypes = ["Dog", "Cat"];
+
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  height: 250,
-                  width: double.infinity,
-                  child: Image.network(
-                    sitter.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        Container(color: Colors.grey[300]),
-                  ),
-                ),
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: InkWell(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(Icons.arrow_back, size: 20),
+                // --- 1. Top Image & Back Button ---
+                Stack(
+                  children: [
+                    SizedBox(
+                      height: 250,
+                      width: double.infinity,
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Container(color: Colors.grey[300]),
                       ),
                     ),
-                  ),
-                ),
-                if (sitter.isVerified)
-                  Positioned(
-                    top: 40,
-                    right: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF34D399), // Green verify color
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.verified, color: Colors.white, size: 16),
-                          SizedBox(width: 4),
-                          Text(
-                            "Verified",
-                            style: TextStyle(
+                    SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: InkWell(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
                               color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(Icons.arrow_back, size: 20),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (isVerified)
+                      Positioned(
+                        top: 40,
+                        right: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFF34D399,
+                            ), // Green verify color
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(
+                                Icons.verified,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                "Verified",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+
+                // --- 2. Profile Details Content ---
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Name
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Rating
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.star,
+                            color: Color(0xFF34D399),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            "$rating ($reviewCount reviews)",
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
                             ),
                           ),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 8),
+
+                      // Location
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on_outlined,
+                            color: Colors.grey,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            location,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // --- 3. Rate & Booking Card ---
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            0xFFE6F7F0,
+                          ), // Very light green background
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text(
+                              "Nightly Rate",
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "RM${price.toStringAsFixed(0)}",
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF34D399),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Booking feature coming soon!",
+                                      ),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF34D399),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: const Text(
+                                  "Book Now",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // --- 4. Experience (Combined About Me + Experience) ---
+                      _buildSectionCard(
+                        title: "Experience",
+                        icon: Icons.pets,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              bio,
+                              style: const TextStyle(
+                                color: Colors.black87,
+                                height: 1.5,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              bookingsCompleted,
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // --- 5. Pet Sitting Environment ---
+                      _buildSectionCard(
+                        title: "Pet Sitting Environment",
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Display House Type here
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.home_work_outlined,
+                                  size: 18,
+                                  color: Color(0xFF34D399),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "Property Type: $houseType",
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Photos Row
+                            Row(
+                              children: [
+                                _buildEnvironmentPlaceholder(),
+                                const SizedBox(width: 12),
+                                _buildEnvironmentPlaceholder(),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // --- 6. Services Offered ---
+                      _buildSectionCard(
+                        title: "Services Offered",
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: servicesString
+                              .split(',')
+                              .map((service) => _buildChip(service))
+                              .toList(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // --- 7. Pet Types ---
+                      _buildSectionCard(
+                        title: "Pet Types",
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: petTypes
+                              .map((type) => _buildChip(type, isGreen: true))
+                              .toList(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+                      // --- 8. Rate / Reviews ---
+                      _buildSectionCard(
+                        title: "Reviews",
+                        trailing: GestureDetector(
+                          onTap: () {
+                            // Note: We need to adapt the SitterReviewsScreen to take raw data
+                            // or you can map this list to the model if Review model still exists
+                            /*
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SitterReviewsScreen(
+                                  reviews: reviewsData, // You may need to update this Screen to accept List<dynamic>
+                                  averageRating: rating,
+                                  reviewCount: reviewCount,
+                                  sitterName: name,
+                                ),
+                              ),
+                            );
+                            */
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("See more clicked")),
+                            );
+                          },
+                          behavior: HitTestBehavior.opaque,
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 8.0),
+                            child: Text(
+                              "See more",
+                              style: TextStyle(
+                                color: Color(0xFF34D399),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                        child: Column(
+                          // Only show first 2 reviews here
+                          children: reviewsData
+                              .take(2)
+                              .map((review) => _buildReviewItem(review))
+                              .toList(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 40),
+                    ],
                   ),
+                ),
               ],
             ),
-
-            // --- 2. Profile Details Content ---
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name
-                  Text(
-                    sitter.name,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Rating
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.star,
-                        color: Color(0xFF34D399),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        "${sitter.rating} (${sitter.reviewCount} reviews)",
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Location
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on_outlined,
-                        color: Colors.grey,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        sitter.location,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // --- 3. Rate & Booking Card ---
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(
-                        0xFFE6F7F0,
-                      ), // Very light green background
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      children: [
-                        const Text(
-                          "Nightly Rate",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "RM${sitter.price.toStringAsFixed(0)}",
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF34D399),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Booking feature coming soon!"),
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF34D399),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: const Text(
-                              "Book Now",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // --- 4. Experience (Combined About Me + Experience) ---
-                  _buildSectionCard(
-                    title: "Experience",
-                    icon: Icons.pets,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          sitter.bio,
-                          style: const TextStyle(
-                            color: Colors.black87,
-                            height: 1.5,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          sitter.bookingsCompleted,
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // --- 5. Pet Sitting Environment ---
-                  _buildSectionCard(
-                    title: "Pet Sitting Environment",
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Display House Type here
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.home_work_outlined,
-                              size: 18,
-                              color: Color(0xFF34D399),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Property Type: ${sitter.houseType}",
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Photos Row
-                        Row(
-                          children: [
-                            _buildEnvironmentPlaceholder(),
-                            const SizedBox(width: 12),
-                            _buildEnvironmentPlaceholder(),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // --- 6. Services Offered ---
-                  _buildSectionCard(
-                    title: "Services Offered",
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: sitter.services
-                          .map((service) => _buildChip(service))
-                          .toList(),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // --- 7. Pet Types ---
-                  _buildSectionCard(
-                    title: "Pet Types",
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: sitter.petTypes
-                          .map((type) => _buildChip(type, isGreen: true))
-                          .toList(),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // --- 8. Rate / Reviews ---
-                  _buildSectionCard(
-                    title: "Rate", // need change to 'review'?
-                    // ADDED: See more button with click action
-                    trailing: GestureDetector(
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("See more reviews clicked!"),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                      // This ensures the tap target includes the padding
-                      behavior: HitTestBehavior.opaque,
-                      child: const Padding(
-                        padding: EdgeInsets.only(left: 8.0),
-                        child: Text(
-                          "See more",
-                          style: TextStyle(
-                            color: Color(0xFF34D399),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                    child: Column(
-                      children: sitter.reviews
-                          .map((review) => _buildReviewItem(review))
-                          .toList(),
-                    ),
-                  ),
-
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -437,7 +542,17 @@ class SitterDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildReviewItem(Review review) {
+  // CHANGED: Accepts dynamic JSON object instead of Review model
+  Widget _buildReviewItem(dynamic reviewData) {
+    // Parsing review data safely
+    final String userName = reviewData['userName'] ?? 'User';
+    // Handle date formatting as needed
+    final String date = reviewData['created_at'] != null
+        ? reviewData['created_at'].toString().substring(0, 10)
+        : 'Recent';
+    final double rating = (reviewData['rating'] ?? 5).toDouble();
+    final String comment = reviewData['comment'] ?? '';
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Container(
@@ -464,14 +579,14 @@ class SitterDetailsScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            review.userName,
+                            userName,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
                             ),
                           ),
                           Text(
-                            review.date,
+                            date,
                             style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 12,
@@ -483,9 +598,7 @@ class SitterDetailsScreen extends StatelessWidget {
                       Row(
                         children: List.generate(5, (index) {
                           return Icon(
-                            index < review.rating
-                                ? Icons.star
-                                : Icons.star_border,
+                            index < rating ? Icons.star : Icons.star_border,
                             color: Colors.amber,
                             size: 14,
                           );
@@ -498,7 +611,7 @@ class SitterDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              review.comment,
+              comment,
               style: const TextStyle(fontSize: 13, color: Colors.black87),
             ),
           ],
