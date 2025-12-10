@@ -226,7 +226,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         pinned: true,
                         toolbarHeight: 0,
                         bottom: PreferredSize(
-                          preferredSize: const Size.fromHeight(48.0),
+                          preferredSize: const Size.fromHeight(50.0),
                           child: Container(
                             decoration: BoxDecoration(
                               color: Theme.of(context).scaffoldBackgroundColor,
@@ -242,7 +242,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                               indicatorWeight: 3.0,
                               labelColor: Theme.of(context).primaryColor,
                               unselectedLabelColor: Colors.grey.shade600,
-                              dividerColor: Colors.grey.shade300,
+                              dividerColor: Colors.transparent,
                               tabs: const [
                                 Tab(text: 'Feed'),
                                 Tab(text: 'Find a Sitter'),
@@ -291,7 +291,6 @@ class FeedTabView extends StatelessWidget {
     return DefaultTabController(
       length: 4,
       child: Column(
-        mainAxisSize: MainAxisSize.max,
         children: [
           TabBar(
             isScrollable: true,
