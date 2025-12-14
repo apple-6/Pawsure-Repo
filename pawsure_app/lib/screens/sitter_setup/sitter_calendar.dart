@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:get/get.dart'; // <--- Import GetX for navigation
 import 'sitter_dashboard.dart';
-
+import 'sitter_inbox.dart';
 // --- Data Models ---
 
 enum DateStatus { available, booked, unavailable }
@@ -224,6 +224,10 @@ class _SitterCalendarState extends State<SitterCalendar> {
             Get.offAll(() => const SitterDashboard());
           }
           // Add other navigations here (e.g., Index 1 -> Discover)
+          if (index == 3) { // Index 3 is Inbox
+          Get.to(() => const SitterInbox());
+        }
+
         },
         items: const [
           BottomNavigationBarItem(
