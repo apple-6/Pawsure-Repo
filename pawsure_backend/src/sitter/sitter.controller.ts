@@ -65,6 +65,7 @@ export class SitterController {
     return await this.sitterService.findByUserId(req.user.id);
   }
 
+
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return await this.sitterService.findOne(id);

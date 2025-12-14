@@ -9,6 +9,7 @@ import 'steps/step2_environment.dart';
 import 'steps/step3_verification.dart';
 import 'steps/step4_rates.dart';
 import 'widgets/progress_bar.dart'; // And the progress bar
+import 'sitter_dashboard.dart';
 
 class SitterSetupScreen extends StatefulWidget {
   const SitterSetupScreen({super.key});
@@ -107,7 +108,10 @@ class _SitterSetupScreenState extends State<SitterSetupScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Profile Created!')));
-        Navigator.of(context).pop(); // Go back
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const SitterDashboard()),
+          (route) => false, 
+        );
       }
     } catch (e) {
       // Handle errors from the service
