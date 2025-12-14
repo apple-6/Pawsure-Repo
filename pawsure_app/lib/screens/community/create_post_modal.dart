@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io'; // Required for File operations
+import 'package:supabase_flutter/supabase_flutter.dart'; // Required for Supabase
 
-// NOTE ON PACKAGES:
-// You must add 'image_picker' and 'supabase_flutter' to your pubspec.yaml
-// before using the actual media picking and Supabase logic.
+// IMPORTANT: Define the Supabase client instance. 
+// Ensure this is initialized in your main() function:
+// await Supabase.initialize(url: 'YOUR_URL', anonKey: 'YOUR_ANON_KEY');
+final supabase = Supabase.instance.client;
 
 class CreatePostModal extends StatefulWidget {
   final VoidCallback onPostCreated;
@@ -22,28 +26,110 @@ class _CreatePostModalState extends State<CreatePostModal> {
   bool _isUrgent = false;
 
   // 2. State for Media Files
-  final List<String> _selectedMedia = [];
+  final List<XFile> _selectedMedia = []; 
+  final ImagePicker _picker = ImagePicker();
+  
+  // Loading state to prevent duplicate submissions
+  bool _isLoading = false;
 
-  // --- Placeholder methods for Media Selection ---
+  // --- Implemented methods for Media Selection ---
 
-  // Placeholder for picking media from gallery (Images and Videos)
-  void _uploadFromGallery() {
-    if (_selectedMedia.length < 10) {
-      setState(() {
-        _selectedMedia.add('gallery_media_${_selectedMedia.length + 1}.jpg');
-      });
+  // For picking multiple media (images/videos) from gallery
+  void _uploadFromGallery() async {
+    final int maxSelection = 10 - _selectedMedia.length;
+    if (maxSelection <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Maximum 10 media files reached!')),
+      );
+      return;
     }
-    // TODO: Implement actual image_picker logic here
+
+    try {
+      final List<XFile> files = await _picker.pickMultipleMedia();
+
+      if (!mounted) return;
+
+      if (files.isNotEmpty) {
+        final filesToAdd = files.take(maxSelection).toList();
+        
+        setState(() {
+          _selectedMedia.addAll(filesToAdd);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${filesToAdd.length} media file(s) added.')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick media: $e')),
+      );
+    }
   }
 
-  // Placeholder for using camera (Image or Video)
-  void _useCamera() {
-    if (_selectedMedia.length < 10) {
+  // For capturing a single photo or video
+  void _useCamera() async {
+    if (_selectedMedia.length >= 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Maximum 10 media files reached!')),
+      );
+      return;
+    }
+    
+    await showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Take Photo'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _captureMedia(ImageSource.camera, type: 'image');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.videocam),
+                title: const Text('Record Video'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _captureMedia(ImageSource.camera, type: 'video');
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _captureMedia(ImageSource source, {required String type}) async {
+    XFile? file;
+    try {
+      if (type == 'image') {
+        file = await _picker.pickImage(source: source);
+      } else if (type == 'video') {
+        file = await _picker.pickVideo(source: source);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to capture media: $e')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+
+    if (file != null) {
       setState(() {
-        _selectedMedia.add('camera_media_${_selectedMedia.length + 1}.jpg');
+        _selectedMedia.add(file!);
       });
     }
-    // TODO: Implement actual image_picker logic here
   }
 
   void _removeMedia(int index) {
@@ -53,6 +139,15 @@ class _CreatePostModalState extends State<CreatePostModal> {
   }
   // ------------------------------------------------------------------
 
+  // Helper to determine icon/color based on file extension
+  Map<String, dynamic> _getMediaDisplay(XFile file) {
+    final path = file.path.toLowerCase();
+    if (path.endsWith('.mp4') || path.endsWith('.mov')) {
+      return {'icon': Icons.videocam, 'color': Colors.red.shade400};
+    }
+    return {'icon': Icons.image, 'color': Colors.blue.shade400};
+  }
+
   @override
   void dispose() {
     _captionController.dispose();
@@ -60,24 +155,119 @@ class _CreatePostModalState extends State<CreatePostModal> {
     super.dispose();
   }
 
-  void _createPost() {
-    // 1. Get all data for submission
-    final postData = {
-      'content': _captionController.text,
-      // Removed 'pet_id' from the data payload
-      'location_name': _locationController.text,
-      'is_urgent': _isUrgent,
-      'media_files': _selectedMedia, // Files to upload
-    };
+  // 🚨 CORRECTED SUPABASE IMPLEMENTATION
+  Future<void> _createPost() async {
+    if (_isLoading) return;
 
-    // 2. Perform Supabase database and storage operations here...
-    // Insert into 'posts' table (without pet_id column)
-    // Upload media to Storage
-    // Insert records into 'post_media' table
+    if (_captionController.text.trim().isEmpty && _selectedMedia.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add content or media before posting.')),
+      );
+      return;
+    }
 
-    // After successful operation:
-    Navigator.pop(context); // Close modal
-    widget.onPostCreated(); // Notify calling widget
+    setState(() {
+      _isLoading = true;
+    });
+
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final userId = supabase.auth.currentUser?.id;
+
+    if (userId == null) {
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('Error: User not logged in.'), backgroundColor: Colors.red),
+      );
+      setState(() { _isLoading = false; });
+      return;
+    }
+
+    try {
+      // 1. UPLOAD MEDIA TO SUPABASE STORAGE
+      final List<String> mediaPublicUrls = [];
+      const String bucketName = 'post_media'; 
+
+      for (var file in _selectedMedia) {
+        final fileExtension = file.path.split('.').last;
+        final fileName = '${DateTime.now().microsecondsSinceEpoch}_${_selectedMedia.indexOf(file)}.$fileExtension';
+        final storagePath = '$userId/$fileName';
+        
+        final fileBytes = await File(file.path).readAsBytes();
+
+        await supabase.storage.from(bucketName).uploadBinary(
+              storagePath,
+              fileBytes,
+              fileOptions: const FileOptions(
+                cacheControl: '3600',
+                upsert: false,
+              ),
+            );
+
+        final publicUrl = supabase.storage.from(bucketName).getPublicUrl(storagePath);
+        mediaPublicUrls.add(publicUrl);
+      }
+
+      // 2. INSERT POST RECORD INTO DATABASE
+      final postData = {
+        'user_id': userId,
+        'content': _captionController.text.trim(),
+        'location_name': _locationController.text.trim(),
+        'is_urgent': _isUrgent,
+        'created_at': DateTime.now().toIso8601String(),
+      };
+
+      // FIX: Changed type from List<Map<String, dynamic>> to Map<String, dynamic> 
+      // as .single() returns a single map.
+      final Map<String, dynamic> postResponse = await supabase 
+          .from('posts')
+          .insert(postData)
+          .select('id')
+          .single();
+
+      final postId = postResponse['id'];
+
+      // 3. INSERT MEDIA RECORDS INTO 'post_media' TABLE
+      if (mediaPublicUrls.isNotEmpty) {
+        final List<Map<String, dynamic>> mediaRecords = mediaPublicUrls.map((url) {
+          return {
+            'post_id': postId,
+            'media_url': url,
+            'media_type': url.toLowerCase().contains('.mp4') || url.toLowerCase().contains('.mov') ? 'video' : 'image',
+          };
+        }).toList();
+
+        await supabase.from('post_media').insert(mediaRecords);
+      }
+
+      // Final Success
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('Post successfully created!'), backgroundColor: Colors.green),
+      );
+      
+      navigator.pop(); // Close modal
+      widget.onPostCreated(); // Notify calling widget
+    } on PostgrestException catch (e) {
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Database Error: ${e.message}'), backgroundColor: Colors.red),
+      );
+    } on StorageException catch (e) {
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Storage Error: ${e.message}'), backgroundColor: Colors.red),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('An unknown error occurred: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -115,7 +305,7 @@ class _CreatePostModalState extends State<CreatePostModal> {
 
               // --- Photo or Video Section ---
               const Text(
-                'Photo or Video',
+                'Photo or Video (Max 10)',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
@@ -124,11 +314,9 @@ class _CreatePostModalState extends State<CreatePostModal> {
                   // Upload from Gallery Button
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: _selectedMedia.length < 10
-                          ? _uploadFromGallery
-                          : null,
+                      onPressed: _selectedMedia.length < 10 ? _uploadFromGallery : null,
                       icon: const Icon(Icons.upload_file),
-                      label: const Text('Upload from Gallery'),
+                      label: const Text('Gallery'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -140,7 +328,7 @@ class _CreatePostModalState extends State<CreatePostModal> {
                     child: OutlinedButton.icon(
                       onPressed: _selectedMedia.length < 10 ? _useCamera : null,
                       icon: const Icon(Icons.camera_alt),
-                      label: const Text('Use Camera'),
+                      label: const Text('Camera'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -158,6 +346,9 @@ class _CreatePostModalState extends State<CreatePostModal> {
                     scrollDirection: Axis.horizontal,
                     itemCount: _selectedMedia.length,
                     itemBuilder: (context, index) {
+                      final file = _selectedMedia[index];
+                      final display = _getMediaDisplay(file);
+                      
                       return Stack(
                         children: [
                           Container(
@@ -165,18 +356,22 @@ class _CreatePostModalState extends State<CreatePostModal> {
                             height: 100,
                             margin: const EdgeInsets.only(right: 8),
                             decoration: BoxDecoration(
-                              color: Colors.blue[100],
+                              color: display['color'].withOpacity(0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Center(
-                              child: Text(
-                                '${index + 1}/${_selectedMedia.length}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue,
-                                ),
-                              ),
-                            ),
+                            // Attempt to display image, otherwise show icon
+                            child: (display['icon'] == Icons.image && (file.path.endsWith('.jpg') || file.path.endsWith('.png')))
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.file(
+                                      File(file.path),
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => Center(child: Icon(display['icon'], size: 40, color: display['color'])),
+                                    ),
+                                  )
+                                : Center( // Placeholder for video/other files or failed images
+                                    child: Icon(display['icon'], size: 40, color: display['color']),
+                                  ),
                           ),
                           Positioned(
                             top: 0,
@@ -186,11 +381,7 @@ class _CreatePostModalState extends State<CreatePostModal> {
                               child: const CircleAvatar(
                                 radius: 12,
                                 backgroundColor: Colors.red,
-                                child: Icon(
-                                  Icons.close,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
+                                child: Icon(Icons.close, size: 16, color: Colors.white),
                               ),
                             ),
                           ),
@@ -204,10 +395,7 @@ class _CreatePostModalState extends State<CreatePostModal> {
               // --- End Media Preview ---
 
               // --- Caption Field ---
-              const Text(
-                'Caption',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              const Text('Caption', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               TextField(
                 controller: _captionController,
@@ -220,13 +408,8 @@ class _CreatePostModalState extends State<CreatePostModal> {
               ),
               const SizedBox(height: 16),
 
-              // *** REMOVED: Tag Pet Field ***
-
               // --- Add Location Field ---
-              const Text(
-                'Add Location (Optional)',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              const Text('Add Location (Optional)', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               TextField(
                 controller: _locationController,
@@ -234,10 +417,7 @@ class _CreatePostModalState extends State<CreatePostModal> {
                   hintText: 'e.g., Taman Merdeka Park',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.location_on),
-                  contentPadding: EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 10,
-                  ),
+                  contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 10),
                 ),
               ),
               const SizedBox(height: 24),
@@ -248,7 +428,8 @@ class _CreatePostModalState extends State<CreatePostModal> {
                 decoration: BoxDecoration(
                   color: Colors.red[50],
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade300!),
+                  // FIX: Removed unnecessary non-null assertion '!'
+                  border: Border.all(color: Colors.red.shade300), 
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -259,24 +440,20 @@ class _CreatePostModalState extends State<CreatePostModal> {
                         children: [
                           const Text(
                             'Mark as Urgent Post',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
                           ),
                           Text(
                             'This will push the post to the Urgent feed and notify nearby users.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.red.shade700,
-                            ),
+                            style: TextStyle(fontSize: 12, color: Colors.red.shade700),
                           ),
                         ],
                       ),
                     ),
                     Switch(
                       value: _isUrgent,
-                      activeColor: Colors.red,
+                      // FIX: Changed 'activeColor' to 'activeThumbColor' (deprecated member)
+                      activeThumbColor: Colors.red, 
+                      activeTrackColor: Colors.red.shade200, // Good practice to add this too
                       onChanged: (bool value) {
                         setState(() {
                           _isUrgent = value;
@@ -292,7 +469,7 @@ class _CreatePostModalState extends State<CreatePostModal> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _createPost,
+                  onPressed: _isLoading ? null : _createPost, // Disable button while loading
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
@@ -301,7 +478,13 @@ class _CreatePostModalState extends State<CreatePostModal> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text('Post', style: TextStyle(fontSize: 18)),
+                  child: _isLoading 
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                        )
+                      : const Text('Post', style: TextStyle(fontSize: 18)),
                 ),
               ),
             ],
