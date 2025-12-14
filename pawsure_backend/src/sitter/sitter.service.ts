@@ -33,63 +33,62 @@ export class SitterService {
       throw new NotFoundException('User not found');
     }
 
-    // Check if user already has a sitter profile
-    if (user.role === 'sitter') {
-      throw new ConflictException('User already has a sitter profile');
-    }
+    // --- LOGIC CHANGE: Check for existing profile instead of throwing error ---
+    let sitter = await this.sitterRepository.findOne({ where: { userId } });
 
-    // --- 1. Extract and Update User Data (Phone Number) ---
-    // If phone number is provided, update the User entity
-    if (createSitterDto.phoneNumber) {
-        // Retrieve the full User entity from the database
-        const userToUpdate = await this.userRepository.findOne({ where: { id: userId } });
-        
-        if (userToUpdate) {
-            // Update the User's phone_number property
-            userToUpdate.phone_number = createSitterDto.phoneNumber;
-            // Save the updated User entity to the 'users' table
-            await this.userRepository.save(userToUpdate); 
-        }
-
-        // CRITICAL: Remove the property from the DTO!
-        // This prevents TypeORM from throwing an error when mapping to the Sitter entity.
-        delete createSitterDto.phoneNumber; 
-    }
-    
-    // NOTE: If you were handling a file upload that provides idDocumentUrl, 
-    // the logic for the file upload/URL assignment would also go here.
-    // --- 2. Handle ID Document File Upload ---
+    // 2. Handle ID Document File Upload
     let idDocumentUrl: string | undefined;
     if (file) {
-        // Call the service to upload the file buffer and get the public URL (e.g., from S3)
-        //idDocumentUrl = 'PLACEHOLDER_ID_DOCUMENT_URL_';
         idDocumentUrl = await this.fileService.uploadPublicFile(
             file.buffer, 
             file.originalname, 
-            'sitter-id-documents' // Optional: path/folder
+            'sitter-id-documents'
         );
-        // Clean up the DTO (just in case)
-        delete createSitterDto.idDocumentUrl; 
+        delete createSitterDto.idDocumentUrl; // Clean DTO
     }
-    // Create sitter profile
-    const sitter = this.sitterRepository.create({
-      ...createSitterDto,
-      userId,
-      idDocumentUrl: idDocumentUrl,
-    });
 
-    await this.sitterRepository.save(sitter);
+    // 3. Handle User Data (Phone Number)
+    if (createSitterDto.phoneNumber) {
+        // Update the User's phone_number property
+        user.phone_number = createSitterDto.phoneNumber;
+        await this.userRepository.save(user);
+        
+        // Remove from DTO to avoid TypeORM error
+        delete createSitterDto.phoneNumber; 
+    }
 
-    
-    user.role = 'sitter';
-    // Save the updated User record (which holds all Sitter data).
-    await this.userRepository.save(user);
+    if (sitter) {
+        // === UPDATE EXISTING PROFILE ===
+        // The user is already a sitter, so we update their existing profile.
+        
+        // If a new file was uploaded, update the URL
+        if (idDocumentUrl) {
+            sitter.idDocumentUrl = idDocumentUrl;
+        }
 
-    // 3. Update the role and save the complete, single entity (record in the 'users' table).
-    user.role = 'sitter';
-    await this.userRepository.save(user);
+        // Apply new data from the form (Step 4 data)
+        Object.assign(sitter, createSitterDto);
+        
+        await this.sitterRepository.save(sitter);
+    } else {
+        // === CREATE NEW PROFILE ===
+        // No profile found, create a brand new one.
+        sitter = this.sitterRepository.create({
+          ...createSitterDto,
+          userId,
+          idDocumentUrl: idDocumentUrl,
+        });
 
-    // 4. Fetch the record using the SitterRepository to return the correct Sitter type.
+        await this.sitterRepository.save(sitter);
+    }
+
+    // 4. Ensure role is 'sitter' (just in case)
+    if (user.role !== 'sitter') {
+        user.role = 'sitter';
+        await this.userRepository.save(user);
+    }
+
+    // 5. Return the full profile
     const finalSitter = await this.sitterRepository.findOne({ 
         where: { userId },
         relations: ['user'] 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // ← ADD THIS IMPORT
+import '../sitter_setup/sitter_dashboard.dart';
 import '../../services/auth_service.dart';
 import 'register_screen.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_setup_screen.dart';
@@ -368,6 +369,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final isEmail = _isEmail(input);
 
       await _authService.login(input, password, isPhone: !isEmail);
+      final role = await _authService.getUserRole();
 
       if (!mounted) return;
 
@@ -386,6 +388,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
         // Navigate to home
         Get.offAllNamed('/home');
+      } 
+      if (role == 'sitter') {
+        // ✅ SITTER: Go to Sitter Dashboard
+        Get.offAll(() => const SitterDashboard());
       } else {
         Get.offAllNamed('/home');
       }
