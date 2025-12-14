@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart'; // <--- Import GetX
+import 'sitter_calendar.dart';
 
 class SitterDashboard extends StatelessWidget {
   const SitterDashboard({super.key});
@@ -44,7 +46,12 @@ class SitterDashboard extends StatelessWidget {
         selectedItemColor: _accent,
         unselectedItemColor: Colors.grey.shade600,
         currentIndex: 0,
-        onTap: (_) {},
+        onTap: (index) {
+        if (index == 2) {
+            Get.to(() => const SitterCalendar());
+          }
+          // You can add other links here later (e.g. Settings is index 4)
+        },
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_filled),
