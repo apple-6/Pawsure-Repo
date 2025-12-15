@@ -5,14 +5,17 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/models/health_record_model.dart';
-import 'package:pawsure_app/models/event_model.dart';
+import 'package:pawsure_app/models/event_model.dart'; // 🆕 IMPORT
 import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
 
+// Detect platform and use appropriate localhost address
+// 10.0.2.2 is for Android emulator, localhost for Windows/Web/iOS
 String get apiBaseUrl {
   const envUrl = String.fromEnvironment('API_BASE_URL');
   if (envUrl.isNotEmpty) return envUrl;
-
+  
+  // Use 10.0.2.2 for Android emulator, localhost for other platforms
   if (Platform.isAndroid) {
     return 'http://10.0.2.2:3000';
   } else {
@@ -21,6 +24,7 @@ String get apiBaseUrl {
 }
 
 class ApiService {
+  // Get authenticated headers with JWT token
   Future<Map<String, String>> _getHeaders() async {
     final headers = {
       'Content-Type': 'application/json; charset=UTF-8',
@@ -93,50 +97,29 @@ class ApiService {
     String? species,
     String? dob,
     String? photoPath,
-    double? weight,
-    String? sterilizationStatus,
-    String? allergies,
-    double? moodRating,
-    String? lastVetVisit,
   }) async {
     try {
       debugPrint('➕ API: POST $apiBaseUrl/pets');
       debugPrint('📤 Creating pet: $name, breed: $breed');
 
       final headers = await _getHeaders();
+      // Remove Content-Type for multipart - it will be set automatically
       headers.remove('Content-Type');
 
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$apiBaseUrl/pets'),
-      );
+      final request = http.MultipartRequest('POST', Uri.parse('$apiBaseUrl/pets'));
+
+      // Add headers (including auth token)
       request.headers.addAll(headers);
 
-      // Required fields
+      // Add text fields
       request.fields['name'] = name;
       request.fields['breed'] = breed;
-
-      // Optional fields
       if (species != null && species.isNotEmpty) {
         request.fields['species'] = species;
       }
       if (dob != null && dob.isNotEmpty) {
+        // Convert mm/dd/yyyy to ISO format if needed
         request.fields['dob'] = dob;
-      }
-      if (weight != null) {
-        request.fields['weight'] = weight.toString();
-      }
-      if (sterilizationStatus != null && sterilizationStatus.isNotEmpty) {
-        request.fields['sterilization_status'] = sterilizationStatus;
-      }
-      if (allergies != null && allergies.isNotEmpty) {
-        request.fields['allergies'] = allergies;
-      }
-      if (moodRating != null) {
-        request.fields['mood_rating'] = moodRating.toString();
-      }
-      if (lastVetVisit != null && lastVetVisit.isNotEmpty) {
-        request.fields['last_vet_visit'] = lastVetVisit;
       }
 
       // Add photo file if provided
@@ -150,9 +133,11 @@ class ApiService {
           debugPrint('📸 Added photo file: $photoPath');
         } catch (e) {
           debugPrint('⚠️ Error adding photo file: $e');
+          // Continue without photo
         }
       }
 
+      // Send request
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
@@ -180,106 +165,11 @@ class ApiService {
     }
   }
 
-  /// 🆕 PUT /pets/:id - Update an existing pet
-  Future<Pet> updatePet({
-    required int petId,
-    String? name,
-    String? breed,
-    String? species,
-    String? dob,
-    String? photoPath,
-    double? weight,
-    String? sterilizationStatus,
-    String? allergies,
-    double? moodRating,
-    String? lastVetVisit,
-  }) async {
-    try {
-      debugPrint('✏️ API: PUT $apiBaseUrl/pets/$petId');
-      debugPrint('📤 Updating pet: $name');
-
-      final headers = await _getHeaders();
-      headers.remove('Content-Type');
-
-      final request = http.MultipartRequest(
-        'PUT',
-        Uri.parse('$apiBaseUrl/pets/$petId'),
-      );
-      request.headers.addAll(headers);
-
-      // Add fields only if they're not null
-      if (name != null && name.isNotEmpty) {
-        request.fields['name'] = name;
-      }
-      if (breed != null && breed.isNotEmpty) {
-        request.fields['breed'] = breed;
-      }
-      if (species != null && species.isNotEmpty) {
-        request.fields['species'] = species;
-      }
-      if (dob != null && dob.isNotEmpty) {
-        request.fields['dob'] = dob;
-      }
-      if (weight != null) {
-        request.fields['weight'] = weight.toString();
-      }
-      if (sterilizationStatus != null && sterilizationStatus.isNotEmpty) {
-        request.fields['sterilization_status'] = sterilizationStatus;
-      }
-      if (allergies != null && allergies.isNotEmpty) {
-        request.fields['allergies'] = allergies;
-      }
-      if (moodRating != null) {
-        request.fields['mood_rating'] = moodRating.toString();
-      }
-      if (lastVetVisit != null && lastVetVisit.isNotEmpty) {
-        request.fields['last_vet_visit'] = lastVetVisit;
-      }
-
-      // Add new photo if provided
-      if (photoPath != null && photoPath.isNotEmpty) {
-        try {
-          final photoFile = await http.MultipartFile.fromPath(
-            'photo',
-            photoPath,
-          );
-          request.files.add(photoFile);
-          debugPrint('📸 Updating photo: $photoPath');
-        } catch (e) {
-          debugPrint('⚠️ Error adding photo file: $e');
-        }
-      }
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> json =
-            jsonDecode(response.body) as Map<String, dynamic>;
-        final pet = Pet.fromJson(json);
-
-        debugPrint('✅ Pet updated successfully: ${pet.name}');
-        return pet;
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication failed. Please log in again.');
-      }
-
-      throw Exception(
-        'Failed to update pet (${response.statusCode}): ${response.body}',
-      );
-    } catch (e, stackTrace) {
-      debugPrint('❌ Error in updatePet: $e');
-      debugPrint('Stack trace: $stackTrace');
-      rethrow;
-    }
-  }
 
   /// DELETE /pets/:petId - Delete a pet
   Future<void> deletePet(int petId) async {
     try {
+      // ⚠️ NOTE: Ensure 'apiBaseUrl' is correctly defined in this file
       debugPrint('🗑️ API: DELETE $apiBaseUrl/pets/$petId');
 
       final headers = await _getHeaders();
@@ -290,6 +180,7 @@ class ApiService {
 
       debugPrint('📦 API Response: ${response.statusCode}');
 
+      // Assuming your backend returns 200 (OK) or 204 (No Content) on success
       if (response.statusCode != 200 && response.statusCode != 204) {
         if (response.statusCode == 401) {
           throw Exception('Authentication failed. Please log in again.');
@@ -307,10 +198,13 @@ class ApiService {
     }
   }
 
+// --------------------------------------------------------------------------
+
   // ========================================================================
-  // HEALTH RECORDS API (keeping existing code)
+  // HEALTH RECORDS API
   // ========================================================================
 
+  /// GET /pets/:petId/health-records - Fetch health records for a specific pet
   Future<List<HealthRecord>> getHealthRecords(int petId) async {
     try {
       debugPrint('🔍 API: GET $apiBaseUrl/pets/$petId/health-records');
@@ -322,6 +216,7 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList =
@@ -341,16 +236,19 @@ class ApiService {
       );
     } catch (e, stackTrace) {
       debugPrint('❌ Error in getHealthRecords: $e');
+      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }
 
+  /// POST /pets/:petId/health-records - Add a new health record
   Future<HealthRecord> addHealthRecord(
     int petId,
     Map<String, dynamic> payload,
   ) async {
     try {
       debugPrint('➕ API: POST $apiBaseUrl/pets/$petId/health-records');
+      debugPrint('📤 Payload: ${jsonEncode(payload)}');
 
       final headers = await _getHeaders();
       final response = await http.post(
@@ -359,10 +257,16 @@ class ApiService {
         body: jsonEncode(payload),
       );
 
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
       if (response.statusCode == 201 || response.statusCode == 200) {
         final Map<String, dynamic> json =
             jsonDecode(response.body) as Map<String, dynamic>;
-        return HealthRecord.fromJson(json);
+        final record = HealthRecord.fromJson(json);
+
+        debugPrint('✅ Health record created successfully');
+        return record;
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please log in again.');
       }
@@ -372,21 +276,30 @@ class ApiService {
       );
     } catch (e, stackTrace) {
       debugPrint('❌ Error in addHealthRecord: $e');
+      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }
 
+  /// PUT /health-records/:recordId - Update an existing health record
+  /// 🔧 FIXED: Corrected the API endpoint
   Future<HealthRecord> updateHealthRecord(
     int recordId,
     Map<String, dynamic> payload,
   ) async {
     try {
+      debugPrint('🔄 API: PUT $apiBaseUrl/health-records/$recordId');
+      debugPrint('📤 Payload: ${jsonEncode(payload)}');
+
       final headers = await _getHeaders();
       final response = await http.put(
-        Uri.parse('$apiBaseUrl/health-records/$recordId'),
+        Uri.parse('$apiBaseUrl/health-records/$recordId'), // ✅ Correct endpoint
         headers: headers,
         body: jsonEncode(payload),
       );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json =
@@ -399,18 +312,26 @@ class ApiService {
       throw Exception(
         'Failed to update health record (${response.statusCode}): ${response.body}',
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in updateHealthRecord: $e');
+      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }
 
+  /// DELETE /health-records/:recordId - Delete a health record
+  /// 🔧 FIXED: Corrected the API endpoint
   Future<void> deleteHealthRecord(int recordId) async {
     try {
+      debugPrint('🗑️ API: DELETE $apiBaseUrl/health-records/$recordId');
+
       final headers = await _getHeaders();
       final response = await http.delete(
-        Uri.parse('$apiBaseUrl/health-records/$recordId'),
+        Uri.parse('$apiBaseUrl/health-records/$recordId'), // ✅ Correct endpoint
         headers: headers,
       );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         if (response.statusCode == 401) {
@@ -420,29 +341,42 @@ class ApiService {
           'Failed to delete health record (${response.statusCode}): ${response.body}',
         );
       }
-    } catch (e) {
+
+      debugPrint('✅ Health record deleted successfully');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in deleteHealthRecord: $e');
+      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }
 
   // ========================================================================
-  // EVENTS API (keeping existing code)
+  // 🆕 EVENTS API
   // ========================================================================
 
+  /// GET /events?petId=X - Fetch all events for a specific pet
   Future<List<EventModel>> getEvents(int petId) async {
     try {
+      debugPrint('🔍 API: GET $apiBaseUrl/events?petId=$petId');
+
       final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$apiBaseUrl/events?petId=$petId'),
         headers: headers,
       );
 
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
       if (response.statusCode == 200) {
         final List<dynamic> jsonList =
             jsonDecode(response.body) as List<dynamic>;
-        return jsonList
+        final events = jsonList
             .map((e) => EventModel.fromJson(e as Map<String, dynamic>))
             .toList();
+
+        debugPrint('✅ Parsed ${events.length} events');
+        return events;
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please log in again.');
       }
@@ -450,25 +384,38 @@ class ApiService {
       throw Exception(
         'Failed to load events (${response.statusCode}): ${response.body}',
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in getEvents: $e');
+      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }
 
+  /// GET /events/upcoming?petId=X&limit=3 - Get upcoming events for dashboard
   Future<List<EventModel>> getUpcomingEvents(int petId, {int limit = 3}) async {
     try {
+      debugPrint(
+        '🔍 API: GET $apiBaseUrl/events/upcoming?petId=$petId&limit=$limit',
+      );
+
       final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$apiBaseUrl/events/upcoming?petId=$petId&limit=$limit'),
         headers: headers,
       );
 
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
       if (response.statusCode == 200) {
         final List<dynamic> jsonList =
             jsonDecode(response.body) as List<dynamic>;
-        return jsonList
+        final events = jsonList
             .map((e) => EventModel.fromJson(e as Map<String, dynamic>))
             .toList();
+
+        debugPrint('✅ Parsed ${events.length} upcoming events');
+        return events;
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please log in again.');
       }
@@ -476,13 +423,19 @@ class ApiService {
       throw Exception(
         'Failed to load upcoming events (${response.statusCode}): ${response.body}',
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in getUpcomingEvents: $e');
+      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }
 
+  /// POST /events - Create a new event
   Future<EventModel> createEvent(Map<String, dynamic> payload) async {
     try {
+      debugPrint('➕ API: POST $apiBaseUrl/events');
+      debugPrint('📤 Payload: ${jsonEncode(payload)}');
+
       final headers = await _getHeaders();
       final response = await http.post(
         Uri.parse('$apiBaseUrl/events'),
@@ -490,10 +443,16 @@ class ApiService {
         body: jsonEncode(payload),
       );
 
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
       if (response.statusCode == 201 || response.statusCode == 200) {
         final Map<String, dynamic> json =
             jsonDecode(response.body) as Map<String, dynamic>;
-        return EventModel.fromJson(json);
+        final event = EventModel.fromJson(json);
+
+        debugPrint('✅ Event created successfully');
+        return event;
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please log in again.');
       }
@@ -501,23 +460,32 @@ class ApiService {
       throw Exception(
         'Failed to create event (${response.statusCode}): ${response.body}',
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in createEvent: $e');
+      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }
 
+  /// PATCH /events/:id - Update event status
   Future<EventModel> updateEventStatus(
     int eventId,
     EventStatus newStatus,
   ) async {
     try {
-      final headers = await _getHeaders();
+      debugPrint('🔄 API: PATCH $apiBaseUrl/events/$eventId');
       final payload = {'status': newStatus.toJson()};
+      debugPrint('📤 Payload: ${jsonEncode(payload)}');
+
+      final headers = await _getHeaders();
       final response = await http.patch(
         Uri.parse('$apiBaseUrl/events/$eventId'),
         headers: headers,
         body: jsonEncode(payload),
       );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json =
@@ -530,18 +498,25 @@ class ApiService {
       throw Exception(
         'Failed to update event status (${response.statusCode}): ${response.body}',
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in updateEventStatus: $e');
+      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }
 
+  /// DELETE /events/:id - Delete an event
   Future<void> deleteEvent(int eventId) async {
     try {
+      debugPrint('🗑️ API: DELETE $apiBaseUrl/events/$eventId');
+
       final headers = await _getHeaders();
       final response = await http.delete(
         Uri.parse('$apiBaseUrl/events/$eventId'),
         headers: headers,
       );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         if (response.statusCode == 401) {
@@ -551,7 +526,11 @@ class ApiService {
           'Failed to delete event (${response.statusCode}): ${response.body}',
         );
       }
-    } catch (e) {
+
+      debugPrint('✅ Event deleted successfully');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in deleteEvent: $e');
+      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }
