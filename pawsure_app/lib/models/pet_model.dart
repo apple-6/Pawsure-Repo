@@ -1,3 +1,4 @@
+//pawsure_app\lib\models\pet_model.dart
 class Pet {
   final int id;
   final String name;
@@ -11,7 +12,7 @@ class Pet {
   final double? moodRating;
   final int streak;
   final String? photoUrl;
-  final String? sterilizationStatus; // 🆕 Added sterilization status
+  final String? sterilizationStatus;
 
   Pet({
     required this.id,
@@ -26,7 +27,7 @@ class Pet {
     this.moodRating,
     this.streak = 0,
     this.photoUrl,
-    this.sterilizationStatus, // 🆕 Added parameter
+    this.sterilizationStatus,
   });
 
   factory Pet.fromJson(Map<String, dynamic> json) {
@@ -36,22 +37,36 @@ class Pet {
       species: json['species'] as String?,
       breed: json['breed'] as String?,
       dob: json['dob'] as String?,
-      weight: json['weight'] != null
-          ? (json['weight'] as num).toDouble()
-          : null,
+      // 🔧 FIX: Handle both string and number types for weight
+      weight: json['weight'] != null ? _parseDouble(json['weight']) : null,
       allergies: json['allergies'] as String?,
       vaccinationDates: json['vaccination_dates'] != null
           ? List<String>.from(json['vaccination_dates'] as List)
           : null,
       lastVetVisit: json['last_vet_visit'] as String?,
+      // 🔧 FIX: Handle both string and number types for mood_rating
       moodRating: json['mood_rating'] != null
-          ? (json['mood_rating'] as num).toDouble()
+          ? _parseDouble(json['mood_rating'])
           : null,
       streak: json['streak'] as int? ?? 0,
       photoUrl: json['photoUrl'] as String?,
-      sterilizationStatus:
-          json['sterilization_status'] as String?, // 🆕 Added mapping
+      sterilizationStatus: json['sterilization_status'] as String?,
     );
+  }
+
+  // 🆕 Helper method to safely parse doubles from both strings and numbers
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+
+    if (value is double) {
+      return value;
+    } else if (value is int) {
+      return value.toDouble();
+    } else if (value is String) {
+      return double.tryParse(value);
+    }
+
+    return null;
   }
 
   Map<String, dynamic> toJson() {
@@ -68,7 +83,7 @@ class Pet {
       'mood_rating': moodRating,
       'streak': streak,
       'photoUrl': photoUrl,
-      'sterilization_status': sterilizationStatus, // 🆕 Added to JSON
+      'sterilization_status': sterilizationStatus,
     };
   }
 }

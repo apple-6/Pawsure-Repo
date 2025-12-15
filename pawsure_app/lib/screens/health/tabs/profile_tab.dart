@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
+import 'package:pawsure_app/screens/profile/create_pet_profile_screen.dart'; // 🆕 IMPORT
 
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
@@ -116,7 +117,6 @@ class ProfileTab extends StatelessWidget {
     );
   }
 
-  // 🆕 Helper method to get sterilization display text
   String _getSterilizationDisplayText(String? status) {
     switch (status?.toLowerCase()) {
       case 'sterilized':
@@ -129,7 +129,6 @@ class ProfileTab extends StatelessWidget {
     }
   }
 
-  // 🆕 Helper method to get sterilization color
   Color _getSterilizationColor(String? status) {
     switch (status?.toLowerCase()) {
       case 'sterilized':
@@ -142,7 +141,6 @@ class ProfileTab extends StatelessWidget {
     }
   }
 
-  // 🆕 Helper method to get sterilization icon
   IconData _getSterilizationIcon(String? status) {
     switch (status?.toLowerCase()) {
       case 'sterilized':
@@ -285,7 +283,6 @@ class ProfileTab extends StatelessWidget {
       final healthChildren = <Widget>[];
       bool hasHealthInfo = false;
 
-      // 🆕 STERILIZATION STATUS - Always show if available
       if (pet.sterilizationStatus != null &&
           pet.sterilizationStatus!.isNotEmpty) {
         healthChildren.add(
@@ -432,16 +429,32 @@ class ProfileTab extends StatelessWidget {
 
           const SizedBox(height: 8),
 
+          // 🆕 EDIT BUTTON - NOW FUNCTIONAL!
           ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Navigate to edit profile screen
-              Get.snackbar(
-                'Coming Soon',
-                'Edit profile feature will be available soon!',
-                snackPosition: SnackPosition.BOTTOM,
-                backgroundColor: Colors.blue.withOpacity(0.1),
-                colorText: Colors.blue[800],
+            onPressed: () async {
+              // Navigate to edit screen with the current pet
+              final result = await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => CreatePetProfileScreen(
+                    petToEdit: pet, // Pass the pet to edit
+                  ),
+                ),
               );
+
+              // If pet was updated, refresh the pet list
+              if (result == true) {
+                controller.loadPets();
+
+                // Show success message
+                Get.snackbar(
+                  'Success',
+                  'Pet profile updated successfully!',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.green.withOpacity(0.1),
+                  colorText: Colors.green[800],
+                  duration: const Duration(seconds: 2),
+                );
+              }
             },
             icon: const Icon(Icons.edit),
             label: const Text('Edit Profile Information'),

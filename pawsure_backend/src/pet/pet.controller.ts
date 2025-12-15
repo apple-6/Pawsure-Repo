@@ -1,7 +1,8 @@
 //pawsure_backend\src\pet\pet.controller.ts
 import { 
   Controller, 
-  Post, 
+  Post,
+  Put, // 🆕 ADDED for UPDATE
   Body, 
   UseInterceptors, 
   UploadedFile, 
@@ -9,14 +10,14 @@ import {
   UseGuards,
   Get,
   Param,
-  // 🔑 ADDED: Import the Delete decorator
   Delete, 
-  HttpCode, // Added for explicit status code control
-  HttpStatus, // Added for status code constants
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PetService } from './pet.service';
 import { CreatePetDto } from './dto/create-pet.dto';
+import { UpdatePetDto } from './dto/update-pet.dto'; // 🆕 ADDED
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 // Base route is '/pets'
@@ -93,7 +94,39 @@ export class PetController {
   }
 
   // ========================================================================
-  // DELETE ENDPOINT (THE FIX)
+  // 🆕 UPDATE (PUT) ENDPOINT
+  // ========================================================================
+
+  /**
+   * Updates a pet by ID, ensuring the requesting user is the owner.
+   * Route: PUT /pets/:id
+   */
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('photo'))
+  async updatePet(
+    @Param('id') id: string,
+    @Body() updatePetDto: UpdatePetDto,
+    @UploadedFile() file: any,
+    @Request() req,
+  ) {
+    const petId = Number(id);
+    const userId = req.user.id;
+    
+    console.log(`✏️ Updating Pet ID: ${petId} by User ID: ${userId}`);
+    console.log('📤 Update data:', updatePetDto);
+    
+    // If a new photo is uploaded, update the photoUrl
+    if (file) {
+      updatePetDto.photoUrl = `https://YOUR-SUPABASE-URL/storage/photos/${file.filename}`;
+      console.log('📸 New photo uploaded');
+    }
+    
+    return this.petService.update(petId, updatePetDto, userId);
+  }
+
+  // ========================================================================
+  // DELETE ENDPOINT
   // ========================================================================
 
   /**
@@ -102,7 +135,6 @@ export class PetController {
    */
   @Delete(':id') 
   @UseGuards(JwtAuthGuard)
-  // Use 204 No Content for successful deletion (standard REST practice)
   @HttpCode(HttpStatus.NO_CONTENT) 
   async removePet(@Param('id') id: string, @Request() req) {
     const petId = Number(id);
@@ -110,7 +142,6 @@ export class PetController {
     
     console.log(`🗑️ Deleting Pet ID: ${petId} by User ID: ${userId}`);
     
-    // Calls the PetService.remove method which includes owner check and database deletion
     await this.petService.remove(petId, userId);
   }
 }
