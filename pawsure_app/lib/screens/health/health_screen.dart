@@ -84,39 +84,52 @@ class HealthScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // Tab Bar Section (Calendar tab REMOVED)
+          // 🎨 IMPROVED TAB BAR: Better pill-shaped indicator
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Container(
               decoration: BoxDecoration(
                 color: const Color(0xFFF1F6F9),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(25),
               ),
+              padding: const EdgeInsets.all(4), // Padding around tabs
               child: TabBar(
                 controller: controller.tabController,
                 indicator: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(20), // Smoother radius
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 4,
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
                       offset: const Offset(0, 2),
+                      spreadRadius: 0,
                     ),
                   ],
                 ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent, // Remove divider line
                 labelColor: Colors.black,
-                unselectedLabelColor: Colors.grey,
+                unselectedLabelColor: Colors.grey.shade600,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                ),
+                labelPadding: EdgeInsets.zero, // Remove extra padding
                 tabs: const [
-                  Tab(text: 'Profile'),
-                  Tab(text: 'Records'),
-                  Tab(text: 'AI Scan'), // Calendar tab REMOVED
+                  Tab(height: 40, child: Center(child: Text('Profile'))),
+                  Tab(height: 40, child: Center(child: Text('Records'))),
+                  Tab(height: 40, child: Center(child: Text('AI Scan'))),
                 ],
               ),
             ),
           ),
 
-          // Tab Views (CalendarTab REMOVED)
+          // Tab Views
           Expanded(
             child: TabBarView(
               controller: controller.tabController,
@@ -139,7 +152,7 @@ class HealthScreen extends StatelessWidget {
                   return const RecordsTab();
                 }),
 
-                AIScanTab(), // Calendar tab REMOVED
+                AIScanTab(),
               ],
             ),
           ),

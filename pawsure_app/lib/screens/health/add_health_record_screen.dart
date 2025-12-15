@@ -35,12 +35,10 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   // Form state
-  HealthRecordType _selectedType =
-      HealthRecordType.vetVisit; // Default to vet visit
+  HealthRecordType _selectedType = HealthRecordType.vetVisit;
   DateTime _selectedDate = DateTime.now();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _clinicController = TextEditingController();
-  DateTime? _nextDueDate;
   bool _submitting = false;
 
   // Track if prefilled from event
@@ -51,7 +49,6 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
   void initState() {
     super.initState();
 
-    // 🔧 CRITICAL FIX: Get and parse arguments from calendar
     final args = Get.arguments as Map<String, dynamic>?;
 
     debugPrint('🏥 AddHealthRecordScreen initialized');
@@ -60,17 +57,14 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
     if (args != null) {
       _prefilledFromEvent = true;
 
-      // Extract pet ID
       _petId = args['petId'] as int?;
       debugPrint('   ✓ Pet ID: $_petId');
 
-      // Prefill date
       if (args['prefillDate'] != null) {
         _selectedDate = args['prefillDate'] as DateTime;
         debugPrint('   ✓ Date prefilled: $_selectedDate');
       }
 
-      // 🔧 CRITICAL FIX: Prefill description from event title
       if (args['prefillTitle'] != null) {
         final title = args['prefillTitle'] as String;
         _descriptionController.text = title;
@@ -79,7 +73,6 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
         debugPrint('   ✗ No prefillTitle in arguments');
       }
 
-      // 🔧 CRITICAL FIX: Prefill clinic from event location
       if (args['prefillLocation'] != null) {
         final location = args['prefillLocation'] as String;
         if (location.isNotEmpty) {
@@ -101,7 +94,6 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
       debugPrint('⚠️ No arguments - manual entry mode');
     }
 
-    // Fallback to controller's selected pet
     if (_petId == null && controller.selectedPet.value != null) {
       _petId = controller.selectedPet.value!.id;
       debugPrint('📌 Using pet from controller: $_petId');
@@ -134,27 +126,13 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
     }
   }
 
-  Future<void> _pickNextDueDate() async {
-    final DateTime now = DateTime.now();
-    final DateTime first = DateTime(now.year);
-    final DateTime last = DateTime(now.year + 10);
-
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _nextDueDate ?? now,
-      firstDate: first,
-      lastDate: last,
-    );
-
-    if (picked != null) {
-      setState(() {
-        _nextDueDate = picked;
-      });
-    }
+  // 🔧 CRITICAL FIX: Simple back navigation without reload
+  void _handleClose() {
+    debugPrint('❌ User cancelled - going back');
+    Get.back(); // ✅ Just go back, don't reload everything
   }
 
   Future<void> _submit() async {
-    // 🔧 CRITICAL FIX: Prevent double submission
     if (_submitting) {
       debugPrint('⚠️ Already submitting, ignoring duplicate click');
       return;
@@ -163,10 +141,8 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
-    // Get pet ID
     int? petId = _petId;
 
-    // Fallback to controller if not set
     if (petId == null) {
       if (controller.selectedPet.value == null) {
         Get.snackbar(
@@ -184,7 +160,6 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
     setState(() => _submitting = true);
 
     try {
-      // Build payload
       final payload = <String, dynamic>{
         'record_type': healthRecordTypeToBackend(_selectedType),
         'record_date': _selectedDate.toIso8601String().split('T')[0],
@@ -200,17 +175,11 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
         payload['clinic'] = clinic;
       }
 
-      if (_nextDueDate != null) {
-        payload['nextDueDate'] = _nextDueDate!.toIso8601String().split('T')[0];
-      }
-
       debugPrint('💾 Saving health record...');
       debugPrint('📤 Payload: $payload');
 
-      // 🔧 CRITICAL FIX: Call controller and wait
       await controller.addNewHealthRecord(payload, petId);
 
-      // Check if still mounted before proceeding
       if (!mounted) {
         debugPrint('⚠️ Widget disposed, aborting');
         return;
@@ -218,7 +187,6 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
 
       debugPrint('✅ Health record saved successfully!');
 
-      // 🔧 CRITICAL FIX: Show success message
       Get.snackbar(
         'Success',
         'Health record added successfully!',
@@ -228,15 +196,12 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
         duration: const Duration(seconds: 2),
       );
 
-      // Small delay to let user see the snackbar
+      // 🔧 CRITICAL FIX: Just go back, don't reload home
       await Future.delayed(const Duration(milliseconds: 300));
+      Get.back(); // ✅ Simple back navigation
 
-      // 🔧 CRITICAL FIX: Navigate back to home
-      Get.offAllNamed('/home');
-
-      // Switch to health tab after navigation
+      // Switch to records tab after going back
       await Future.delayed(const Duration(milliseconds: 100));
-
       try {
         if (Get.isRegistered<NavigationController>()) {
           final navController = Get.find<NavigationController>();
@@ -246,9 +211,7 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
           await Future.delayed(const Duration(milliseconds: 100));
           if (Get.isRegistered<HealthController>()) {
             final healthController = Get.find<HealthController>();
-            healthController.tabController.animateTo(
-              1,
-            ); // ✅ Records tab (index 1)
+            healthController.tabController.animateTo(1); // Records tab
             debugPrint('✅ Switched to Records tab');
           }
         }
@@ -280,8 +243,9 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        Get.offAllNamed('/home');
-        return false;
+        // 🔧 CRITICAL FIX: Handle Android back button
+        _handleClose();
+        return false; // Prevent default back action
       },
       child: Scaffold(
         appBar: AppBar(
@@ -292,7 +256,7 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
           ),
           leading: IconButton(
             icon: const Icon(Icons.close),
-            onPressed: () => Get.offAllNamed('/home'),
+            onPressed: _handleClose, // ✅ Use simple close handler
           ),
         ),
         body: SafeArea(
@@ -300,7 +264,6 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
             key: _formKey,
             child: Column(
               children: [
-                // Show info banner if prefilled
                 if (_prefilledFromEvent)
                   Container(
                     width: double.infinity,
@@ -327,7 +290,6 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                   child: ListView(
                     padding: const EdgeInsets.all(16.0),
                     children: [
-                      // Record Type Dropdown
                       DropdownButtonFormField<HealthRecordType>(
                         value: _selectedType,
                         decoration: const InputDecoration(
@@ -364,7 +326,6 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Record Date
                       ListTile(
                         title: const Text('Record Date'),
                         subtitle: Text(
@@ -383,7 +344,6 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Description
                       TextFormField(
                         controller: _descriptionController,
                         decoration: const InputDecoration(
@@ -395,7 +355,6 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Clinic (Optional)
                       TextFormField(
                         controller: _clinicController,
                         decoration: const InputDecoration(
@@ -404,49 +363,10 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                           hintText: 'Where was this performed?',
                         ),
                       ),
-                      const SizedBox(height: 16),
-
-                      // Next Due Date (Optional)
-                      ListTile(
-                        title: const Text('Next Due Date (Optional)'),
-                        subtitle: Text(
-                          _nextDueDate != null
-                              ? '${_nextDueDate!.day}/${_nextDueDate!.month}/${_nextDueDate!.year}'
-                              : 'Not set',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: _nextDueDate != null
-                                ? Colors.black
-                                : Colors.grey,
-                          ),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (_nextDueDate != null)
-                              IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  setState(() {
-                                    _nextDueDate = null;
-                                  });
-                                },
-                              ),
-                            const Icon(Icons.calendar_today),
-                          ],
-                        ),
-                        onTap: _pickNextDueDate,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(color: Colors.grey.shade400),
-                        ),
-                      ),
                     ],
                   ),
                 ),
 
-                // Submit Button
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: SizedBox(
