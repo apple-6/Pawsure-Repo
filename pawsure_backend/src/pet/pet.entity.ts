@@ -53,6 +53,9 @@ export class Pet {
   @Column({ nullable: true })
   photoUrl: string;
 
+  @Column({ default: 'unknown', nullable: true })
+sterilization_status: string;
+
   @Column()
   ownerId: number;
 

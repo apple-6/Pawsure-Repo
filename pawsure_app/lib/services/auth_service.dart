@@ -15,12 +15,17 @@ class AuthService {
       if (Platform.isIOS) return 'http://localhost:3000';
     } catch (_) {}
     return 'http://localhost:3000';
-    // return 'http://127.0.0.1:3000';
-    // return 'http://10.202.109.35:3000';
   }
 
   // Use file-based storage implementation
   final StorageService _storage = FileStorageService();
+
+  /// Check if user is authenticated
+  /// Returns true if a valid token exists
+  Future<bool> isAuthenticated() async {
+    final token = await getToken();
+    return token != null && token.isNotEmpty;
+  }
 
   /// Login with email or phone number
   /// Automatically adds +60 prefix for phone numbers
@@ -30,7 +35,6 @@ class AuthService {
     bool isPhone = false,
   }) async {
     final uri = Uri.parse('$_baseUrl/auth/login');
-    // Debug: print the request target
     // ignore: avoid_print
     print('AuthService.login -> POST $uri');
     http.Response resp;
@@ -56,7 +60,6 @@ class AuthService {
     } on TimeoutException {
       throw Exception('Request timed out');
     }
-    // Debug: print status and body for troubleshooting
     // ignore: avoid_print
     print('AuthService.login <- ${resp.statusCode} ${resp.body}');
 
@@ -88,22 +91,24 @@ class AuthService {
     }
   }
 
+  /// Logout user and clear all stored credentials
   Future<void> logout() async {
     await _storage.delete(key: 'jwt');
     await _storage.delete(key: 'user_role');
   }
 
+  /// Get stored JWT token
   Future<String?> getToken() async {
     return _storage.read(key: 'jwt');
   }
 
-  /// Get user role
+  /// Get user role from storage
   Future<String?> getUserRole() async {
     return _storage.read(key: 'user_role');
   }
 
   /// Get current user profile
-  /// ✅ FIXED: Changed from /auth/me to /auth/profile
+  /// Returns null if not authenticated or if request fails
   Future<Map<String, dynamic>?> profile() async {
     final token = await getToken();
     if (token == null) {
@@ -112,7 +117,7 @@ class AuthService {
       return null;
     }
 
-    final uri = Uri.parse('$_baseUrl/auth/profile'); // ✅ Changed from /auth/me
+    final uri = Uri.parse('$_baseUrl/auth/profile');
     // ignore: avoid_print
     print('🔍 AuthService.profile -> GET $uri');
 
@@ -128,18 +133,39 @@ class AuthService {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         // ignore: avoid_print
         print('✅ Profile data received: ${data['name']}');
+
+        // Update stored role if available
+        if (data.containsKey('role')) {
+          await _storage.write(key: 'user_role', value: data['role']);
+        }
+
         return data;
+      } else if (resp.statusCode == 401) {
+        // Token is invalid or expired - clear it
+        // ignore: avoid_print
+        print('🔒 Token expired or invalid, clearing storage');
+        await logout();
+        return null;
       } else {
         // ignore: avoid_print
         print(
           '⚠️ Profile endpoint returned: ${resp.statusCode} - ${resp.body}',
         );
+        return null;
       }
+    } on SocketException catch (e) {
+      // ignore: avoid_print
+      print('❌ Network error in profile: ${e.message}');
+      return null;
+    } on TimeoutException {
+      // ignore: avoid_print
+      print('❌ Profile request timed out');
+      return null;
     } catch (e) {
       // ignore: avoid_print
       print('❌ AuthService.profile error: $e');
+      return null;
     }
-    return null;
   }
 
   /// Register a new user with optional phone number and role
@@ -196,6 +222,7 @@ class AuthService {
         final token = data['access_token'] as String?;
         if (token != null) {
           await _storage.write(key: 'jwt', value: token);
+          await _storage.write(key: 'user_role', value: role);
           return token;
         }
       } catch (_) {
@@ -212,10 +239,9 @@ class AuthService {
     }
   }
 
-  /// --- SITTER SETUP FUNCTION ---
-  /// Submits the 4-step sitter setup form.
+  /// Submits the 4-step sitter setup form
+  /// Requires user to be authenticated
   Future<void> submitSitterSetup(Map<String, dynamic> setupData) async {
-    // 1. Get the stored token
     final token = await getToken();
     if (token == null) {
       throw Exception('Not authenticated. Please log in.');
@@ -232,9 +258,9 @@ class AuthService {
             uri,
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token', // 2. Send the token
+              'Authorization': 'Bearer $token',
             },
-            body: json.encode(setupData), // 3. Send the form data
+            body: json.encode(setupData),
           )
           .timeout(const Duration(seconds: 10));
     } on SocketException catch (e) {
@@ -246,12 +272,15 @@ class AuthService {
     // ignore: avoid_print
     print('AuthService.submitSitterSetup <- ${resp.statusCode} ${resp.body}');
 
-    // 4. Check for success
-    if (resp.statusCode == 201) {
-      // Success!
+    if (resp.statusCode == 201 || resp.statusCode == 200) {
+      // Success - update role to sitter
+      await _storage.write(key: 'user_role', value: 'sitter');
       return;
+    } else if (resp.statusCode == 401) {
+      // Token expired
+      await logout();
+      throw Exception('Session expired. Please log in again.');
     } else {
-      // Handle errors
       String message = 'Setup failed: ${resp.statusCode}';
       try {
         final Map<String, dynamic> err = jsonDecode(resp.body);
@@ -259,5 +288,12 @@ class AuthService {
       } catch (_) {}
       throw Exception(message);
     }
+  }
+
+  /// Validate if the current token is still valid
+  /// Returns true if token is valid, false otherwise
+  Future<bool> validateToken() async {
+    final profile = await this.profile();
+    return profile != null;
   }
 }
