@@ -1,8 +1,6 @@
-//pawsure_app\lib\screens\health\tabs\profile_tab.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
-import 'package:pawsure_app/screens/profile/create_pet_profile_screen.dart'; // 🆕 IMPORT
 
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
@@ -47,8 +45,6 @@ class ProfileTab extends StatelessWidget {
     required String label,
     required String value,
     bool isPlaceholder = false,
-    Color? valueColor,
-    IconData? statusIcon,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
@@ -66,25 +62,12 @@ class ProfileTab extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Row(
-              children: [
-                if (statusIcon != null) ...[
-                  Icon(statusIcon, size: 18, color: valueColor),
-                  const SizedBox(width: 6),
-                ],
-                Expanded(
-                  child: Text(
-                    value,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color:
-                          valueColor ??
-                          (isPlaceholder ? Colors.grey[500] : null),
-                      fontStyle: isPlaceholder ? FontStyle.italic : null,
-                      fontWeight: statusIcon != null ? FontWeight.w600 : null,
-                    ),
-                  ),
-                ),
-              ],
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: isPlaceholder ? Colors.grey[500] : null,
+                fontStyle: isPlaceholder ? FontStyle.italic : null,
+              ),
             ),
           ),
         ],
@@ -115,42 +98,6 @@ class ProfileTab extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _getSterilizationDisplayText(String? status) {
-    switch (status?.toLowerCase()) {
-      case 'sterilized':
-        return 'Yes';
-      case 'not_sterilized':
-        return 'No';
-      case 'unknown':
-      default:
-        return 'Unknown';
-    }
-  }
-
-  Color _getSterilizationColor(String? status) {
-    switch (status?.toLowerCase()) {
-      case 'sterilized':
-        return Colors.green;
-      case 'not_sterilized':
-        return Colors.orange;
-      case 'unknown':
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getSterilizationIcon(String? status) {
-    switch (status?.toLowerCase()) {
-      case 'sterilized':
-        return Icons.check_circle;
-      case 'not_sterilized':
-        return Icons.cancel;
-      case 'unknown':
-      default:
-        return Icons.help_outline;
-    }
   }
 
   @override
@@ -282,20 +229,6 @@ class ProfileTab extends StatelessWidget {
       // Build Health Information Section
       final healthChildren = <Widget>[];
       bool hasHealthInfo = false;
-
-      if (pet.sterilizationStatus != null &&
-          pet.sterilizationStatus!.isNotEmpty) {
-        healthChildren.add(
-          _buildInfoRow(
-            context: context,
-            label: 'Sterilization',
-            value: _getSterilizationDisplayText(pet.sterilizationStatus),
-            valueColor: _getSterilizationColor(pet.sterilizationStatus),
-            statusIcon: _getSterilizationIcon(pet.sterilizationStatus),
-          ),
-        );
-        hasHealthInfo = true;
-      }
 
       if (pet.allergies != null && pet.allergies!.isNotEmpty) {
         healthChildren.add(
@@ -429,32 +362,16 @@ class ProfileTab extends StatelessWidget {
 
           const SizedBox(height: 8),
 
-          // 🆕 EDIT BUTTON - NOW FUNCTIONAL!
           ElevatedButton.icon(
-            onPressed: () async {
-              // Navigate to edit screen with the current pet
-              final result = await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => CreatePetProfileScreen(
-                    petToEdit: pet, // Pass the pet to edit
-                  ),
-                ),
+            onPressed: () {
+              // TODO: Navigate to edit profile screen
+              Get.snackbar(
+                'Coming Soon',
+                'Edit profile feature will be available soon!',
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: Colors.blue.withOpacity(0.1),
+                colorText: Colors.blue[800],
               );
-
-              // If pet was updated, refresh the pet list
-              if (result == true) {
-                controller.loadPets();
-
-                // Show success message
-                Get.snackbar(
-                  'Success',
-                  'Pet profile updated successfully!',
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.green.withOpacity(0.1),
-                  colorText: Colors.green[800],
-                  duration: const Duration(seconds: 2),
-                );
-              }
             },
             icon: const Icon(Icons.edit),
             label: const Text('Edit Profile Information'),
