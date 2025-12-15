@@ -10,7 +10,8 @@ class Pet {
   final String? lastVetVisit;
   final double? moodRating;
   final int streak;
-  final String? photoUrl; // ← Added this field
+  final String? photoUrl;
+  final String? sterilizationStatus; // 🆕 Added sterilization status
 
   Pet({
     required this.id,
@@ -24,7 +25,8 @@ class Pet {
     this.lastVetVisit,
     this.moodRating,
     this.streak = 0,
-    this.photoUrl, // ← Added this parameter
+    this.photoUrl,
+    this.sterilizationStatus, // 🆕 Added parameter
   });
 
   factory Pet.fromJson(Map<String, dynamic> json) {
@@ -46,11 +48,12 @@ class Pet {
           ? (json['mood_rating'] as num).toDouble()
           : null,
       streak: json['streak'] as int? ?? 0,
-      photoUrl: json['photoUrl'] as String?, // ← Added this mapping
+      photoUrl: json['photoUrl'] as String?,
+      sterilizationStatus:
+          json['sterilization_status'] as String?, // 🆕 Added mapping
     );
   }
 
-  // Optional: Add toJson method for sending data to backend
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -65,6 +68,7 @@ class Pet {
       'mood_rating': moodRating,
       'streak': streak,
       'photoUrl': photoUrl,
+      'sterilization_status': sterilizationStatus, // 🆕 Added to JSON
     };
   }
 }

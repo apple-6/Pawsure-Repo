@@ -1,3 +1,4 @@
+//pawsure_app\lib\screens\health\tabs\profile_tab.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
@@ -45,6 +46,8 @@ class ProfileTab extends StatelessWidget {
     required String label,
     required String value,
     bool isPlaceholder = false,
+    Color? valueColor,
+    IconData? statusIcon,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
@@ -62,12 +65,25 @@ class ProfileTab extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isPlaceholder ? Colors.grey[500] : null,
-                fontStyle: isPlaceholder ? FontStyle.italic : null,
-              ),
+            child: Row(
+              children: [
+                if (statusIcon != null) ...[
+                  Icon(statusIcon, size: 18, color: valueColor),
+                  const SizedBox(width: 6),
+                ],
+                Expanded(
+                  child: Text(
+                    value,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color:
+                          valueColor ??
+                          (isPlaceholder ? Colors.grey[500] : null),
+                      fontStyle: isPlaceholder ? FontStyle.italic : null,
+                      fontWeight: statusIcon != null ? FontWeight.w600 : null,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -98,6 +114,45 @@ class ProfileTab extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // 🆕 Helper method to get sterilization display text
+  String _getSterilizationDisplayText(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'sterilized':
+        return 'Yes';
+      case 'not_sterilized':
+        return 'No';
+      case 'unknown':
+      default:
+        return 'Unknown';
+    }
+  }
+
+  // 🆕 Helper method to get sterilization color
+  Color _getSterilizationColor(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'sterilized':
+        return Colors.green;
+      case 'not_sterilized':
+        return Colors.orange;
+      case 'unknown':
+      default:
+        return Colors.grey;
+    }
+  }
+
+  // 🆕 Helper method to get sterilization icon
+  IconData _getSterilizationIcon(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'sterilized':
+        return Icons.check_circle;
+      case 'not_sterilized':
+        return Icons.cancel;
+      case 'unknown':
+      default:
+        return Icons.help_outline;
+    }
   }
 
   @override
@@ -229,6 +284,21 @@ class ProfileTab extends StatelessWidget {
       // Build Health Information Section
       final healthChildren = <Widget>[];
       bool hasHealthInfo = false;
+
+      // 🆕 STERILIZATION STATUS - Always show if available
+      if (pet.sterilizationStatus != null &&
+          pet.sterilizationStatus!.isNotEmpty) {
+        healthChildren.add(
+          _buildInfoRow(
+            context: context,
+            label: 'Sterilization',
+            value: _getSterilizationDisplayText(pet.sterilizationStatus),
+            valueColor: _getSterilizationColor(pet.sterilizationStatus),
+            statusIcon: _getSterilizationIcon(pet.sterilizationStatus),
+          ),
+        );
+        hasHealthInfo = true;
+      }
 
       if (pet.allergies != null && pet.allergies!.isNotEmpty) {
         healthChildren.add(
