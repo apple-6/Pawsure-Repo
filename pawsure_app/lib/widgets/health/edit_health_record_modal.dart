@@ -23,7 +23,11 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
   late TextEditingController _descriptionController;
   late TextEditingController _clinicController;
   DateTime? _nextDueDate;
+
+  // 🔧 FIX: Track operation states separately
   bool _submitting = false;
+  bool _deleting = false;
+  bool _hasCompletedOperation = false;
 
   @override
   void initState() {
@@ -63,7 +67,7 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
       lastDate: last,
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         _selectedDate = picked;
       });
@@ -82,7 +86,7 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
       lastDate: last,
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         _nextDueDate = picked;
       });
@@ -90,46 +94,129 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
   }
 
   void _confirmDelete() {
-    Get.defaultDialog(
-      title: 'Delete Health Record?',
-      middleText:
-          'Are you sure you want to delete this health record? This action cannot be undone.',
-      textConfirm: 'Delete',
-      textCancel: 'Cancel',
-      confirmTextColor: Colors.white,
-      buttonColor: Colors.red,
-      onConfirm: () {
-        Get.back(); // Close confirmation dialog
-        _deleteRecord();
+    // 🔧 FIX: Prevent delete during any operation
+    if (_submitting || _deleting || _hasCompletedOperation) {
+      debugPrint('⚠️ Operation in progress or completed, ignoring delete');
+      return;
+    }
+
+    // 🔧 CRITICAL FIX: Close any existing snackbar BEFORE showing dialog
+    if (Get.isSnackbarOpen) {
+      Get.closeAllSnackbars();
+      debugPrint('🚫 Closed existing snackbar before delete dialog');
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete Health Record?'),
+          content: const Text(
+            'Are you sure you want to delete this health record? This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                // Close dialog first
+                Navigator.of(dialogContext).pop();
+
+                // Wait a bit, then delete
+                Future.delayed(const Duration(milliseconds: 300), () {
+                  if (mounted) {
+                    _deleteRecord();
+                  }
+                });
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
       },
     );
   }
 
   Future<void> _deleteRecord() async {
-    setState(() => _submitting = true);
+    // 🔧 FIX: Double-check state before proceeding
+    if (_submitting || _deleting || _hasCompletedOperation) {
+      debugPrint('⚠️ Operation already in progress or completed');
+      return;
+    }
+
+    // 🔧 CRITICAL FIX: Close any lingering snackbars before operation
+    if (Get.isSnackbarOpen) {
+      Get.closeAllSnackbars();
+      debugPrint('🚫 Closed lingering snackbar before delete');
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
+    setState(() {
+      _deleting = true;
+      _hasCompletedOperation = true;
+    });
 
     try {
       debugPrint('🗑️ Deleting health record ${widget.record.id}...');
 
       await controller.deleteHealthRecord(widget.record.id);
 
-      if (!mounted) return;
+      debugPrint('✅ Delete successful from backend');
 
-      // Close the edit modal
-      Navigator.pop(context);
+      if (!mounted) {
+        debugPrint('⚠️ Widget not mounted, aborting UI updates');
+        return;
+      }
+
+      // 🔧 CRITICAL FIX: Close modal using Navigator with context
+      // This is more reliable than Get.back() in this scenario
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+        debugPrint('✅ Modal closed with Navigator.pop()');
+      }
+
+      // 🔧 Wait for modal animation to complete
+      await Future.delayed(const Duration(milliseconds: 400));
+
+      // 🔧 Close any existing snackbars before showing new one
+      if (Get.isSnackbarOpen) {
+        Get.closeAllSnackbars();
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
 
       // Show success message
       Get.snackbar(
         'Success',
         'Health record deleted successfully!',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.grey.withOpacity(0.1),
-        colorText: Colors.grey[900],
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green[900],
         duration: const Duration(seconds: 2),
       );
+
+      debugPrint('✅ Delete operation complete');
     } catch (e) {
       debugPrint('❌ Error deleting record: $e');
+
+      // Reset state on error so user can retry
       if (mounted) {
+        setState(() {
+          _deleting = false;
+          _hasCompletedOperation = false;
+        });
+
+        // Close any existing snackbars before showing error
+        if (Get.isSnackbarOpen) {
+          Get.closeAllSnackbars();
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
+
         Get.snackbar(
           'Error',
           'Failed to delete health record: $e',
@@ -138,23 +225,29 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
           colorText: Colors.red[900],
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() => _submitting = false);
-      }
     }
   }
 
   Future<void> _submit() async {
-    // Prevent double submission
-    if (_submitting) {
-      debugPrint('⚠️ Already submitting, ignoring duplicate click');
+    // 🔧 FIX: Prevent any submission during operations or after completion
+    if (_submitting || _deleting || _hasCompletedOperation) {
+      debugPrint('⚠️ Operation in progress or completed, ignoring submit');
       return;
     }
 
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _submitting = true);
+    // 🔧 FIX: Close any existing snackbar before operation
+    if (Get.isSnackbarOpen) {
+      Get.closeAllSnackbars();
+      debugPrint('🚫 Closed existing snackbar before submit');
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
+    setState(() {
+      _submitting = true;
+      _hasCompletedOperation = true;
+    });
 
     try {
       // Build payload
@@ -174,7 +267,9 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
       }
 
       if (_nextDueDate != null) {
-        payload['nextDueDate'] = _nextDueDate!.toIso8601String().split('T')[0];
+        payload['next_due_date'] = _nextDueDate!.toIso8601String().split(
+          'T',
+        )[0];
       }
 
       debugPrint('💾 Updating health record ${widget.record.id}...');
@@ -182,10 +277,27 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
 
       await controller.updateHealthRecord(widget.record.id, payload);
 
-      if (!mounted) return;
+      debugPrint('✅ Update successful from backend');
 
-      // Close modal
-      Navigator.pop(context);
+      if (!mounted) {
+        debugPrint('⚠️ Widget not mounted, aborting UI updates');
+        return;
+      }
+
+      // 🔧 CRITICAL FIX: Close modal using Navigator with context
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+        debugPrint('✅ Modal closed with Navigator.pop()');
+      }
+
+      // 🔧 Wait for modal animation to complete
+      await Future.delayed(const Duration(milliseconds: 400));
+
+      // 🔧 Close any existing snackbars before showing new one
+      if (Get.isSnackbarOpen) {
+        Get.closeAllSnackbars();
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
 
       // Show success message
       Get.snackbar(
@@ -196,9 +308,24 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
         colorText: Colors.green[900],
         duration: const Duration(seconds: 2),
       );
+
+      debugPrint('✅ Update operation complete');
     } catch (e) {
       debugPrint('❌ Error updating record: $e');
+
+      // Reset state on error so user can retry
       if (mounted) {
+        setState(() {
+          _submitting = false;
+          _hasCompletedOperation = false;
+        });
+
+        // Close any existing snackbars before showing error
+        if (Get.isSnackbarOpen) {
+          Get.closeAllSnackbars();
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
+
         Get.snackbar(
           'Error',
           'Failed to update health record: $e',
@@ -207,15 +334,15 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
           colorText: Colors.red[900],
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() => _submitting = false);
-      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // 🔧 FIX: Check if any operation is in progress
+    final isOperationInProgress =
+        _submitting || _deleting || _hasCompletedOperation;
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -246,13 +373,24 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
                     ),
                     Row(
                       children: [
+                        // 🔧 FIX: Disable delete button during any operation
                         IconButton(
-                          onPressed: _submitting ? null : _confirmDelete,
-                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: isOperationInProgress
+                              ? null
+                              : _confirmDelete,
+                          icon: Icon(
+                            Icons.delete,
+                            color: isOperationInProgress
+                                ? Colors.grey
+                                : Colors.red,
+                          ),
                           tooltip: 'Delete Record',
                         ),
                         IconButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () {
+                            // 🔧 FIX: Always allow closing with X button
+                            Navigator.of(context).pop();
+                          },
                           icon: const Icon(Icons.close),
                         ),
                       ],
@@ -376,7 +514,8 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _submitting ? null : _submit,
+                    // 🔧 FIX: Disable button during any operation
+                    onPressed: isOperationInProgress ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
@@ -385,7 +524,7 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: _submitting
+                    child: (_submitting || _deleting)
                         ? const SizedBox(
                             width: 20,
                             height: 20,
@@ -394,9 +533,10 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'Save Changes',
-                            style: TextStyle(
+                        : Text(
+                            // 🔧 FIX: Show different text after operation
+                            _hasCompletedOperation ? 'Saved!' : 'Save Changes',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),

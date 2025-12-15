@@ -4,10 +4,8 @@ import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
 import 'package:pawsure_app/controllers/navigation_controller.dart';
 
-// Match your backend's HealthRecordType enum exactly
 enum HealthRecordType { vaccination, vetVisit, medication, allergy, note }
 
-// Convert enum to backend string
 String healthRecordTypeToBackend(HealthRecordType type) {
   switch (type) {
     case HealthRecordType.vaccination:
@@ -34,14 +32,15 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
   final HealthController controller = Get.find<HealthController>();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  // Form state
   HealthRecordType _selectedType = HealthRecordType.vetVisit;
   DateTime _selectedDate = DateTime.now();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _clinicController = TextEditingController();
-  bool _submitting = false;
 
-  // Track if prefilled from event
+  // 🔧 FIX: Track submission state properly
+  bool _submitting = false;
+  bool _hasSubmittedSuccessfully = false;
+
   int? _petId;
   bool _prefilledFromEvent = false;
 
@@ -119,22 +118,24 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
       lastDate: last,
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         _selectedDate = picked;
       });
     }
   }
 
-  // 🔧 CRITICAL FIX: Simple back navigation without reload
   void _handleClose() {
     debugPrint('❌ User cancelled - going back');
-    Get.back(); // ✅ Just go back, don't reload everything
+    Get.back();
   }
 
   Future<void> _submit() async {
-    if (_submitting) {
-      debugPrint('⚠️ Already submitting, ignoring duplicate click');
+    // 🔧 FIX: Prevent duplicate submissions with comprehensive check
+    if (_submitting || _hasSubmittedSuccessfully) {
+      debugPrint(
+        '⚠️ Already ${_submitting ? "submitting" : "submitted"}, ignoring duplicate click',
+      );
       return;
     }
 
@@ -157,7 +158,11 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
       petId = controller.selectedPet.value!.id;
     }
 
-    setState(() => _submitting = true);
+    // 🔧 FIX: Set BOTH flags to prevent any possibility of duplicate submission
+    setState(() {
+      _submitting = true;
+      _hasSubmittedSuccessfully = true;
+    });
 
     try {
       final payload = <String, dynamic>{
@@ -187,6 +192,12 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
 
       debugPrint('✅ Health record saved successfully!');
 
+      // 🔧 FIX: Close screen FIRST, before showing any messages
+      Get.back();
+
+      // Small delay before showing snackbar
+      await Future.delayed(const Duration(milliseconds: 100));
+
       Get.snackbar(
         'Success',
         'Health record added successfully!',
@@ -195,10 +206,6 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
         colorText: Colors.green[900],
         duration: const Duration(seconds: 2),
       );
-
-      // 🔧 CRITICAL FIX: Just go back, don't reload home
-      await Future.delayed(const Duration(milliseconds: 300));
-      Get.back(); // ✅ Simple back navigation
 
       // Switch to records tab after going back
       await Future.delayed(const Duration(milliseconds: 100));
@@ -222,7 +229,13 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
       debugPrint('❌ Error saving health record: $e');
       debugPrint('Stack trace: $stackTrace');
 
+      // 🔧 FIX: Reset flags on error so user can retry
       if (mounted) {
+        setState(() {
+          _submitting = false;
+          _hasSubmittedSuccessfully = false;
+        });
+
         Get.snackbar(
           'Error',
           'Failed to save health record: ${e.toString()}',
@@ -232,20 +245,18 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
           duration: const Duration(seconds: 3),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() => _submitting = false);
-      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // 🔧 FIX: Check if any operation is in progress or completed
+    final isDisabled = _submitting || _hasSubmittedSuccessfully;
+
     return WillPopScope(
       onWillPop: () async {
-        // 🔧 CRITICAL FIX: Handle Android back button
         _handleClose();
-        return false; // Prevent default back action
+        return false;
       },
       child: Scaffold(
         appBar: AppBar(
@@ -256,7 +267,7 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
           ),
           leading: IconButton(
             icon: const Icon(Icons.close),
-            onPressed: _handleClose, // ✅ Use simple close handler
+            onPressed: _handleClose,
           ),
         ),
         body: SafeArea(
@@ -373,7 +384,8 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: _submitting ? null : _submit,
+                      // 🔧 FIX: Disable button once operation starts or completes
+                      onPressed: isDisabled ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
@@ -388,9 +400,12 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text(
-                              'Save Health Record',
-                              style: TextStyle(
+                          : Text(
+                              // 🔧 FIX: Show different text after successful submission
+                              _hasSubmittedSuccessfully
+                                  ? 'Saving...'
+                                  : 'Save Health Record',
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
