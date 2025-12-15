@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:pawsure_app/constants/api_endpoints.dart';
 import 'package:pawsure_app/screens/community/sitter_model.dart';
 
+
 class SitterService {
   // Use a dedicated client for non-setup calls and a separate base URL for setup (as shown in your conflict)
   final http.Client _client;
