@@ -80,7 +80,6 @@ class HealthScreen extends StatelessWidget {
                 color: const Color(0xFFF1F6F9),
                 borderRadius: BorderRadius.circular(25),
               ),
-              padding: const EdgeInsets.all(4), // Padding around tabs
               child: TabBar(
                 controller: controller.tabController,
                 indicator: BoxDecoration(
