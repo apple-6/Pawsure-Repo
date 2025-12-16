@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'find_sitter_tab.dart';
+import 'find_sitter_tab.dart'; // Ensure this path is correct
+// import 'feed_tab.dart'; // You will create this for the Feed content
+import 'sitter_details.dart';
 
 class CommunityScreen extends StatelessWidget {
   const CommunityScreen({super.key});
@@ -139,8 +141,16 @@ class CommunityScreen extends StatelessWidget {
 
                   // Find a Sitter Tab
                   FindSitterTab(
-                    onSitterClick: (sitterId) =>
-                        _handleSitterClick(context, sitterId),
+                    onSitterClick: (String sitterId) {
+                      // This is the "Bridge" that connects the two files
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              SitterDetailsScreen(sitterId: sitterId),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

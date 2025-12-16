@@ -1,3 +1,4 @@
+//pawsure_backend\src\pet\dto\create-pet.dto.ts
 import {
   IsString,
   IsNotEmpty,
@@ -7,6 +8,7 @@ import {
   IsArray,
   Min,
   Max,
+  IsIn,
 } from 'class-validator';
 
 export class CreatePetDto {
@@ -52,6 +54,11 @@ export class CreatePetDto {
   @IsString()
   @IsOptional()
   photoUrl?: string;
+
+  @IsString()
+@IsOptional()
+@IsIn(['sterilized', 'not_sterilized', 'unknown'])
+sterilization_status?: string;
 
   @IsNumber()
   @IsNotEmpty()

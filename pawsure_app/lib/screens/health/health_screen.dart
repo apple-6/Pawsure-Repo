@@ -71,32 +71,34 @@ class HealthScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // Tab Bar Section
+          // 🎨 IMPROVED TAB BAR: Better pill-shaped indicator
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(16),
+                color: const Color(0xFFF1F6F9),
+                borderRadius: BorderRadius.circular(25),
               ),
+              padding: const EdgeInsets.all(4), // Padding around tabs
               child: TabBar(
                 controller: controller.tabController,
                 indicator: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(20), // Smoother radius
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 4,
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
                       offset: const Offset(0, 2),
+                      spreadRadius: 0,
                     ),
                   ],
                 ),
                 indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-                labelColor: const Color(0xFF1F2937),
-                unselectedLabelColor: const Color(0xFF9CA3AF),
+                dividerColor: Colors.transparent, // Remove divider line
+                labelColor: Colors.black,
+                unselectedLabelColor: Colors.grey.shade600,
                 labelStyle: const TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
@@ -105,10 +107,11 @@ class HealthScreen extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                   fontSize: 14,
                 ),
+                labelPadding: EdgeInsets.zero, // Remove extra padding
                 tabs: const [
-                  Tab(text: 'Profile'),
-                  Tab(text: 'Records'),
-                  Tab(text: 'AI Scan'),
+                  Tab(height: 40, child: Center(child: Text('Profile'))),
+                  Tab(height: 40, child: Center(child: Text('Records'))),
+                  Tab(height: 40, child: Center(child: Text('AI Scan'))),
                 ],
               ),
             ),
