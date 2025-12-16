@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'find_sitter_tab.dart';
 import 'post_card.dart';
 import 'create_post_modal.dart';
-import 'find_sitter_tab.dart'; // Ensure this path is correct
-// import 'feed_tab.dart'; // You will create this for the Feed content
 import 'sitter_details.dart';
 
 // --- Mock Data Structure ---
@@ -50,6 +48,7 @@ class CommunityScreen extends StatefulWidget {
 }
 
 class _CommunityScreenState extends State<CommunityScreen> {
+  // Retained the mock data
   List<Post> _posts = [
     Post(
       id: "1",
@@ -117,15 +116,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
       isLiked: false,
     ),
   ];
-
-  void _handleSitterClick(String sitterId) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Navigating to Sitter Profile: $sitterId'),
-        duration: const Duration(seconds: 1),
-      ),
-    );
-  }
 
   List<Post> _getFilteredPosts(String feedTab) {
     if (feedTab == "urgent") {
@@ -198,7 +188,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 2, // Only two tabs: Feed and Find a Sitter
       child: Builder(
         builder: (BuildContext innerContext) {
           final TabController tabController = DefaultTabController.of(
@@ -209,71 +199,66 @@ class _CommunityScreenState extends State<CommunityScreen> {
             body: NestedScrollView(
               headerSliverBuilder:
                   (BuildContext context, bool innerBoxIsScrolled) {
-                    return <Widget>[
-                      SliverList(
-                        delegate: SliverChildListDelegate([
-                          const Padding(
-                            padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
-                            child: Text(
-                              'Community',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ]),
-                      ),
-                      SliverAppBar(
-                        automaticallyImplyLeading: false,
-                        pinned: true,
-                        toolbarHeight: 0,
-                        bottom: PreferredSize(
-                          preferredSize: const Size.fromHeight(50.0),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).scaffoldBackgroundColor,
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: Colors.grey.shade300,
-                                  width: 1.0,
-                                ),
-                              ),
-                            ),
-                            child: TabBar(
-                              indicatorSize: TabBarIndicatorSize.label,
-                              indicatorWeight: 3.0,
-                              labelColor: Theme.of(context).primaryColor,
-                              unselectedLabelColor: Colors.grey.shade600,
-                              dividerColor: Colors.transparent,
-                              tabs: const [
-                                Tab(text: 'Feed'),
-                                Tab(text: 'Find a Sitter'),
-                              ],
-                              onTap: (index) {
-                                setState(() {});
-                              },
-                            ),
+                return <Widget>[
+                  SliverList(
+                    delegate: SliverChildListDelegate([
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+                        child: Text(
+                          'Community',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                    ];
-                  },
-              body: TabBarView(
-                children: [
-                  FeedTabView(parentState: this),
-                  FindSitterTab(onSitterClick: _handleSitterClick),
-                  // 1. Feed Tab Content (Placeholder)
-                  const Center(
-                    child: Text(
-                      'Feed Content (For You, Following, Nearby, Topics)',
+                    ]),
+                  ),
+                  SliverAppBar(
+                    automaticallyImplyLeading: false,
+                    pinned: true,
+                    toolbarHeight: 0,
+                    bottom: PreferredSize(
+                      preferredSize: const Size.fromHeight(50.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.grey.shade300,
+                              width: 1.0,
+                            ),
+                          ),
+                        ),
+                        child: TabBar(
+                          indicatorSize: TabBarIndicatorSize.label,
+                          indicatorWeight: 3.0,
+                          labelColor: Theme.of(context).primaryColor,
+                          unselectedLabelColor: Colors.grey.shade600,
+                          dividerColor: Colors.transparent,
+                          tabs: const [
+                            Tab(text: 'Feed'),
+                            Tab(text: 'Find a Sitter'),
+                          ],
+                          onTap: (index) {
+                            setState(() {});
+                          },
+                        ),
+                      ),
                     ),
                   ),
+                ];
+              },
+              body: TabBarView(
+                // We only need 2 children here, matching the length of the TabBar.
+                children: [
+                  // 1. Feed Tab Content
+                  FeedTabView(parentState: this),
 
-                  // 2. Find a Sitter Tab Content
+                  // 2. Find a Sitter Tab Content (Corrected and implemented)
                   FindSitterTab(
                     onSitterClick: (String sitterId) {
-                      // This is the "Bridge" that connects the two files
+                      print("Navigating to Sitter Profile: $sitterId"); // Retained for debug
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -288,14 +273,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
             ),
             floatingActionButton:
                 DefaultTabController.of(innerContext).index == 0
-                ? FloatingActionButton(
-                    onPressed: _showCreatePostModal,
-                    backgroundColor: Theme.of(innerContext).primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: const CircleBorder(),
-                    child: const Icon(Icons.add),
-                  )
-                : null,
+                    ? FloatingActionButton(
+                        onPressed: _showCreatePostModal,
+                        backgroundColor: Theme.of(innerContext).primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: const CircleBorder(),
+                        child: const Icon(Icons.add),
+                      )
+                    : null,
           );
         },
       ),
