@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'find_sitter_tab.dart';
 import 'post_card.dart';
 import 'create_post_modal.dart';
+import 'find_sitter_tab.dart'; // Ensure this path is correct
+// import 'feed_tab.dart'; // You will create this for the Feed content
+import 'sitter_details.dart';
 
 // --- Mock Data Structure ---
 class Post {
@@ -260,6 +263,26 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 children: [
                   FeedTabView(parentState: this),
                   FindSitterTab(onSitterClick: _handleSitterClick),
+                  // 1. Feed Tab Content (Placeholder)
+                  const Center(
+                    child: Text(
+                      'Feed Content (For You, Following, Nearby, Topics)',
+                    ),
+                  ),
+
+                  // 2. Find a Sitter Tab Content
+                  FindSitterTab(
+                    onSitterClick: (String sitterId) {
+                      // This is the "Bridge" that connects the two files
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              SitterDetailsScreen(sitterId: sitterId),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),

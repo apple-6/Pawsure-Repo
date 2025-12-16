@@ -102,4 +102,5 @@ export class Sitter {
         name: 'deleted_at' 
     })
     deleted_at: Date;
+
 }
