@@ -36,6 +36,8 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
   DateTime _selectedDate = DateTime.now();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _clinicController = TextEditingController();
+
+  // 🔧 FIX: Track submission state properly
   bool _submitting = false;
   bool _hasSubmittedSuccessfully = false;
 
