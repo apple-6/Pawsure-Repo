@@ -45,7 +45,7 @@ export class Sitter {
     //available_dates: string[];
 
     // --- Sitter Profile Setup Fields ---
-    @Column('text', { array: true, nullable: true, default: () => 'ARRAY[]::text[]' })
+    @Column('date', { array: true, nullable: true, default: () => 'ARRAY[]::date[]' })
     unavailable_dates: string[] = [];
 
     @Column('text', { array: true, nullable: true, default: () => 'ARRAY[]::text[]' })
