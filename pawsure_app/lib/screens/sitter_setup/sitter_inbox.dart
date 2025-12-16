@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'sitter_dashboard.dart'; // Adjust path if needed
 import 'chat_screen.dart'; 
-
+import 'sitter_calendar.dart'; // Import SitterCalendar screen
 // --- Mock Data Models ---
 
 // Renamed from SitterInbox to SitterInboxItem to avoid conflict with the Screen class
@@ -194,6 +194,10 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
         onTap: (index) {
           if (index == 0) Get.offAll(() => const SitterDashboard());
           // Add other navigation logic here if needed
+        
+          if (index == 2) { // Index 2 is Calendar
+          Get.to(() => const SitterCalendar());
+          }
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Dashboard'),
