@@ -3,7 +3,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:flutter/material.dart'; // Needed for the 'required' keyword for now
+import 'package:flutter/material.dart'; // Required for 'required' keyword in older Dart versions
 import 'package:intl/intl.dart';
 import 'package:pawsure_app/constants/api_endpoints.dart';
 import 'package:pawsure_app/screens/community/sitter_model.dart';
@@ -20,7 +20,7 @@ class SitterService {
   // Placeholder for getting the user's authentication token
   Future<String> _getAuthToken() async {
     // Example: Retrieve token from SharedPreferences, Flutter Secure Storage, etc.
-    return 'YOUR_JWT_AUTH_TOKEN'; 
+    return 'YOUR_JWT_AUTH_TOKEN';
   }
 
   /// Submits the sitter setup form data, including the ID document file.
@@ -46,11 +46,11 @@ class SitterService {
     // 2. Add the file to the request
     if (idDocumentFilePath.isNotEmpty) {
       File file = File(idDocumentFilePath);
-      
+
       // CRITICAL: 'idDocumentFile' MUST match the key in your NestJS @FileInterceptor!
       request.files.add(
         await http.MultipartFile.fromPath(
-          'idDocumentFile', 
+          'idDocumentFile',
           file.path,
           // Optional: You might want to specify contentType here if needed
         ),
@@ -69,7 +69,9 @@ class SitterService {
         final errorBody = json.decode(response.body);
         print('❌ Setup failed: Status ${response.statusCode}');
         print('Error Details: $errorBody');
-        throw Exception(errorBody['message'] ?? 'Failed to create sitter profile.');
+        throw Exception(
+          errorBody['message'] ?? 'Failed to create sitter profile.',
+        );
       }
     } catch (e) {
       print('An error occurred during API submission: $e');
@@ -77,10 +79,9 @@ class SitterService {
     }
   }
 
-  /// Fetches a list of sitters, optionally filtered by date availability.
-  // This satisfies the 'fetchSitters' method missing error
-  Future<List<Sitter>> fetchSitters({DateTime? date}) async {
-    final uri = _buildUri(date: date);
+  /// Fetches ALL sitters, typically used when no date filter is applied.
+  Future<List<Sitter>> fetchSitters() async {
+    final uri = Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.sitters}');
     final response = await _client.get(uri);
 
     if (response.statusCode != 200) {
@@ -97,20 +98,48 @@ class SitterService {
     return Sitter.fromJsonList(decodedBody);
   }
 
-  // Helper method for fetchSitters
-  Uri _buildUri({DateTime? date}) {
-    if (date == null) {
-      return Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.sitters}');
+  /**
+   * Fetches available sitters based on a continuous date range.
+   * This calls the updated backend searchByAvailability logic.
+   */
+  Future<List<Sitter>> fetchSittersByRange({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    // 1. Format dates for the backend (e.g., '2025-12-10')
+    final formattedStartDate = DateFormat('yyyy-MM-dd').format(startDate);
+    final formattedEndDate = DateFormat('yyyy-MM-dd').format(endDate);
+
+    // 2. Build the URI with query parameters
+    final uri = Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.sitterSearch}')
+        .replace(
+          queryParameters: {
+            'startDate': formattedStartDate,
+            'endDate': formattedEndDate,
+          },
+        );
+
+    // 3. Send the request
+    final response = await _client.get(uri);
+
+    if (response.statusCode != 200) {
+      final errorBody = json.decode(response.body);
+      throw Exception(
+        'Failed to search sitters by range: ${errorBody['message'] ?? response.statusCode}',
+      );
     }
 
-    final formattedDate = DateFormat('yyyy-MM-dd').format(date);
-    return Uri.parse(
-      '${ApiEndpoints.baseUrl}${ApiEndpoints.sitterSearch}?date=$formattedDate',
-    );
+    final decodedBody = jsonDecode(response.body);
+    if (decodedBody is! List) {
+      throw Exception('Unexpected response format for filtered sitters.');
+    }
+
+    return Sitter.fromJsonList(decodedBody);
   }
 
+  // --- Removed _buildUri as it's no longer necessary with the new methods ---
+
   /// Closes the underlying HTTP client.
-  // This satisfies the 'dispose' method missing error
   void dispose() {
     _client.close();
   }
