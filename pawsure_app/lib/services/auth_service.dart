@@ -11,7 +11,7 @@ class AuthService {
   // - Real devices: replace with your machine's LAN IP (e.g. http://192.168.1.100:3000)
   static String get _baseUrl {
     try {
-      if (Platform.isAndroid) return 'http://10.203.105.212:3000';
+      if (Platform.isAndroid) return 'http://localhost:3000';
       if (Platform.isIOS) return 'http://localhost:3000';
     } catch (_) {}
     return 'http://localhost:3000';
