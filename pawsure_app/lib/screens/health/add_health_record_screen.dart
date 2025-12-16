@@ -4,10 +4,8 @@ import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
 import 'package:pawsure_app/controllers/navigation_controller.dart';
 
-// Match your backend's HealthRecordType enum exactly
 enum HealthRecordType { vaccination, vetVisit, medication, allergy, note }
 
-// Convert enum to backend string
 String healthRecordTypeToBackend(HealthRecordType type) {
   switch (type) {
     case HealthRecordType.vaccination:
@@ -34,16 +32,13 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
   final HealthController controller = Get.find<HealthController>();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  // Form state
-  HealthRecordType _selectedType =
-      HealthRecordType.vetVisit; // Default to vet visit
+  HealthRecordType _selectedType = HealthRecordType.vetVisit;
   DateTime _selectedDate = DateTime.now();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _clinicController = TextEditingController();
-  DateTime? _nextDueDate;
   bool _submitting = false;
+  bool _hasSubmittedSuccessfully = false;
 
-  // Track if prefilled from event
   int? _petId;
   bool _prefilledFromEvent = false;
 
@@ -127,34 +122,20 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
       lastDate: last,
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         _selectedDate = picked;
       });
     }
   }
 
-  Future<void> _pickNextDueDate() async {
-    final DateTime now = DateTime.now();
-    final DateTime first = DateTime(now.year);
-    final DateTime last = DateTime(now.year + 10);
-
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _nextDueDate ?? now,
-      firstDate: first,
-      lastDate: last,
-    );
-
-    if (picked != null) {
-      setState(() {
-        _nextDueDate = picked;
-      });
-    }
+  // 🔧 CRITICAL FIX: Simple back navigation without reload
+  void _handleClose() {
+    debugPrint('❌ User cancelled - going back');
+    Get.back(); // ✅ Just go back, don't reload everything
   }
 
   Future<void> _submit() async {
-    // 🔧 CRITICAL FIX: Prevent double submission
     if (_submitting) {
       debugPrint('⚠️ Already submitting, ignoring duplicate click');
       return;
@@ -181,7 +162,11 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
       petId = controller.selectedPet.value!.id;
     }
 
-    setState(() => _submitting = true);
+    // 🔧 FIX: Set BOTH flags to prevent any possibility of duplicate submission
+    setState(() {
+      _submitting = true;
+      _hasSubmittedSuccessfully = true;
+    });
 
     try {
       // Build payload
@@ -218,6 +203,12 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
 
       debugPrint('✅ Health record saved successfully!');
 
+      // 🔧 FIX: Close screen FIRST, before showing any messages
+      Get.back();
+
+      // Small delay before showing snackbar
+      await Future.delayed(const Duration(milliseconds: 100));
+
       // 🔧 CRITICAL FIX: Show success message
       Get.snackbar(
         'Success',
@@ -228,11 +219,9 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
         duration: const Duration(seconds: 2),
       );
 
-      // Small delay to let user see the snackbar
+      // 🔧 CRITICAL FIX: Just go back, don't reload home
       await Future.delayed(const Duration(milliseconds: 300));
-
-      // 🔧 CRITICAL FIX: Navigate back to home
-      Get.offAllNamed('/home');
+      Get.back(); // ✅ Simple back navigation
 
       // Switch to health tab after navigation
       await Future.delayed(const Duration(milliseconds: 100));
@@ -259,7 +248,13 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
       debugPrint('❌ Error saving health record: $e');
       debugPrint('Stack trace: $stackTrace');
 
+      // 🔧 FIX: Reset flags on error so user can retry
       if (mounted) {
+        setState(() {
+          _submitting = false;
+          _hasSubmittedSuccessfully = false;
+        });
+
         Get.snackbar(
           'Error',
           'Failed to save health record: ${e.toString()}',
@@ -269,19 +264,19 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
           duration: const Duration(seconds: 3),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() => _submitting = false);
-      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // 🔧 FIX: Check if any operation is in progress or completed
+    final isDisabled = _submitting || _hasSubmittedSuccessfully;
+
     return WillPopScope(
       onWillPop: () async {
-        Get.offAllNamed('/home');
-        return false;
+        // 🔧 CRITICAL FIX: Handle Android back button
+        _handleClose();
+        return false; // Prevent default back action
       },
       child: Scaffold(
         appBar: AppBar(
@@ -292,7 +287,7 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
           ),
           leading: IconButton(
             icon: const Icon(Icons.close),
-            onPressed: () => Get.offAllNamed('/home'),
+            onPressed: _handleClose, // ✅ Use simple close handler
           ),
         ),
         body: SafeArea(
@@ -453,7 +448,8 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: _submitting ? null : _submit,
+                      // 🔧 FIX: Disable button once operation starts or completes
+                      onPressed: isDisabled ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
@@ -468,9 +464,12 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text(
-                              'Save Health Record',
-                              style: TextStyle(
+                          : Text(
+                              // 🔧 FIX: Show different text after successful submission
+                              _hasSubmittedSuccessfully
+                                  ? 'Saving...'
+                                  : 'Save Health Record',
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),

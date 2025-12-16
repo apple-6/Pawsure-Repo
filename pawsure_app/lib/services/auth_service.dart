@@ -224,40 +224,83 @@ class AuthService {
     final uri = Uri.parse('$_baseUrl/sitters/setup');
     // ignore: avoid_print
     print('AuthService.submitSitterSetup -> POST $uri');
-    http.Response resp;
 
+    // 2. Create a Multipart Request (Required for files)
+    var request = http.MultipartRequest('POST', uri);
+
+    // Add Headers
+    request.headers['Authorization'] = 'Bearer $token';
+    request.headers['Content-Type'] = 'multipart/form-data';
+
+    // 3. Add Text Fields
+    setupData.forEach((key, value) {
+      // Skip the file path keys (we handle the file separately below)
+      // Also skip null values
+      if (key != 'idDocumentUrl' &&
+          key != 'idDocumentFilePath' &&
+          value != null) {
+        request.fields[key] = value.toString();
+      }
+    });
+
+    // 4. Add the File (The Critical Fix)
+    // We look for 'idDocumentFilePath' which contains the local path on your phone
+    final filePath = setupData['idDocumentFilePath'];
+
+    if (filePath != null && filePath.toString().isNotEmpty) {
+      final file = File(filePath);
+
+      if (await file.exists()) {
+        // Create the file part
+        var stream = http.ByteStream(file.openRead());
+        var length = await file.length();
+
+        var multipartFile = http.MultipartFile(
+          'idDocumentFile', // <--- This MUST match the NestJS @UseInterceptors name
+          stream,
+          length,
+          filename: file.path.split(Platform.pathSeparator).last,
+        );
+
+        request.files.add(multipartFile);
+      } else {
+        print('⚠️ Warning: File not found at path: $filePath');
+      }
+    }
+
+    // 5. Send the request
     try {
-      resp = await http
-          .post(
-            uri,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token', // 2. Send the token
-            },
-            body: json.encode(setupData), // 3. Send the form data
-          )
-          .timeout(const Duration(seconds: 10));
+      // MERGE FIX: Used Sprint3 logic to send Multipart request
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      // ignore: avoid_print
+      print(
+        'AuthService.submitSitterSetup <- ${response.statusCode} ${response.body}',
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        // MERGE FIX: Used HEAD logic to update Role in storage
+        await _storage.write(key: 'user_role', value: 'sitter');
+        return;
+      } else if (response.statusCode == 401) {
+        // MERGE FIX: Used HEAD logic to handle token expiration
+        await logout();
+        throw Exception('Session expired. Please log in again.');
+      } else {
+        String message = 'Setup failed: ${response.statusCode}';
+        try {
+          final Map<String, dynamic> err = jsonDecode(response.body);
+          if (err.containsKey('message')) message = err['message'].toString();
+        } catch (_) {}
+        throw Exception(message);
+      }
     } on SocketException catch (e) {
       throw Exception('Network error: ${e.message}');
     } on TimeoutException {
       throw Exception('Request timed out');
-    }
-
-    // ignore: avoid_print
-    print('AuthService.submitSitterSetup <- ${resp.statusCode} ${resp.body}');
-
-    // 4. Check for success
-    if (resp.statusCode == 201) {
-      // Success!
-      return;
-    } else {
-      // Handle errors
-      String message = 'Setup failed: ${resp.statusCode}';
-      try {
-        final Map<String, dynamic> err = jsonDecode(resp.body);
-        if (err.containsKey('message')) message = err['message'].toString();
-      } catch (_) {}
-      throw Exception(message);
+    } catch (e) {
+      throw Exception('Error sending request: $e');
     }
   }
 }
