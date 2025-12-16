@@ -20,18 +20,18 @@ class StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Pawsure Green
-    final primaryColor = const Color(0xFF22c55e);
-
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE5E7EB)),
         boxShadow: [
           BoxShadow(
-              color: Colors.black12, blurRadius: 10, offset: const Offset(0, 4))
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -39,76 +39,247 @@ class StatusCard extends StatelessWidget {
           // Avatar & Info Row
           Row(
             children: [
-              CircleAvatar(
-                radius: 35,
-                backgroundColor: const Color(0xFFF3F4F6),
-                child: Text(petType == 'dog' ? "🐕" : "🐈",
-                    style: const TextStyle(fontSize: 32)),
+              // Pet Avatar
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Text(
+                    petType.toLowerCase() == 'dog' ? "🐕" : "🐈",
+                    style: const TextStyle(fontSize: 28),
+                  ),
+                ),
               ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(petName,
+              const SizedBox(width: 14),
+              // Pet Name & Badges
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      petName,
                       style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      _badge(currentMood, "Mood", Colors.grey.shade200),
-                      const SizedBox(width: 8),
-                      _badge("🔥 $streak", "Days",
-                          primaryColor.withValues(alpha: 0.1),
-                          textColor: primaryColor),
-                    ],
-                  )
-                ],
-              )
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1F2937),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        // Mood Badge
+                        _MoodBadge(mood: currentMood),
+                        const SizedBox(width: 8),
+                        // Streak Badge
+                        _StreakBadge(streak: streak),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 24),
-          // Progress Rings
+          const SizedBox(height: 28),
+          // Progress Rings Row
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildRing(
-                  "Walks", progress['walks']!, goals['walks']!, Colors.blue),
-              _buildRing(
-                  "Meals", progress['meals']!, goals['meals']!, Colors.green),
-              _buildRing("Health", progress['wellbeing']!, goals['wellbeing']!,
-                  Colors.purple),
+              _ProgressRing(
+                label: "Walks",
+                current: progress['walks'] ?? 0,
+                goal: goals['walks'] ?? 1,
+                color: const Color(0xFF3B82F6),
+                bgColor: const Color(0xFFDBEAFE),
+              ),
+              _ProgressRing(
+                label: "Meals",
+                current: progress['meals'] ?? 0,
+                goal: goals['meals'] ?? 1,
+                color: const Color(0xFF22C55E),
+                bgColor: const Color(0xFFDCFCE7),
+              ),
+              _ProgressRing(
+                label: "Well-being",
+                current: progress['wellbeing'] ?? 0,
+                goal: goals['wellbeing'] ?? 1,
+                color: const Color(0xFFA855F7),
+                bgColor: const Color(0xFFF3E8FF),
+              ),
             ],
-          )
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _badge(String text, String label, Color bg,
-      {Color textColor = Colors.black87}) {
+class _MoodBadge extends StatelessWidget {
+  final String mood;
+
+  const _MoodBadge({required this.mood});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration:
-          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
-      child: Text("$text $label",
-          style: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.bold, color: textColor)),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEE2E2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            mood == "❓" ? "❓" : mood,
+            style: const TextStyle(fontSize: 12),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            "Mood",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.red[400],
+            ),
+          ),
+        ],
+      ),
     );
   }
+}
 
-  Widget _buildRing(String label, int current, int goal, Color color) {
-    return Column(children: [
-      SizedBox(
-        height: 60,
-        width: 60,
-        child: CircularProgressIndicator(
-            value: current / goal,
-            color: color,
-            strokeWidth: 6,
-            backgroundColor: Colors.grey[100]),
+class _StreakBadge extends StatelessWidget {
+  final int streak;
+
+  const _StreakBadge({required this.streak});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF3C7),
+        borderRadius: BorderRadius.circular(20),
       ),
-      const SizedBox(height: 8),
-      Text(label, style: const TextStyle(fontSize: 12))
-    ]);
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text("🔥", style: TextStyle(fontSize: 12)),
+          const SizedBox(width: 4),
+          Text(
+            "$streak day streak",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.orange[700],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressRing extends StatelessWidget {
+  final String label;
+  final int current;
+  final int goal;
+  final Color color;
+  final Color bgColor;
+
+  const _ProgressRing({
+    required this.label,
+    required this.current,
+    required this.goal,
+    required this.color,
+    required this.bgColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double progressValue = goal > 0 ? (current / goal).clamp(0.0, 1.0) : 0.0;
+    final bool isComplete = current >= goal;
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 64,
+          width: 64,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Background ring
+              SizedBox(
+                height: 64,
+                width: 64,
+                child: CircularProgressIndicator(
+                  value: 1,
+                  strokeWidth: 5,
+                  color: bgColor,
+                  backgroundColor: Colors.transparent,
+                ),
+              ),
+              // Progress ring
+              SizedBox(
+                height: 64,
+                width: 64,
+                child: CircularProgressIndicator(
+                  value: progressValue,
+                  strokeWidth: 5,
+                  color: color,
+                  backgroundColor: Colors.transparent,
+                  strokeCap: StrokeCap.round,
+                ),
+              ),
+              // Center content
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: isComplete
+                      ? Icon(
+                          Icons.check,
+                          color: color,
+                          size: 24,
+                        )
+                      : Text(
+                          "$current/$goal",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: color,
+          ),
+        ),
+      ],
+    );
   }
 }

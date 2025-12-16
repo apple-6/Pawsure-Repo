@@ -30,7 +30,10 @@ dependencies:
   shared_preferences: ^2.5.3
 
   # To pick files from the device
-  file_picker: ^10.3.3 
+  file_picker: ^10.3.3
+
+  # URL Launcher for phone calls and maps
+  url_launcher: ^6.2.0 
 
 
 dev_dependencies:

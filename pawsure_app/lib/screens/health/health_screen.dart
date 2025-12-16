@@ -17,86 +17,74 @@ class HealthScreen extends StatelessWidget {
         : Get.put(HealthController());
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: Obx(() {
-          if (controller.isLoadingPets.value) {
-            return const SizedBox(
-              height: 24,
-              width: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            );
-          }
-          if (controller.pets.isEmpty) {
-            return const Text('No Pets Available');
-          }
-          return Text(controller.selectedPet.value?.name ?? 'Select Pet');
-        }),
+        backgroundColor: const Color(0xFFF9FAFB),
+        elevation: 0,
+        title: const Text(
+          'Health',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1F2937),
+          ),
+        ),
         actions: [
-          // Dropdown menu to switch pets
+          // Pet Selector Dropdown
           Obx(() {
             if (!controller.isLoadingPets.value && controller.pets.isNotEmpty) {
-              return PopupMenuButton<Pet>(
-                icon: const Icon(Icons.pets),
-                onSelected: (Pet pet) {
-                  controller.selectPet(pet);
-                },
-                itemBuilder: (context) => controller.pets
-                    .map(
-                      (pet) => PopupMenuItem<Pet>(
-                        value: pet,
-                        child: Row(
-                          children: [
-                            if (controller.selectedPet.value?.id == pet.id)
-                              const Icon(
-                                Icons.check,
-                                size: 20,
-                                color: Colors.green,
-                              ),
-                            const SizedBox(width: 8),
-                            Text(pet.name),
-                          ],
-                        ),
-                      ),
-                    )
-                    .toList(),
-              );
+              return _PetSelectorDropdown(controller: controller);
             }
             return const SizedBox.shrink();
           }),
-
+          const SizedBox(width: 8),
           // Share Button
-          TextButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Share with Vet feature coming soon!'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
-            },
-            icon: const Icon(Icons.share_outlined, size: 20),
-            label: const Text('Share'),
-            style: TextButton.styleFrom(foregroundColor: Colors.black),
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              onPressed: () {
+                Get.snackbar(
+                  'Coming Soon',
+                  'Share with Vet feature will be available soon!',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.blue.withOpacity(0.1),
+                  colorText: Colors.blue[800],
+                  margin: const EdgeInsets.all(16),
+                  borderRadius: 12,
+                );
+              },
+              icon: const Icon(
+                Icons.share_outlined,
+                size: 20,
+                color: Color(0xFF6B7280),
+              ),
+              tooltip: 'Share with Vet',
+            ),
           ),
         ],
         toolbarHeight: 64,
       ),
       body: Column(
         children: [
-          // Tab Bar Section (Calendar tab REMOVED)
+          // Tab Bar Section
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Container(
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F6F9),
-                borderRadius: BorderRadius.circular(24),
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: TabBar(
                 controller: controller.tabController,
                 indicator: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
@@ -105,45 +93,209 @@ class HealthScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                labelColor: Colors.black,
-                unselectedLabelColor: Colors.grey,
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelColor: const Color(0xFF1F2937),
+                unselectedLabelColor: const Color(0xFF9CA3AF),
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                ),
                 tabs: const [
                   Tab(text: 'Profile'),
                   Tab(text: 'Records'),
-                  Tab(text: 'AI Scan'), // Calendar tab REMOVED
+                  Tab(text: 'AI Scan'),
                 ],
               ),
             ),
           ),
 
-          // Tab Views (CalendarTab REMOVED)
+          // Tab Views
           Expanded(
             child: TabBarView(
               controller: controller.tabController,
               children: [
                 ProfileTab(),
-
                 Obx(() {
                   if (controller.selectedPet.value == null) {
-                    return const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.pets, size: 48, color: Colors.grey),
-                          SizedBox(height: 16),
-                          Text('Please add or select a pet first.'),
-                        ],
-                      ),
+                    return _EmptyStateView(
+                      icon: Icons.pets,
+                      title: 'No Pet Selected',
+                      subtitle: 'Please add or select a pet first.',
                     );
                   }
                   return const RecordsTab();
                 }),
-
-                AIScanTab(), // Calendar tab REMOVED
+                AIScanTab(),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PetSelectorDropdown extends StatelessWidget {
+  final HealthController controller;
+
+  const _PetSelectorDropdown({required this.controller});
+
+  String _getAnimalEmoji(Pet? pet) {
+    if (pet == null) return '🐾';
+    return pet.species?.toLowerCase() == 'dog' ? '🐕' : '🐈';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<Object>(
+      icon: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${_getAnimalEmoji(controller.selectedPet.value)} ${controller.selectedPet.value?.name ?? ""}',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF374151),
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.arrow_drop_down,
+              color: Color(0xFF6B7280),
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+      tooltip: 'Switch Pet',
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onSelected: (value) {
+        if (value is Pet) {
+          controller.selectPet(value);
+        } else if (value == 'add_pet') {
+          Get.toNamed('/profile/create-pet');
+        }
+      },
+      itemBuilder: (context) => [
+        ...controller.pets.map(
+          (pet) => PopupMenuItem<Object>(
+            value: pet,
+            child: Row(
+              children: [
+                Text(
+                  pet.species?.toLowerCase() == 'dog' ? "🐕" : "🐈",
+                  style: const TextStyle(fontSize: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Text(pet.name)),
+                if (controller.selectedPet.value?.id == pet.id)
+                  const Icon(
+                    Icons.check,
+                    size: 18,
+                    color: Color(0xFF22C55E),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem<Object>(
+          value: 'add_pet',
+          child: Row(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF3F4F6),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.add,
+                  size: 16,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Add Pet',
+                style: TextStyle(
+                  color: Color(0xFF6B7280),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyStateView extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _EmptyStateView({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 36,
+                color: const Color(0xFF9CA3AF),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF6B7280),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
