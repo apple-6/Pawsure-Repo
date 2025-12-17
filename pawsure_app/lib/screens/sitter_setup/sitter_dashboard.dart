@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // <--- Import GetX
 import 'sitter_calendar.dart';
 import 'sitter_inbox.dart';
+import 'sitter_setting_screen.dart';
 
 class SitterDashboard extends StatelessWidget {
   const SitterDashboard({super.key});
@@ -54,6 +55,9 @@ class SitterDashboard extends StatelessWidget {
           // You can add other links here later (e.g. Settings is index 4)
         if (index == 3) { // Index 3 is Inbox
           Get.to(() => const SitterInbox());
+        }
+        if (index == 4) { 
+          Get.to(() => const SitterSettingPage());
         }
 
         },
