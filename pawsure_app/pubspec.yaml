@@ -28,6 +28,9 @@ dependencies:
 
   # Storage
   shared_preferences: ^2.5.3
+  
+  # Supabase
+  supabase_flutter: ^2.8.0
 
   # To pick files from the device
   file_picker: ^10.3.3

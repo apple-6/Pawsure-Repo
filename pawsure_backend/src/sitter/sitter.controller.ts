@@ -1,25 +1,45 @@
 import {
   Controller,
+  Get,
   Post,
-  UploadedFile,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  Request,
+  UseGuards,
   UseInterceptors,
+  UploadedFile,
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { AiService } from '../ai/ai.service';
+import { SitterService } from './sitter.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateSitterDto } from './dto/create-sitter.dto';
+import { UpdateSitterDto } from './dto/update-sitter.dto';
 import { Express } from 'express';
 
-@Controller('ai')
-export class AiController {
-  constructor(private readonly aiService: AiService) {}
+@Controller('sitters')
+export class SitterController {
+  constructor(private readonly sitterService: SitterService) {}
 
-  @Post('analyze-photo')
-  @UseInterceptors(FileInterceptor('image'))
-  async analyzePhoto(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      // Handle error: no file uploaded
-    }
-    console.log('File received, sending to AI service...');
-    return this.aiService.analyzeImage(file.buffer);
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('idDocument'))
+  async create(
+    @Body() createSitterDto: CreateSitterDto,
+    @Request() req,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return await this.sitterService.create(createSitterDto, req.user.id, file);
+  }
+
+  @Get()
+  async findAll() {
+    return await this.sitterService.findAll();
   }
 
   @Get('search')
@@ -32,7 +52,6 @@ export class AiController {
   async getMyProfile(@Request() req) {
     return await this.sitterService.findByUserId(req.user.id);
   }
-
 
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
