@@ -7,7 +7,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseFloatPipe,
-  UseInterceptors,
+  UseInterceptors, // <-- FIX 1: Add UseInterceptors
   UploadedFile,
   Post,
   Query,
@@ -55,18 +55,8 @@ export class SitterController {
   }
 
   @Get('search')
-  async searchByAvailability(
-    // --- UPDATED: Receive both startDate and endDate as strings ---
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
-  ) {
-    // 1. Basic validation to ensure both dates are present
-    if (!startDate || !endDate) {
-      throw new BadRequestException('Both startDate and endDate are required for availability search.');
-    }
-
-    // 2. Call the updated service method with both dates
-    return await this.sitterService.searchByAvailability(startDate, endDate);
+  async searchByAvailability(@Query('date') date: string) {
+    return await this.sitterService.searchByAvailability(date);
   }
 
   @Get('my-profile')
