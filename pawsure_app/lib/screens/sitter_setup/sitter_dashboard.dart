@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // <--- Import GetX
 import 'sitter_calendar.dart';
 import 'sitter_inbox.dart';
+import 'sitter_setting_screen.dart';
 
 class SitterDashboard extends StatelessWidget {
   const SitterDashboard({super.key});
@@ -23,10 +24,9 @@ class SitterDashboard extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 'Hey Anya Forger,',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
               _buildStatsGrid(context),
@@ -48,14 +48,17 @@ class SitterDashboard extends StatelessWidget {
         unselectedItemColor: Colors.grey.shade600,
         currentIndex: 0,
         onTap: (index) {
-        if (index == 2) {
+          if (index == 2) {
             Get.to(() => const SitterCalendar());
           }
           // You can add other links here later (e.g. Settings is index 4)
-        if (index == 3) { // Index 3 is Inbox
-          Get.to(() => const SitterInbox());
-        }
-
+          if (index == 3) {
+            // Index 3 is Inbox
+            Get.to(() => const SitterInbox());
+          }
+          if (index == 4) {
+            Get.to(() => const SitterSettingPage());
+          }
         },
         items: const [
           BottomNavigationBarItem(
@@ -93,10 +96,7 @@ class SitterDashboard extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               'Dashboard - pet sitter',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
           ],
         ),
@@ -155,10 +155,12 @@ class SitterDashboard extends StatelessWidget {
 
     return Column(
       children: requests
-          .map((req) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _RequestCard(request: req),
-              ))
+          .map(
+            (req) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _RequestCard(request: req),
+            ),
+          )
           .toList(),
     );
   }
@@ -180,17 +182,18 @@ class SitterDashboard extends StatelessWidget {
     ];
 
     return Row(
-      children: stays
-          .map(
-            (stay) => Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: stay,
-              ),
-            ),
-          )
-          .toList()
-        ..removeLast(), // remove padding after last item
+      children:
+          stays
+              .map(
+                (stay) => Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: stay,
+                  ),
+                ),
+              )
+              .toList()
+            ..removeLast(), // remove padding after last item
     );
   }
 }
@@ -314,10 +317,7 @@ class _RequestCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'Requested by ${request.requester}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -333,8 +333,11 @@ class _RequestCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.attach_money,
-                            size: 16, color: SitterDashboard._accent),
+                        const Icon(
+                          Icons.attach_money,
+                          size: 16,
+                          color: SitterDashboard._accent,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           'Est. Earning: ${request.estEarning}',
@@ -348,7 +351,7 @@ class _RequestCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              )
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -385,7 +388,7 @@ class _RequestCard extends StatelessWidget {
                 ),
               ),
             ],
-          )
+          ),
         ],
       ),
     );
@@ -427,25 +430,22 @@ class _StayCard extends StatelessWidget {
                   color: SitterDashboard._lightAccent,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.pets,
-                    size: 28, color: SitterDashboard._accent),
+                child: const Icon(
+                  Icons.pets,
+                  size: 28,
+                  color: SitterDashboard._accent,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 6),
           Text(
             petName,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
           ),
           Text(
             dateRange,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-            ),
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
           const SizedBox(height: 6),
           Container(
@@ -468,4 +468,3 @@ class _StayCard extends StatelessWidget {
     );
   }
 }
-
