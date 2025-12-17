@@ -1,4 +1,7 @@
 class ApiEndpoints {
+  // Using localhost works with `adb reverse tcp:3000 tcp:3000`
+  // Alternative: Use 10.0.2.2 for Android emulator without adb reverse
+  // For physical device: use your computer's local IP (e.g., 192.168.x.x)
   static const String baseUrl = 'http://localhost:3000';
 
   // Sitter Endpoints

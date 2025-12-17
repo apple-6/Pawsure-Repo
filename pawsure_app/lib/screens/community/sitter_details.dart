@@ -1,8 +1,7 @@
 import 'dart:convert';
-import 'dart:io'; // Required for Platform detection
-import 'package:flutter/foundation.dart'; // Required for kIsWeb detection
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pawsure_app/constants/api_endpoints.dart';
 
 class SitterDetailsScreen extends StatefulWidget {
   final String sitterId;
@@ -16,17 +15,8 @@ class SitterDetailsScreen extends StatefulWidget {
 class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
   late Future<Map<String, dynamic>> _sitterFuture;
 
-  // DYNAMIC BASE URL
-  // This automatically selects the correct URL based on the device you are running on.
-  String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:3000'; // For Web
-    } else if (Platform.isAndroid) {
-      return 'http://10.0.2.2:3000'; // For Android Emulator
-    } else {
-      return 'http://localhost:3000'; // For Windows, macOS, and iOS Simulator
-    }
-  }
+  // Use centralized API endpoint
+  String get baseUrl => ApiEndpoints.baseUrl;
 
   @override
   void initState() {

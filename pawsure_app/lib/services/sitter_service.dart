@@ -10,10 +10,10 @@ import 'package:pawsure_app/screens/community/sitter_model.dart';
 
 
 class SitterService {
-  // Use a dedicated client for non-setup calls and a separate base URL for setup (as shown in your conflict)
+  // Use a dedicated client for non-setup calls
   final http.Client _client;
-  // This base URL was defined for the setup endpoint, which suggests it might be different from ApiEndpoints.baseUrl
-  final String _setupBaseUrl = 'http://10.0.2.2:3000/sitters/setup';
+  // Use consistent base URL from ApiEndpoints
+  String get _setupBaseUrl => '${ApiEndpoints.baseUrl}/sitters/setup';
 
   SitterService({http.Client? client}) : _client = client ?? http.Client();
 

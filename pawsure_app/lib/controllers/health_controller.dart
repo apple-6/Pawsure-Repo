@@ -5,6 +5,7 @@ import 'package:pawsure_app/models/health_record_model.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/services/api_service.dart';
 import 'package:pawsure_app/controllers/pet_controller.dart';
+import 'package:pawsure_app/controllers/home_controller.dart';
 
 class HealthController extends GetxController
     with GetSingleTickerProviderStateMixin {
@@ -19,6 +20,9 @@ class HealthController extends GetxController
   var selectedFilter = 'All'.obs;
 
   late TabController tabController;
+  
+  // Flag to prevent circular sync updates
+  bool _isSyncingFromHome = false;
 
   // --- LIFECYCLE & WORKERS ---
 
@@ -26,6 +30,8 @@ class HealthController extends GetxController
   void onInit() {
     super.onInit();
     tabController = TabController(length: 3, vsync: this);
+    _fetchPets();
+    _syncWithHomeController();
 
     // 🔧 Watch for pet selection changes from PetController
     ever(_petController.selectedPet, (Pet? pet) {
@@ -34,6 +40,10 @@ class HealthController extends GetxController
           '🐕 HealthController: Pet changed to ${pet.name}, ID: ${pet.id}',
         );
         _fetchHealthRecords(pet.id);
+        // Sync back to HomeController if not coming from HomeController
+        if (!_isSyncingFromHome) {
+          _syncToHomeController(pet);
+        }
       } else {
         healthRecords.clear();
         filteredRecords.clear();
@@ -45,6 +55,53 @@ class HealthController extends GetxController
     });
   }
 
+  /// Sync selected pet with HomeController
+  void _syncWithHomeController() {
+    try {
+      if (Get.isRegistered<HomeController>()) {
+        final homeController = Get.find<HomeController>();
+        
+        // Listen for changes from HomeController
+        ever(homeController.selectedPet, (Pet? pet) {
+          if (pet != null && selectedPet.value?.id != pet.id) {
+            debugPrint('🔄 HealthController: Syncing from HomeController - ${pet.name}');
+            _isSyncingFromHome = true;
+            // Find the pet in our local list
+            final localPet = pets.firstWhereOrNull((p) => p.id == pet.id);
+            if (localPet != null) {
+              selectedPet.value = localPet;
+            } else {
+              selectedPet.value = pet;
+            }
+            _isSyncingFromHome = false;
+          }
+        });
+        
+        // Initial sync if HomeController already has a selected pet
+        if (homeController.selectedPet.value != null) {
+          debugPrint('🔄 HealthController: Initial sync from HomeController');
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Could not sync with HomeController: $e');
+    }
+  }
+
+  /// Sync selection back to HomeController
+  void _syncToHomeController(Pet pet) {
+    try {
+      if (Get.isRegistered<HomeController>()) {
+        final homeController = Get.find<HomeController>();
+        if (homeController.selectedPet.value?.id != pet.id) {
+          debugPrint('🔄 HealthController: Syncing to HomeController - ${pet.name}');
+          homeController.selectPet(pet);
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Could not sync to HomeController: $e');
+    }
+  }
+
   @override
   void onClose() {
     tabController.dispose();
@@ -52,6 +109,54 @@ class HealthController extends GetxController
   }
 
   // --- BUSINESS LOGIC ---
+
+  Future<void> _fetchPets() async {
+    try {
+      isLoadingPets.value = true;
+      debugPrint('🔍 Fetching pets from API...');
+
+      final fetchedPets = await _apiService.getPets();
+      debugPrint('📦 Fetched ${fetchedPets.length} pets');
+
+      if (fetchedPets.isNotEmpty) {
+        pets.assignAll(fetchedPets);
+        
+        // Try to sync with HomeController's selected pet first
+        Pet? initialPet;
+        if (Get.isRegistered<HomeController>()) {
+          final homeController = Get.find<HomeController>();
+          final homePet = homeController.selectedPet.value;
+          if (homePet != null) {
+            initialPet = fetchedPets.firstWhereOrNull((p) => p.id == homePet.id);
+            if (initialPet != null) {
+              debugPrint('✅ Synced with HomeController pet: ${initialPet.name}');
+            }
+          }
+        }
+        
+        // Fallback to first pet if no sync
+        selectedPet.value = initialPet ?? fetchedPets.first;
+        debugPrint('✅ Selected pet: ${selectedPet.value?.name}');
+      } else {
+        debugPrint('⚠️ No pets found');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error loading pets: $e');
+      debugPrint('Stack trace: $stackTrace');
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.snackbar(
+          'Error',
+          'Failed to load pets: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      });
+    } finally {
+      isLoadingPets.value = false;
+    }
+  }
 
   Future<void> _fetchHealthRecords(int petId) async {
     try {

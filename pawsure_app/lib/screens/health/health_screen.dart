@@ -33,33 +33,65 @@ class HealthScreen extends StatelessWidget {
           return Text(controller.selectedPet.value?.name ?? 'Select Pet');
         }),
         actions: [
-          // Dropdown menu to switch pets
+          // Dropdown menu to switch pets (synced with HomeController)
           Obx(() {
             if (!controller.isLoadingPets.value && controller.pets.isNotEmpty) {
+              final selectedPet = controller.selectedPet.value;
+              final emoji = selectedPet?.species?.toLowerCase() == 'dog' ? '🐕' : '🐈';
               return PopupMenuButton<Pet>(
-                icon: const Icon(Icons.pets),
                 onSelected: (Pet pet) {
                   controller.selectPet(pet);
                 },
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 itemBuilder: (context) => controller.pets
                     .map(
                       (pet) => PopupMenuItem<Pet>(
                         value: pet,
                         child: Row(
                           children: [
-                            if (controller.selectedPet.value?.id == pet.id)
+                            Text(
+                              pet.species?.toLowerCase() == 'dog' ? '🐕' : '🐈',
+                              style: const TextStyle(fontSize: 18),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(child: Text(pet.name)),
+                            if (selectedPet?.id == pet.id)
                               const Icon(
                                 Icons.check,
-                                size: 20,
-                                color: Colors.green,
+                                size: 18,
+                                color: Color(0xFF22C55E),
                               ),
-                            const SizedBox(width: 8),
-                            Text(pet.name),
                           ],
                         ),
                       ),
                     )
                     .toList(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$emoji ${selectedPet?.name ?? ""}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF374151),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.arrow_drop_down,
+                        color: Color(0xFF6B7280),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
               );
             }
             return const SizedBox.shrink();
