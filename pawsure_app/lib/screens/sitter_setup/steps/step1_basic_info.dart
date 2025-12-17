@@ -58,7 +58,7 @@ class Step1BasicInfo extends StatelessWidget {
               onSaved: (value) => formData['address'] = value, 
             ),
             const SizedBox(height: 16),
-            const Text(
+            /*const Text(
               'Phone Number',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
@@ -87,7 +87,7 @@ class Step1BasicInfo extends StatelessWidget {
                 return null;
               },
               onSaved: (value) => formData['phoneNumber'] = value,
-            ),
+            ),*/
           ],
         ),
       ),
