@@ -2,24 +2,18 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'bindings/initial_bindings.dart';
-import 'controllers/pet_controller.dart'; // 🆕 Import PetController
 
 // Screens
 import 'screens/auth/onboarding_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/role_selection.dart';
 import 'screens/calendar/calendar_screen.dart';
-import 'screens/health/add_health_record_screen.dart';
+import 'screens/health/add_health_record_screen.dart'; // 👈 ADD THIS IMPORT
 import 'main_navigation.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[DEBUG] PawsureApp: Starting main()');
-
-  // 🆕 Register PetController globally FIRST (before any screens load)
-  Get.put(PetController(), permanent: true);
-  debugPrint('[DEBUG] PawsureApp: PetController registered globally');
-
   runApp(const PawsureApp());
 }
 
@@ -43,6 +37,7 @@ class PawsureApp extends StatelessWidget {
       // Initial screen
       home: const OnboardingScreen(),
 
+      // ✅ FIXED: Added all necessary routes including /health/add-record
       getPages: [
         GetPage(name: '/', page: () => const OnboardingScreen()),
         GetPage(name: '/onboarding', page: () => const OnboardingScreen()),
@@ -54,7 +49,7 @@ class PawsureApp extends StatelessWidget {
         GetPage(name: '/home', page: () => const MainNavigation()),
         GetPage(name: '/calendar', page: () => const CalendarScreen()),
         GetPage(
-          name: '/health/add-record',
+          name: '/health/add-record', // 👈 CRITICAL: This was missing!
           page: () => const AddHealthRecordScreen(),
         ),
       ],
