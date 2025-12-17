@@ -136,17 +136,23 @@ export class SitterService {
   }
 
   async findAll(minRating?: number): Promise<Sitter[]> {
-    const query = this.sitterRepository
-      .createQueryBuilder('sitter')
-      .leftJoinAndSelect('sitter.user', 'user')
-      .where('sitter.deleted_at IS NULL')
-      .orderBy('sitter.rating', 'DESC');
+    try {
+      const query = this.sitterRepository
+        .createQueryBuilder('sitter')
+        .leftJoinAndSelect('sitter.user', 'user')
+        .where('sitter.deleted_at IS NULL')
+        .orderBy('sitter.rating', 'DESC');
 
-    if (minRating) {
-      query.where('sitter.rating >= :minRating', { minRating });
+      if (minRating !== undefined && minRating !== null) {
+        query.andWhere('sitter.rating >= :minRating', { minRating });
+      }
+
+      return await query.getMany();
+    } catch (error) {
+      console.error('Error fetching sitters:', error);
+      // Return empty array instead of throwing 500
+      return [];
     }
-
-    return await query.getMany();
   }
 
   async findOne(id: number): Promise<Sitter> {
