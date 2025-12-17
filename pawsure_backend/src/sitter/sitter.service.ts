@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   ConflictException,
+  BadRequestException, // Kept from Version M for date validation
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
@@ -13,6 +14,44 @@ import { User } from '../user/user.entity';
 import { UserService } from '../user/user.service';
 import { FileService } from '../file/file.service';
 import { Express } from 'express';
+
+// --- HELPER FUNCTION (From Version M) ---
+// Generates arrays of specific dates and day names for the search query
+function generateSearchRangeArrays(startDateStr: string, endDateStr: string): { searchDates: string[], searchDays: string[] } {
+    const start = new Date(startDateStr);
+    const end = new Date(endDateStr);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+        throw new BadRequestException('Invalid date range provided.');
+    }
+
+    const searchDates: string[] = [];
+    const searchDaysSet: Set<string> = new Set();
+    
+    // Day names for PostgreSQL array (e.g., 'Sun', 'Mon', 'Tue', ...)
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    let currentDate = new Date(start);
+    
+    while (currentDate <= end) {
+        // Format date as 'YYYY-MM-DD'
+        const dateString = currentDate.toISOString().split('T')[0];
+        searchDates.push(dateString);
+
+        // Get the day of the week string
+        const dayIndex = currentDate.getDay();
+        const dayString = daysOfWeek[dayIndex];
+        searchDaysSet.add(dayString);
+
+        // Move to the next day
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return { 
+        searchDates: searchDates, 
+        searchDays: Array.from(searchDaysSet) 
+    };
+}
 
 @Injectable()
 export class SitterService {
@@ -25,6 +64,9 @@ export class SitterService {
     private userRepository: Repository<User>,
   ) {}
 
+  // --- CREATE METHOD (From Version S - The "Fixer") ---
+  // This version checks if a profile actually exists and "Upserts" it.
+  // It effectively heals the "Zombie User" bug.
   async create(createSitterDto: CreateSitterDto, userId: number, file?: Express.Multer.File): Promise<Sitter> {
     // 1. Fetch the existing User entity.
     const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -33,7 +75,7 @@ export class SitterService {
       throw new NotFoundException('User not found');
     }
 
-    // --- LOGIC CHANGE: Check for existing profile instead of throwing error ---
+    // Check actual sitter table, NOT just the user role.
     let sitter = await this.sitterRepository.findOne({ where: { userId } });
 
     // 2. Handle ID Document File Upload
@@ -49,30 +91,22 @@ export class SitterService {
 
     // 3. Handle User Data (Phone Number)
     if (createSitterDto.phoneNumber) {
-        // Update the User's phone_number property
         user.phone_number = createSitterDto.phoneNumber;
         await this.userRepository.save(user);
-        
-        // Remove from DTO to avoid TypeORM error
         delete createSitterDto.phoneNumber; 
     }
 
     if (sitter) {
         // === UPDATE EXISTING PROFILE ===
-        // The user is already a sitter, so we update their existing profile.
-        
-        // If a new file was uploaded, update the URL
+        // If the zombie profile exists (or partially exists), we update it.
         if (idDocumentUrl) {
             sitter.idDocumentUrl = idDocumentUrl;
         }
-
-        // Apply new data from the form (Step 4 data)
         Object.assign(sitter, createSitterDto);
-        
         await this.sitterRepository.save(sitter);
     } else {
         // === CREATE NEW PROFILE ===
-        // No profile found, create a brand new one.
+        // If it was missing (even if role was 'sitter'), we create it now.
         sitter = this.sitterRepository.create({
           ...createSitterDto,
           userId,
@@ -82,7 +116,7 @@ export class SitterService {
         await this.sitterRepository.save(sitter);
     }
 
-    // 4. Ensure role is 'sitter' (just in case)
+    // 4. Ensure role is 'sitter' (Fixes the role if it was missing)
     if (user.role !== 'sitter') {
         user.role = 'sitter';
         await this.userRepository.save(user);
@@ -132,7 +166,6 @@ export class SitterService {
   async findByUserId(userId: number): Promise<Sitter | null> {
     return await this.sitterRepository.findOne({
       where: { userId, deleted_at: IsNull() },
-      
       relations: ['user'],
     });
   }
@@ -142,20 +175,15 @@ export class SitterService {
     updateSitterDto: UpdateSitterDto,
     userId: number,
   ): Promise<Sitter> {
-    // We fetch the Sitter entity (which contains both user and sitter data)
     const sitter = await this.findOne(id);
 
     if (sitter.userId !== userId) {
       throw new ForbiddenException('You can only update your own sitter profile');
     }
 
-    // 5. CORRECT LOGIC for Single Table Inheritance: Apply ALL DTO properties directly to the Sitter entity.
     Object.assign(sitter, updateSitterDto);
-    
-    // We save the Sitter entity, updating the single shared record in the 'users' table.
     await this.sitterRepository.save(sitter);
 
-    // Get a FRESH Sitter object to ensure all related data is up-to-date
     const freshSitter = await this.sitterRepository.findOne({
         where: { id },
         relations: ['user', 'reviews', 'bookings'],
@@ -171,12 +199,10 @@ export class SitterService {
   async remove(id: number, userId: number): Promise<void> {
     const sitter = await this.findOne(id);
 
-    // Check if the user owns this sitter profile
     if (sitter.userId !== userId) {
       throw new ForbiddenException('You can only delete your own sitter profile');
     }
 
-    // We rely on TypeORM's configuration (soft-delete behavior) when removing the entity.
     await this.sitterRepository.remove(sitter);
   }
 
@@ -205,12 +231,32 @@ export class SitterService {
     return await this.sitterRepository.save(sitter);
   }
 
-  async searchByAvailability(date: string): Promise<Sitter[]> {
+  // --- SEARCH METHOD (From Version M - The "Feature") ---
+  // This uses the advanced range search and exclusion logic.
+  async searchByAvailability(startDate: string, endDate: string): Promise<Sitter[]> {
+    // 1. Generate the required arrays for the search range
+    const { searchDates, searchDays } = generateSearchRangeArrays(startDate, endDate);
+
+    // 2. Build the query to find sitters NOT overlapping with any unavailability
     return await this.sitterRepository
-      .createQueryBuilder('sitter')
-      .leftJoinAndSelect('sitter.user', 'user')
-      .where(':date = ANY(sitter.available_dates)', { date })
-      .orderBy('sitter.rating', 'DESC')
-      .getMany();
+        .createQueryBuilder('sitter')
+        .leftJoinAndSelect('sitter.user', 'user')
+        
+        // --- Unavailability Check 1: Specific Dates ---
+        // Filter OUT sitters where their unavailable_dates array OVERLAPS (&&) the requested searchDates array.
+        .andWhere(`NOT ("sitter"."unavailable_dates" && :searchDates)`, {
+            searchDates: searchDates, 
+        })
+        
+        // --- Unavailability Check 2: Recurring Days ---
+        // Filter OUT sitters where their unavailable_days array OVERLAPS (&&) the requested searchDays array.
+        .andWhere(`NOT ("sitter"."unavailable_days" && :searchDays)`, {
+            searchDays: searchDays, 
+        })
+        
+        // --- General Filtering ---
+        .andWhere('sitter.deleted_at IS NULL')
+        .orderBy('sitter.rating', 'DESC')
+        .getMany();
   }
 }
