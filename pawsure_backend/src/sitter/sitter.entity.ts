@@ -41,16 +41,10 @@ export class Sitter {
     @Column({ type: 'int', default: 0 })
     reviews_count: number;
 
-    //@Column({ type: 'simple-array', nullable: true })
-    //available_dates: string[];
+    @Column({ type: 'simple-array', nullable: true })
+    available_dates: string[];
 
     // --- Sitter Profile Setup Fields ---
-    @Column('date', { array: true, nullable: true, default: () => 'ARRAY[]::date[]' })
-    unavailable_dates: string[] = [];
-
-    @Column('text', { array: true, nullable: true, default: () => 'ARRAY[]::text[]' })
-    unavailable_days: string[] = [];
-
     @Column({ nullable: true })
     address: string;
 
