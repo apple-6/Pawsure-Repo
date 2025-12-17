@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'sitter_calendar.dart';
-import 'sitter_inbox.dart';
 import 'sitter_preview_page.dart';
-import 'sitter_dashboard.dart';
 
 class SitterSettingPage extends StatelessWidget {
   const SitterSettingPage({super.key});
@@ -16,51 +12,14 @@ class SitterSettingPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.white, // Or Colors.grey[50] depending on preference
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.accents[3],
-        unselectedItemColor: Colors.grey.shade600,
-        currentIndex: 0,
-        onTap: (index) {
-        if (index == 0) {
-          Get.to(() => const SitterDashboard());
-        }
-        if (index == 1) {
-          // Placeholder for Discover Screen
-        }
-        if (index == 2) {
-          Get.to(() => const SitterCalendar());
-        }
-        if (index == 3) { // Index 3 is Inbox
-          Get.to(() => const SitterInbox());
-        }
-        if (index == 4) { 
-          Get.to(() => const SitterSettingPage());
-        }
-
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_filled),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            label: 'Discover',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_outlined),
-            label: 'Calendar',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            label: 'Inbox',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            label: 'Setting',
-          ),
-        ],
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        // Assuming there is a back button or menu button, otherwise remove leading
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {},
+        ),
       ),
       body: SingleChildScrollView(
         child: Padding(
