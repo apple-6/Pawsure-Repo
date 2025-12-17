@@ -17,7 +17,11 @@ class FindSitterTab extends StatefulWidget {
 
 class _FindSitterTabState extends State<FindSitterTab> {
   String selectedLocation = '';
-  DateTime? selectedDate;
+  // --- UPDATED: Track both start and end dates ---
+  DateTime? startDate;
+  DateTime? endDate;
+  // ------------------------------------------------
+
   List<Sitter> availableSitters = [];
   bool isLoading = false;
   String? errorMessage;
@@ -28,8 +32,8 @@ class _FindSitterTabState extends State<FindSitterTab> {
   @override
   void initState() {
     super.initState();
-    // Start with an empty search field so all sitters are shown initially.
     _locationController.text = '';
+    // Call the fetching method after initialization
     _fetchAndFilterSitters();
   }
 
@@ -46,10 +50,48 @@ class _FindSitterTabState extends State<FindSitterTab> {
       errorMessage = null;
     });
 
+    // --- UPDATED: Check for a valid date range before calling the service ---
+    if (startDate == null || endDate == null) {
+      // If dates are not selected, fetch all sitters (or apply location filter only)
+      try {
+        final fetchedSitters = await _sitterService
+            .fetchSitters(); // Assuming fetchSitters() without args gets all sitters
+        final filteredSitters = _applyFilters(fetchedSitters);
+        if (mounted) {
+          setState(() {
+            availableSitters = filteredSitters;
+          });
+        }
+      } catch (e) {
+        // Existing error handling with mock data fallback
+        final fallbackSitters = _applyFilters(mockSitters);
+        if (mounted) {
+          setState(() {
+            availableSitters = fallbackSitters;
+            errorMessage =
+                'Unable to load sitters from the server. Showing sample data instead.\n$e';
+          });
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
+      }
+      return; // Exit here if dates are not fully selected
+    }
+
+    // Call the backend service with the date range
     try {
-      final fetchedSitters = await _sitterService.fetchSitters(
-        date: selectedDate,
+      // NOTE: Your SitterService needs to be updated to accept two dates.
+      // We assume a new method or updated signature like:
+      // fetchSitters(startDate: String, endDate: String)
+      final fetchedSitters = await _sitterService.fetchSittersByRange(
+        startDate: startDate!,
+        endDate: endDate!,
       );
+      // Backend handles availability filtering, so only location filter is applied here.
       final filteredSitters = _applyFilters(fetchedSitters);
       if (mounted) {
         setState(() {
@@ -57,6 +99,7 @@ class _FindSitterTabState extends State<FindSitterTab> {
         });
       }
     } catch (e) {
+      // Existing error handling with mock data fallback
       final fallbackSitters = _applyFilters(mockSitters);
       if (mounted) {
         setState(() {
@@ -78,59 +121,62 @@ class _FindSitterTabState extends State<FindSitterTab> {
     final search = selectedLocation.trim().toLowerCase();
     var filtered = sitters;
 
-    // If there is any search text, always filter by it.
-    // Clearing the field will show all locations.
+    // Filter by location
     if (search.isNotEmpty) {
       filtered = filtered
           .where((sitter) => sitter.location.toLowerCase().contains(search))
           .toList();
     }
 
-    if (selectedDate == null) {
-      return filtered;
-    }
+    // --- Removed Client-Side Date Filtering ---
+    // The availability filtering logic is now handled by the backend
+    // using the unavailable_dates and unavailable_days array checks.
 
-    return filtered.where(_matchesSelectedDate).toList();
+    return filtered;
   }
 
-  bool _matchesSelectedDate(Sitter sitter) {
-    if (selectedDate == null) return true;
-    final targetDate = DateTime(
-      selectedDate!.year,
-      selectedDate!.month,
-      selectedDate!.day,
-    );
+  // --- Removed _matchesSelectedDate and _isSameDay as they are no longer needed for client-side date filtering ---
 
-    if (sitter.availableDates.isNotEmpty) {
-      return sitter.availableDates.any((date) => _isSameDay(date, targetDate));
-    }
-
-    if (sitter.unavailableDates.isNotEmpty) {
-      return !sitter.unavailableDates.any(
-        (date) => _isSameDay(date, targetDate),
-      );
-    }
-
-    return true;
-  }
-
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+  // --- UPDATED: Function to select the date range ---
+  Future<void> _selectDateRange(BuildContext context) async {
+    final DateTimeRange? picked = await showDateRangePicker(
       context: context,
-      initialDate: selectedDate ?? DateTime.now().add(const Duration(days: 1)),
+      initialDateRange: (startDate != null && endDate != null)
+          ? DateTimeRange(start: startDate!, end: endDate!)
+          : null, // Initial range is null if not set
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      helpText: 'Select Start and End Dates',
+      saveText: 'Apply',
     );
+
     if (picked != null) {
-      final pickedDateOnly = DateTime(picked.year, picked.month, picked.day);
-      setState(() {
-        selectedDate = pickedDateOnly;
-      });
-      _fetchAndFilterSitters();
+      // Use date-only versions to match the backend comparison (no time component)
+      final start = DateTime(
+        picked.start.year,
+        picked.start.month,
+        picked.start.day,
+      );
+      final end = DateTime(picked.end.year, picked.end.month, picked.end.day);
+
+      if (mounted) {
+        setState(() {
+          startDate = start;
+          endDate = end;
+        });
+        _fetchAndFilterSitters();
+      }
+    } else {
+      // Option to clear the selected date range
+      if (startDate != null || endDate != null) {
+        if (mounted) {
+          setState(() {
+            startDate = null;
+            endDate = null;
+          });
+          _fetchAndFilterSitters();
+        }
+      }
     }
   }
 
@@ -141,18 +187,21 @@ class _FindSitterTabState extends State<FindSitterTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // --- UPDATED: Pass both dates to the helper widget ---
           _SearchBarsRow(
             locationController: _locationController,
-            selectedDate: selectedDate,
+            startDate: startDate,
+            endDate: endDate,
             onSearch: () {
               selectedLocation = _locationController.text;
               _fetchAndFilterSitters();
             },
-            onDateTap: () => _selectDate(context),
+            onDateTap: () => _selectDateRange(context),
           ),
-          const SizedBox(height: 16),
-          const _MapViewPlaceholder(),
-          const SizedBox(height: 24),
+          // ----------------------------------------------------
+          // REMOVED: const SizedBox(height: 16),
+          // REMOVED: const _MapViewPlaceholder(),
+          const SizedBox(height: 24), // Retained/Adjusted for spacing after search row
           Text(
             'Available Sitters (${availableSitters.length})',
             style: Theme.of(
@@ -174,26 +223,26 @@ class _FindSitterTabState extends State<FindSitterTab> {
           isLoading
               ? const Center(child: CircularProgressIndicator())
               : availableSitters.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40.0),
-                  child: Center(
-                    child: Text(
-                      'No sitters found matching your criteria.',
-                      style: TextStyle(color: Colors.grey, fontSize: 16),
-                    ),
-                  ),
-                )
-              : Column(
-                  children: availableSitters.map((sitter) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: SitterCard(
-                        sitter: sitter,
-                        onClick: widget.onSitterClick,
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40.0),
+                      child: Center(
+                        child: Text(
+                          'No sitters found matching your criteria.',
+                          style: TextStyle(color: Colors.grey, fontSize: 16),
+                        ),
                       ),
-                    );
-                  }).toList(),
-                ),
+                    )
+                  : Column(
+                      children: availableSitters.map((sitter) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: SitterCard(
+                            sitter: sitter,
+                            onClick: widget.onSitterClick,
+                          ),
+                        );
+                      }).toList(),
+                    ),
         ],
       ),
     );
@@ -206,22 +255,37 @@ class _FindSitterTabState extends State<FindSitterTab> {
 
 class _SearchBarsRow extends StatelessWidget {
   final TextEditingController locationController;
-  final DateTime? selectedDate;
+  // --- UPDATED: Accept start and end dates ---
+  final DateTime? startDate;
+  final DateTime? endDate;
+  // -------------------------------------------
   final VoidCallback onSearch;
   final VoidCallback onDateTap;
 
   const _SearchBarsRow({
     required this.locationController,
-    required this.selectedDate,
+    // --- UPDATED: Require start and end dates ---
+    required this.startDate,
+    required this.endDate,
+    // --------------------------------------------
     required this.onSearch,
     required this.onDateTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    String dateText = selectedDate != null
-        ? DateFormat('dd MMM').format(selectedDate!)
-        : 'Dates';
+    // --- UPDATED: Logic to display the date range ---
+    String dateText;
+    if (startDate != null && endDate != null) {
+      final startFmt = DateFormat('dd MMM').format(startDate!);
+      final endFmt = DateFormat('dd MMM').format(endDate!);
+      dateText = '$startFmt - $endFmt';
+    } else {
+      dateText = 'Dates';
+    }
+    // ------------------------------------------------
+
+    final isDateSelected = startDate != null && endDate != null;
 
     return Row(
       children: [
@@ -260,10 +324,10 @@ class _SearchBarsRow extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8.0),
                 border: Border.all(
-                  color: selectedDate != null
+                  color: isDateSelected
                       ? Theme.of(context).primaryColor
                       : Colors.grey.shade300,
-                  width: selectedDate != null ? 2 : 1,
+                  width: isDateSelected ? 2 : 1,
                 ),
               ),
               child: Row(
@@ -271,20 +335,27 @@ class _SearchBarsRow extends StatelessWidget {
                   Icon(
                     LucideIcons.calendar,
                     size: 20,
-                    color: selectedDate != null
+                    color: isDateSelected
                         ? Theme.of(context).primaryColor
                         : Colors.grey.shade600,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    dateText,
-                    style: TextStyle(
-                      color: selectedDate != null
-                          ? Theme.of(context).primaryColor
-                          : Colors.grey.shade800,
-                      fontWeight: FontWeight.w500,
+                  // --- UPDATED: Display the range text ---
+                  Expanded(
+                    // Use Expanded to ensure long date range text fits
+                    child: Text(
+                      dateText,
+                      style: TextStyle(
+                        color: isDateSelected
+                            ? Theme.of(context).primaryColor
+                            : Colors.grey.shade800,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow:
+                          TextOverflow.ellipsis, // Add ellipsis for overflow
                     ),
                   ),
+                  // ---------------------------------------
                 ],
               ),
             ),
@@ -305,38 +376,10 @@ class _SearchBarsRow extends StatelessWidget {
   }
 }
 
-class _MapViewPlaceholder extends StatelessWidget {
-  const _MapViewPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 150,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(LucideIcons.mapPin, size: 32, color: Colors.grey.shade500),
-          const SizedBox(height: 8),
-          Text(
-            'Map view coming soon',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// REMOVED: class _MapViewPlaceholder
 
 class SitterCard extends StatelessWidget {
+  // ... (No change)
   final Sitter sitter;
   final Function(String id) onClick;
 
@@ -352,7 +395,7 @@ class SitterCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.1),
+              color: Colors.grey.withOpacity(0.1), // Used withOpacity to fix the withValues issue
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 2),
@@ -389,8 +432,8 @@ class SitterCard extends StatelessWidget {
                     Text(
                       sitter.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
