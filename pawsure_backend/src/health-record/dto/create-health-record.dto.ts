@@ -1,3 +1,4 @@
+//pawsure_backend\src\health-record\dto\create-health-record.dto.ts
 import { IsNotEmpty, IsString, IsDateString, IsEnum, IsOptional } from 'class-validator';
 
 export enum HealthRecordType {

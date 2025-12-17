@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'controllers/navigation_controller.dart';
 import 'controllers/health_controller.dart';
-import 'controllers/home_controller.dart';
+import 'controllers/pet_controller.dart'; // 🆕 Import PetController
 import 'controllers/profile_controller.dart';
 
 // Import your screens
@@ -32,13 +32,12 @@ class MainNavigation extends StatelessWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       nav.changePage(0); // Reset to Home tab
 
-      // Refresh controllers with new user data
-      if (Get.isRegistered<HomeController>()) {
-        Get.find<HomeController>().loadPets();
+      // 🔧 FIXED: Refresh PetController (which updates both Home and Health)
+      if (Get.isRegistered<PetController>()) {
+        Get.find<PetController>().loadPets();
       }
-      if (Get.isRegistered<HealthController>()) {
-        Get.find<HealthController>().refreshPets();
-      }
+
+      // Refresh profile
       if (Get.isRegistered<ProfileController>()) {
         Get.find<ProfileController>().loadProfile();
       }
