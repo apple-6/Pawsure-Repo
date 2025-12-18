@@ -21,7 +21,7 @@ import { RoleModule } from './role/role.module';
 import { AuthModule } from './auth/auth.module';
 import { FileService } from './file/file.service';
 import { FileModule } from './file/file.module';
-import { EventsModule } from './events/events.module'; // 👈 Correct Import
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -36,9 +36,7 @@ import { EventsModule } from './events/events.module'; // 👈 Correct Import
         type: 'postgres',
         url: configService.get<string>('DATABASE_URL'),
         autoLoadEntities: true,
-        synchronize: true, // Temporarily true to create missing tables
-        migrationsRun: true, // Automatically run pending migrations on startup
-        migrations: [__dirname + '/migrations/*.{ts,js}'],
+        synchronize: false, // ✅ FIXED: Changed to false for production safety
         ssl: {
           rejectUnauthorized: false,
         },
@@ -60,7 +58,7 @@ import { EventsModule } from './events/events.module'; // 👈 Correct Import
     FileModule,
     RoleModule,
     AuthModule,
-    EventsModule, // 👈 Added here
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService, FileService],
