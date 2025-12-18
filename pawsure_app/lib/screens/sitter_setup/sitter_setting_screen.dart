@@ -5,23 +5,23 @@ import 'sitter_inbox.dart';
 import 'sitter_preview_page.dart';
 import 'sitter_dashboard.dart';
 
-class SitterSettingPage extends StatelessWidget {
-  const SitterSettingPage({super.key});
+class SitterSettingScreen extends StatelessWidget {
+  const SitterSettingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     // Define the specific green color from your screenshot
-    const Color brandColor = Color(0xFF2ECA6A);
-    const Color lightGreen = Color(0xFFE8F5E9);
+    const Color brandColor = Color(0xFF1CCA5B);
+    const Color lightGreen = Color(0xFFEFFAF4);
 
     return Scaffold(
       backgroundColor:
           Colors.white, // Or Colors.grey[50] depending on preference
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.accents[3],
+        selectedItemColor: brandColor, 
         unselectedItemColor: Colors.grey.shade600,
-        currentIndex: 0,
+        currentIndex: 4,
         onTap: (index) {
           if (index == 0) {
             Get.to(() => const SitterDashboard());
@@ -37,7 +37,7 @@ class SitterSettingPage extends StatelessWidget {
             Get.to(() => const SitterInbox());
           }
           if (index == 4) {
-            Get.to(() => const SitterSettingPage());
+            Get.to(() => const SitterSettingScreen());
           }
         },
         items: const [

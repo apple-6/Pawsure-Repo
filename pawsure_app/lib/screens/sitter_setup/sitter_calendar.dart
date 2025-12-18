@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:get/get.dart'; // <--- Import GetX for navigation
 import 'sitter_dashboard.dart';
 import 'sitter_inbox.dart';
+import 'sitter_setting_screen.dart';
 // --- Data Models ---
 
 enum DateStatus { available, booked, unavailable }
@@ -24,11 +25,7 @@ class DateInfo {
   final DateStatus status;
   final BookingInfo? booking;
 
-  DateInfo({
-    required this.date,
-    required this.status,
-    this.booking,
-  });
+  DateInfo({required this.date, required this.status, this.booking});
 }
 
 // --- Main Widget ---
@@ -45,14 +42,22 @@ class _SitterCalendarState extends State<SitterCalendar> {
   DateTime _currentDate = DateTime.now();
   bool _isEditMode = false;
   List<DateTime> _selectedDates = [];
-  
+
   // 0 = Sunday, 1 = Monday, ... 6 = Saturday
-  List<int> _recurringUnavailableDays = []; 
-  
+  List<int> _recurringUnavailableDays = [];
+
   // Map Key: "yyyy-MM-dd"
   Map<String, DateInfo> _dateStatuses = {};
 
-  final List<String> _daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  final List<String> _daysOfWeek = [
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat",
+  ];
 
   // Your App's Green Color
   final Color _accentColor = const Color(0xFF1CCA5B);
@@ -67,7 +72,7 @@ class _SitterCalendarState extends State<SitterCalendar> {
     final now = DateTime.now();
     final year = now.year;
     final month = now.month;
-    
+
     // Create sample data for the CURRENT month so you can see it immediately
     _dateStatuses = {
       // Bookings on 15th and 16th
@@ -101,7 +106,7 @@ class _SitterCalendarState extends State<SitterCalendar> {
 
   DateInfo _getDateStatus(DateTime date) {
     final key = DateFormat('yyyy-MM-dd').format(date);
-    
+
     // 1. Check specific overrides (Manual settings/Bookings)
     if (_dateStatuses.containsKey(key)) {
       return _dateStatuses[key]!;
@@ -109,7 +114,7 @@ class _SitterCalendarState extends State<SitterCalendar> {
 
     // 2. Check recurring unavailability
     // Dart weekday: 1=Mon...7=Sun. Convert to 0=Sun...6=Sat
-    final dayIndex = date.weekday % 7; 
+    final dayIndex = date.weekday % 7;
     if (_recurringUnavailableDays.contains(dayIndex)) {
       return DateInfo(date: date, status: DateStatus.unavailable);
     }
@@ -139,14 +144,16 @@ class _SitterCalendarState extends State<SitterCalendar> {
   }
 
   void _handleMarkDates(DateStatus status, {DateTime? singleDate}) {
-    final datesToUpdate = _isEditMode ? _selectedDates : (singleDate != null ? [singleDate] : []);
+    final datesToUpdate = _isEditMode
+        ? _selectedDates
+        : (singleDate != null ? [singleDate] : []);
 
     setState(() {
       for (var date in datesToUpdate) {
         final key = DateFormat('yyyy-MM-dd').format(date);
         _dateStatuses[key] = DateInfo(date: date, status: status);
       }
-      
+
       if (_isEditMode) {
         _selectedDates = [];
         _isEditMode = false;
@@ -155,19 +162,25 @@ class _SitterCalendarState extends State<SitterCalendar> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("Marked ${datesToUpdate.length} date(s) as ${status.name}"),
+        content: Text(
+          "Marked ${datesToUpdate.length} date(s) as ${status.name}",
+        ),
         backgroundColor: _accentColor,
         duration: const Duration(seconds: 1),
       ),
     );
-    
+
     // Close bottom sheet if open (for single date mode)
     if (!_isEditMode && singleDate != null) Navigator.pop(context);
   }
 
   void _changeMonth(int offset) {
     setState(() {
-      _currentDate = DateTime(_currentDate.year, _currentDate.month + offset, 1);
+      _currentDate = DateTime(
+        _currentDate.year,
+        _currentDate.month + offset,
+        1,
+      );
     });
   }
 
@@ -176,14 +189,25 @@ class _SitterCalendarState extends State<SitterCalendar> {
   @override
   Widget build(BuildContext context) {
     // Calendar Math
-    final daysInMonth = DateTime(_currentDate.year, _currentDate.month + 1, 0).day;
+    final daysInMonth = DateTime(
+      _currentDate.year,
+      _currentDate.month + 1,
+      0,
+    ).day;
     final firstDayOfMonth = DateTime(_currentDate.year, _currentDate.month, 1);
-    final firstDayOffset = firstDayOfMonth.weekday % 7; 
+    final firstDayOffset = firstDayOfMonth.weekday % 7;
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Availability', style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Availability',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -202,7 +226,11 @@ class _SitterCalendarState extends State<SitterCalendar> {
                     children: [
                       _buildWeeklySettingsButton(),
                       const SizedBox(height: 20),
-                      _buildCalendarGrid(daysInMonth, firstDayOffset, firstDayOfMonth),
+                      _buildCalendarGrid(
+                        daysInMonth,
+                        firstDayOffset,
+                        firstDayOfMonth,
+                      ),
                       const SizedBox(height: 100), // Spacing
                     ],
                   ),
@@ -223,11 +251,18 @@ class _SitterCalendarState extends State<SitterCalendar> {
             // Navigate back to Dashboard (clears stack so no back button loop)
             Get.offAll(() => const SitterDashboard());
           }
-          // Add other navigations here (e.g., Index 1 -> Discover)
-          if (index == 3) { // Index 3 is Inbox
-          Get.to(() => const SitterInbox());
-        }
-
+          if (index == 1) {
+            // Navigate to Discover Screen
+          }
+          if (index == 2) {
+            Get.to(() => const SitterCalendar());
+          }
+          if (index == 3) {
+            Get.to(() => const SitterInbox());
+          }
+          if (index == 4) {
+            Get.to(() => const SitterSettingScreen());
+          }
         },
         items: const [
           BottomNavigationBarItem(
@@ -239,7 +274,9 @@ class _SitterCalendarState extends State<SitterCalendar> {
             label: 'Discover',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today), // Filled version for active state if preferred
+            icon: Icon(
+              Icons.calendar_today,
+            ), // Filled version for active state if preferred
             label: 'Calendar',
           ),
           BottomNavigationBarItem(
@@ -259,7 +296,9 @@ class _SitterCalendarState extends State<SitterCalendar> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: Colors.grey.shade200)),
-                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
+                boxShadow: const [
+                  BoxShadow(color: Colors.black12, blurRadius: 10),
+                ],
               ),
               child: Row(
                 children: [
@@ -268,9 +307,14 @@ class _SitterCalendarState extends State<SitterCalendar> {
                       onPressed: () => _handleMarkDates(DateStatus.unavailable),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
-                      child: const Text("Unavailable", style: TextStyle(color: Colors.grey)),
+                      child: const Text(
+                        "Unavailable",
+                        style: TextStyle(color: Colors.grey),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -280,9 +324,14 @@ class _SitterCalendarState extends State<SitterCalendar> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _accentColor,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
-                      child: const Text("Available", style: TextStyle(color: Colors.white)),
+                      child: const Text(
+                        "Available",
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ),
                 ],
@@ -311,7 +360,10 @@ class _SitterCalendarState extends State<SitterCalendar> {
                 child: Text(
                   DateFormat('MMMM yyyy').format(_currentDate),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               IconButton(
@@ -328,14 +380,25 @@ class _SitterCalendarState extends State<SitterCalendar> {
                       _selectedDates = [];
                     });
                   },
-                  child: Text("Done", style: TextStyle(color: _accentColor, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    "Done",
+                    style: TextStyle(
+                      color: _accentColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 )
               : OutlinedButton.icon(
                   onPressed: () => setState(() => _isEditMode = true),
                   icon: const Icon(Icons.edit, size: 16, color: Colors.black),
-                  label: const Text("Edit", style: TextStyle(color: Colors.black)),
+                  label: const Text(
+                    "Edit",
+                    style: TextStyle(color: Colors.black),
+                  ),
                   style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     side: BorderSide(color: Colors.grey.shade300),
                   ),
                 ),
@@ -384,18 +447,27 @@ class _SitterCalendarState extends State<SitterCalendar> {
       child: OutlinedButton.icon(
         onPressed: _showWeeklySettingsSheet,
         icon: const Icon(Icons.tune, size: 18, color: Colors.grey),
-        label: const Text("Set Weekly Availability", style: TextStyle(color: Colors.black87)),
+        label: const Text(
+          "Set Weekly Availability",
+          style: TextStyle(color: Colors.black87),
+        ),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 14),
           backgroundColor: Colors.grey.shade50,
           side: BorderSide(color: Colors.grey.shade300),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildCalendarGrid(int daysInMonth, int firstDayOffset, DateTime firstDayOfMonth) {
+  Widget _buildCalendarGrid(
+    int daysInMonth,
+    int firstDayOffset,
+    DateTime firstDayOfMonth,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -403,19 +475,34 @@ class _SitterCalendarState extends State<SitterCalendar> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
-          BoxShadow(color: Colors.grey.shade100, blurRadius: 10, offset: const Offset(0, 5))
-        ]
+          BoxShadow(
+            color: Colors.grey.shade100,
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         children: [
           // Header Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: _daysOfWeek.map((day) => Expanded(
-              child: Center(
-                child: Text(day, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
-              ),
-            )).toList(),
+            children: _daysOfWeek
+                .map(
+                  (day) => Expanded(
+                    child: Center(
+                      child: Text(
+                        day,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
           ),
           const SizedBox(height: 12),
           // Days Grid
@@ -430,9 +517,13 @@ class _SitterCalendarState extends State<SitterCalendar> {
             ),
             itemBuilder: (context, index) {
               if (index < firstDayOffset) return const SizedBox();
-              
+
               final dayNumber = index - firstDayOffset + 1;
-              final date = DateTime(firstDayOfMonth.year, firstDayOfMonth.month, dayNumber);
+              final date = DateTime(
+                firstDayOfMonth.year,
+                firstDayOfMonth.month,
+                dayNumber,
+              );
               return _buildDayCell(date);
             },
           ),
@@ -484,7 +575,7 @@ class _SitterCalendarState extends State<SitterCalendar> {
             color: textColor,
             fontWeight: FontWeight.w600,
             decoration: textDeco,
-            fontSize: 13
+            fontSize: 13,
           ),
         ),
       ),
@@ -496,7 +587,9 @@ class _SitterCalendarState extends State<SitterCalendar> {
   void _showDateActionSheet(DateTime date) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       backgroundColor: Colors.white,
       builder: (ctx) {
         return SafeArea(
@@ -508,7 +601,10 @@ class _SitterCalendarState extends State<SitterCalendar> {
               children: [
                 Text(
                   DateFormat('EEEE, MMM d').format(date),
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -519,23 +615,40 @@ class _SitterCalendarState extends State<SitterCalendar> {
                 ),
                 const SizedBox(height: 24),
                 OutlinedButton(
-                  onPressed: () => _handleMarkDates(DateStatus.unavailable, singleDate: date),
+                  onPressed: () => _handleMarkDates(
+                    DateStatus.unavailable,
+                    singleDate: date,
+                  ),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     side: BorderSide(color: Colors.grey.shade300),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: const Text("Mark as Unavailable", style: TextStyle(color: Colors.black)),
+                  child: const Text(
+                    "Mark as Unavailable",
+                    style: TextStyle(color: Colors.black),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 ElevatedButton(
-                  onPressed: () => _handleMarkDates(DateStatus.available, singleDate: date),
+                  onPressed: () =>
+                      _handleMarkDates(DateStatus.available, singleDate: date),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _accentColor,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: const Text("Mark as Available", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    "Mark as Available",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -547,10 +660,12 @@ class _SitterCalendarState extends State<SitterCalendar> {
 
   void _showBookingDetailSheet(DateInfo info) {
     if (info.booking == null) return;
-    
+
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       backgroundColor: Colors.white,
       builder: (ctx) {
         return SafeArea(
@@ -560,36 +675,58 @@ class _SitterCalendarState extends State<SitterCalendar> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text("Booking Details", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const Text(
+                  "Booking Details",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 24),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade200)
+                    border: Border.all(color: Colors.grey.shade200),
                   ),
                   child: Row(
                     children: [
                       Container(
-                        width: 56, height: 56,
+                        width: 56,
+                        height: 56,
                         decoration: BoxDecoration(
-                          color: Colors.white, 
+                          color: Colors.white,
                           shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 5)]
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.shade200,
+                              blurRadius: 5,
+                            ),
+                          ],
                         ),
                         alignment: Alignment.center,
-                        child: const Icon(Icons.pets, size: 28, color: Colors.orange),
+                        child: const Icon(
+                          Icons.pets,
+                          size: 28,
+                          color: Colors.orange,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(info.booking!.petName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                          Text(
+                            info.booking!.petName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          Text("Owned by ${info.booking!.ownerName}", style: TextStyle(color: Colors.grey.shade600)),
+                          Text(
+                            "Owned by ${info.booking!.ownerName}",
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
                         ],
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -599,9 +736,14 @@ class _SitterCalendarState extends State<SitterCalendar> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: const Text("Close", style: TextStyle(color: Colors.white)),
+                  child: const Text(
+                    "Close",
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ],
             ),
@@ -618,7 +760,9 @@ class _SitterCalendarState extends State<SitterCalendar> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       backgroundColor: Colors.white,
       builder: (ctx) {
         return StatefulBuilder(
@@ -630,11 +774,20 @@ class _SitterCalendarState extends State<SitterCalendar> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Set Weekly Availability", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const Text(
+                      "Set Weekly Availability",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       "Select days you are always unavailable.",
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     Expanded(
@@ -654,25 +807,46 @@ class _SitterCalendarState extends State<SitterCalendar> {
                               });
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                               decoration: BoxDecoration(
-                                color: isChecked ? _accentColor.withOpacity(0.1) : Colors.grey.shade50,
+                                color: isChecked
+                                    ? _accentColor.withOpacity(0.1)
+                                    : Colors.grey.shade50,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: isChecked ? _accentColor : Colors.transparent
-                                )
+                                  color: isChecked
+                                      ? _accentColor
+                                      : Colors.transparent,
+                                ),
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(_daysOfWeek[index], style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: isChecked ? _accentColor : Colors.black87
-                                  )),
-                                  if (isChecked) 
-                                    Icon(Icons.check_circle, color: _accentColor, size: 20)
+                                  Text(
+                                    _daysOfWeek[index],
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: isChecked
+                                          ? _accentColor
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                  if (isChecked)
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: _accentColor,
+                                      size: 20,
+                                    )
                                   else
-                                    Icon(Icons.circle_outlined, color: Colors.grey.shade400, size: 20)
+                                    Icon(
+                                      Icons.circle_outlined,
+                                      color: Colors.grey.shade400,
+                                      size: 20,
+                                    ),
                                 ],
                               ),
                             ),
@@ -690,22 +864,32 @@ class _SitterCalendarState extends State<SitterCalendar> {
                           });
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Weekly availability saved")),
+                            const SnackBar(
+                              content: Text("Weekly availability saved"),
+                            ),
                           );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _accentColor,
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                        child: const Text("Save Settings", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          "Save Settings",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
             );
-          }
+          },
         );
       },
     );
