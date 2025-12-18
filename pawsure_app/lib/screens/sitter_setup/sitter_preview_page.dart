@@ -42,21 +42,33 @@ class SitterPreviewPage extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: Colors.white,
                       boxShadow: [
-                         BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, spreadRadius: 2)
-                      ]
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
                     child: const CircleAvatar(
                       radius: 40,
                       backgroundColor: brandLight,
-                      child: Icon(Icons.person_outline, size: 40, color: brandColor),
+                      child: Icon(
+                        Icons.person_outline,
+                        size: 40,
+                        color: brandColor,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   // Name
                   const Text(
                     "Aisha B.",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textDark),
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: textDark,
+                    ),
                   ),
                   const SizedBox(height: 4),
 
@@ -64,9 +76,16 @@ class SitterPreviewPage extends StatelessWidget {
                   const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.location_on_outlined, size: 16, color: textGrey),
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: 16,
+                        color: textGrey,
+                      ),
                       SizedBox(width: 4),
-                      Text("Petaling Jaya, Selangor", style: TextStyle(color: textGrey)),
+                      Text(
+                        "Petaling Jaya, Selangor",
+                        style: TextStyle(color: textGrey),
+                      ),
                     ],
                   ),
 
@@ -78,7 +97,13 @@ class SitterPreviewPage extends StatelessWidget {
                     children: [
                       Icon(Icons.star, color: starColor, size: 20),
                       SizedBox(width: 4),
-                      Text("4.9", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(
+                        "4.9",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                       SizedBox(width: 4),
                       Text("(32 Reviews)", style: TextStyle(color: textGrey)),
                     ],
@@ -92,23 +117,40 @@ class SitterPreviewPage extends StatelessWidget {
                     children: [
                       // Verified Badge
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: brandLight,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.verified_user_outlined, size: 16, color: brandColor),
+                            Icon(
+                              Icons.verified_user_outlined,
+                              size: 16,
+                              color: brandColor,
+                            ),
                             SizedBox(width: 4),
-                            Text("Verified", style: TextStyle(color: brandColor, fontWeight: FontWeight.w600, fontSize: 12)),
+                            Text(
+                              "Verified",
+                              style: TextStyle(
+                                color: brandColor,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 10),
                       // Super Sitter Badge
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           border: Border.all(color: Colors.grey.shade300),
@@ -116,9 +158,20 @@ class SitterPreviewPage extends StatelessWidget {
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.favorite_border, size: 16, color: textGrey),
+                            Icon(
+                              Icons.favorite_border,
+                              size: 16,
+                              color: textGrey,
+                            ),
                             SizedBox(width: 4),
-                            Text("Super Sitter", style: TextStyle(color: textGrey, fontWeight: FontWeight.w600, fontSize: 12)),
+                            Text(
+                              "Super Sitter",
+                              style: TextStyle(
+                                color: textGrey,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -136,22 +189,37 @@ class SitterPreviewPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("About Me", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textDark)),
+                  const Text(
+                    "About Me",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textDark,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   const Text(
                     "Hi! I'm Aisha, an experienced pet sitter with over 3 years of caring for furry friends. I grew up with dogs and cats, so I understand their needs and behaviors. I treat every pet like my own family member and ensure they receive the love and attention they deserve.",
                     style: TextStyle(color: textGrey, height: 1.5),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Stats Row
                   Row(
                     children: [
-                      _buildStatItem(Icons.access_time, "3 years exp.", textGrey),
+                      _buildStatItem(
+                        Icons.access_time,
+                        "3 years exp.",
+                        textGrey,
+                      ),
                       const SizedBox(width: 24),
-                      _buildStatItem(Icons.calendar_today_outlined, "32 stays completed", textGrey),
+                      _buildStatItem(
+                        Icons.calendar_today_outlined,
+                        "32 stays completed",
+                        textGrey,
+                      ),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
@@ -163,7 +231,14 @@ class SitterPreviewPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Services & Rates", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textDark)),
+                  const Text(
+                    "Services & Rates",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textDark,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   _buildServiceRow("Dog Boarding", "RM 80/night", brandColor),
                   const Divider(height: 24),
@@ -171,7 +246,11 @@ class SitterPreviewPage extends StatelessWidget {
                   const Divider(height: 24),
                   _buildServiceRow("Pet Sitting", "RM 60/visit", brandColor),
                   const Divider(height: 24),
-                  _buildServiceRow("Overnight Care", "RM 100/night", brandColor),
+                  _buildServiceRow(
+                    "Overnight Care",
+                    "RM 100/night",
+                    brandColor,
+                  ),
                 ],
               ),
             ),
@@ -186,35 +265,44 @@ class SitterPreviewPage extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: const [
-                      Text("Reviews", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textDark)),
+                      Text(
+                        "Reviews",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: textDark,
+                        ),
+                      ),
                       Text("32 total", style: TextStyle(color: textGrey)),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Review 1
                   _buildReviewItem(
                     name: "Sarah M.",
                     petName: "Max",
                     date: "Oct 2024",
                     rating: 5,
-                    comment: "Aisha was amazing with Max! She sent daily updates and photos. Highly recommend!",
+                    comment:
+                        "Aisha was amazing with Max! She sent daily updates and photos. Highly recommend!",
                     starColor: starColor,
-                    textGrey: textGrey
+                    textGrey: textGrey,
                   ),
                   const Divider(height: 30),
-                  
+
                   // Review 2
                   _buildReviewItem(
                     name: "John D.",
                     petName: "Bella",
                     date: "Sep 2024",
                     rating: 5,
-                    comment: "Very professional and caring. Bella loved staying with her.",
+                    comment:
+                        "Very professional and caring. Bella loved staying with her.",
                     starColor: starColor,
-                    textGrey: textGrey
+                    textGrey: textGrey,
                   ),
-                   const Divider(height: 30),
+                  const Divider(height: 30),
 
                   // Review 3
                   _buildReviewItem(
@@ -222,9 +310,10 @@ class SitterPreviewPage extends StatelessWidget {
                     petName: "Charlie",
                     date: "Aug 2024",
                     rating: 5,
-                    comment: "Great communication throughout the stay. Would book again.",
+                    comment:
+                        "Great communication throughout the stay. Would book again.",
                     starColor: starColor,
-                    textGrey: textGrey
+                    textGrey: textGrey,
                   ),
                 ],
               ),
@@ -239,13 +328,21 @@ class SitterPreviewPage extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: () {}, // Disabled for preview or show snackbar
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF86EFAC), // Lighter green as seen in image
+                  backgroundColor: const Color(
+                    0xFF86EFAC,
+                  ), // Lighter green as seen in image
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: const Text(
-                  "Contact Sitter (Preview Only)", 
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)
+                  "Contact Sitter (Preview Only)",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -271,7 +368,7 @@ class SitterPreviewPage extends StatelessWidget {
             color: Colors.black.withOpacity(0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: child,
@@ -294,8 +391,18 @@ class SitterPreviewPage extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(name, style: const TextStyle(fontSize: 15, color: Color(0xFF4B5563))),
-        Text(price, style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 15)),
+        Text(
+          name,
+          style: const TextStyle(fontSize: 15, color: Color(0xFF4B5563)),
+        ),
+        Text(
+          price,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: color,
+            fontSize: 15,
+          ),
+        ),
       ],
     );
   }
@@ -319,18 +426,30 @@ class SitterPreviewPage extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                Text("Pet: $petName", style: TextStyle(color: textGrey, fontSize: 12)),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                Text(
+                  "Pet: $petName",
+                  style: TextStyle(color: textGrey, fontSize: 12),
+                ),
               ],
             ),
             Row(
               children: [
                 Row(
-                  children: List.generate(5, (index) => Icon(
-                    Icons.star, 
-                    size: 16, 
-                    color: index < rating ? starColor : Colors.grey[300]
-                  )),
+                  children: List.generate(
+                    5,
+                    (index) => Icon(
+                      Icons.star,
+                      size: 16,
+                      color: index < rating ? starColor : Colors.grey[300],
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Text(date, style: TextStyle(color: textGrey, fontSize: 12)),
@@ -339,7 +458,10 @@ class SitterPreviewPage extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        Text(comment, style: TextStyle(color: textGrey, height: 1.4, fontSize: 14)),
+        Text(
+          comment,
+          style: TextStyle(color: textGrey, height: 1.4, fontSize: 14),
+        ),
       ],
     );
   }

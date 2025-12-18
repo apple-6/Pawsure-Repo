@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'sitter_calendar.dart';
+import 'sitter_inbox.dart';
 import 'sitter_preview_page.dart';
+import 'sitter_dashboard.dart';
 
 class SitterSettingPage extends StatelessWidget {
   const SitterSettingPage({super.key});
@@ -7,19 +11,57 @@ class SitterSettingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Define the specific green color from your screenshot
-    const Color brandColor = Color(0xFF2ECA6A); 
+    const Color brandColor = Color(0xFF2ECA6A);
     const Color lightGreen = Color(0xFFE8F5E9);
 
     return Scaffold(
-      backgroundColor: Colors.white, // Or Colors.grey[50] depending on preference
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        // Assuming there is a back button or menu button, otherwise remove leading
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {},
-        ),
+      backgroundColor:
+          Colors.white, // Or Colors.grey[50] depending on preference
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.accents[3],
+        unselectedItemColor: Colors.grey.shade600,
+        currentIndex: 0,
+        onTap: (index) {
+          if (index == 0) {
+            Get.to(() => const SitterDashboard());
+          }
+          if (index == 1) {
+            // Placeholder for Discover Screen
+          }
+          if (index == 2) {
+            Get.to(() => const SitterCalendar());
+          }
+          if (index == 3) {
+            // Index 3 is Inbox
+            Get.to(() => const SitterInbox());
+          }
+          if (index == 4) {
+            Get.to(() => const SitterSettingPage());
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_filled),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.explore_outlined),
+            label: 'Discover',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today_outlined),
+            label: 'Calendar',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            label: 'Inbox',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings_outlined),
+            label: 'Setting',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -32,22 +74,29 @@ class SitterSettingPage extends StatelessWidget {
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: brandColor.withOpacity(0.3), width: 2),
+                  border: Border.all(
+                    color: brandColor.withOpacity(0.3),
+                    width: 2,
+                  ),
                 ),
                 child: CircleAvatar(
                   radius: 40,
                   backgroundColor: lightGreen,
-                  child: const Icon(Icons.person_outline, size: 40, color: brandColor),
+                  child: const Icon(
+                    Icons.person_outline,
+                    size: 40,
+                    color: brandColor,
+                  ),
                   // If you have an image, use: backgroundImage: NetworkImage('url'),
                 ),
               ),
               const SizedBox(height: 12),
-              
+
               const Text(
                 "Aisha B.",
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
-              
+
               const SizedBox(height: 8),
 
               // Rating Row
@@ -61,10 +110,7 @@ class SitterSettingPage extends StatelessWidget {
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   SizedBox(width: 4),
-                  Text(
-                    "(32 Reviews)",
-                    style: TextStyle(color: Colors.grey),
-                  ),
+                  Text("(32 Reviews)", style: TextStyle(color: Colors.grey)),
                 ],
               ),
 
@@ -72,7 +118,10 @@ class SitterSettingPage extends StatelessWidget {
 
               // Verified Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: lightGreen,
                   borderRadius: BorderRadius.circular(20),
@@ -80,11 +129,18 @@ class SitterSettingPage extends StatelessWidget {
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.check_circle_outline, size: 16, color: brandColor),
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 16,
+                      color: brandColor,
+                    ),
                     SizedBox(width: 6),
                     Text(
                       "Verified Sitter",
-                      style: TextStyle(color: brandColor, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: brandColor,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -93,7 +149,7 @@ class SitterSettingPage extends StatelessWidget {
               const SizedBox(height: 24),
 
               // --- 2. ACTION BUTTONS ---
-              
+
               // Edit Profile Button
               SizedBox(
                 width: double.infinity,
@@ -110,7 +166,10 @@ class SitterSettingPage extends StatelessWidget {
                     ),
                     elevation: 0,
                   ),
-                  child: const Text("Edit Profile", style: TextStyle(fontSize: 16, color: Colors.white)),
+                  child: const Text(
+                    "Edit Profile",
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
                 ),
               ),
 
@@ -129,8 +188,15 @@ class SitterSettingPage extends StatelessWidget {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.visibility_outlined, color: Colors.black87, size: 20),
-                  label: const Text("Preview as Owner", style: TextStyle(fontSize: 16, color: Colors.black87)),
+                  icon: const Icon(
+                    Icons.visibility_outlined,
+                    color: Colors.black87,
+                    size: 20,
+                  ),
+                  label: const Text(
+                    "Preview as Owner",
+                    style: TextStyle(fontSize: 16, color: Colors.black87),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey[100], // Very light grey
                     elevation: 0,
@@ -148,7 +214,11 @@ class SitterSettingPage extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   "Sitter Tools",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
 
@@ -178,7 +248,7 @@ class SitterSettingPage extends StatelessWidget {
               ),
               _buildToolTile(
                 icon: Icons.logout, // Logout Icon
-                title: "Log Out",   // New Title
+                title: "Log Out", // New Title
                 brandColor: Colors.red, // Red color to indicate exit
                 lightGreen: Colors.red.withOpacity(0.1), // Light red background
                 onTap: () {
@@ -187,7 +257,7 @@ class SitterSettingPage extends StatelessWidget {
                   // Navigator.pushReplacementNamed(context, '/login');
                 },
               ),
-              
+
               // Extra space at bottom
               const SizedBox(height: 20),
             ],
@@ -199,11 +269,11 @@ class SitterSettingPage extends StatelessWidget {
 
   // Helper Widget for the menu items to reduce code repetition
   Widget _buildToolTile({
-    required IconData icon, 
-    required String title, 
+    required IconData icon,
+    required String title,
     required Color brandColor,
     required Color lightGreen,
-    required VoidCallback onTap
+    required VoidCallback onTap,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -232,7 +302,11 @@ class SitterSettingPage extends StatelessWidget {
           title,
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: Colors.grey,
+        ),
       ),
     );
   }
