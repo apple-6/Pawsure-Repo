@@ -6,6 +6,8 @@ import '../../widgets/home/status_card.dart';
 import '../../widgets/home/sos_button.dart';
 import '../../widgets/home/upcoming_events_card.dart';
 import '../../models/pet_model.dart';
+import 'booking_card.dart';
+import '../../controllers/booking_controller.dart'; // 🆕 Import
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -13,6 +15,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final HomeController controller = Get.find<HomeController>();
+    final BookingController bookingController = Get.put(BookingController());
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -150,6 +153,67 @@ class HomeScreen extends StatelessWidget {
 
                 // 🆕 Upcoming Events Card
                 UpcomingEventsCard(petId: pet.id),
+                const SizedBox(height: 24),
+
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "My Bookings",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Obx(() {
+                  // 1. Check loading from BookingController
+                  if (bookingController.isLoadingBookings.value) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+
+                  final filteredBookings = bookingController.userBookings.where(
+                    (booking) {
+                      final bId = booking['pet']?['id'];
+                      final sId = controller.selectedPet.value?.id;
+                      return bId.toString() == sId.toString();
+                    },
+                  ).toList();
+
+                  if (filteredBookings.isEmpty) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade100),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          "No bookings scheduled for this pet.",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: filteredBookings
+                        .map((booking) => BookingCard(booking: booking))
+                        .toList(),
+                  );
+                }),
+
+                const SizedBox(height: 80),
               ],
             ),
           ),
