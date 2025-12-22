@@ -3,11 +3,20 @@ import 'dart:io'; // Required for Platform detection
 import 'package:flutter/foundation.dart'; // Required for kIsWeb detection
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pawsure_app/screens/community/booking_modal.dart';
 
 class SitterDetailsScreen extends StatefulWidget {
   final String sitterId;
+  final DateTime? startDate;
+  final DateTime? endDate;
 
-  const SitterDetailsScreen({super.key, required this.sitterId});
+  // UPDATE CONSTRUCTOR
+  const SitterDetailsScreen({
+    super.key,
+    required this.sitterId,
+    this.startDate,
+    this.endDate,
+  });
 
   @override
   State<SitterDetailsScreen> createState() => _SitterDetailsScreenState();
@@ -333,11 +342,21 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                               width: double.infinity,
                               child: ElevatedButton(
                                 onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "Booking feature coming soon!",
-                                      ),
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled:
+                                        true, // Allows modal to use full height for keyboard
+                                    backgroundColor: Colors
+                                        .transparent, // Keeps the custom rounded corners
+                                    builder: (context) => BookingModal(
+                                      sitterId: widget.sitterId,
+                                      sitterName:
+                                          name, // From the snapshot data mapping
+                                      ratePerNight:
+                                          price, // From the snapshot data mapping
+                                      // Optional: Pass these if you have a date picker in the previous screen
+                                      startDate: widget.startDate,
+                                      endDate: widget.endDate,
                                     ),
                                   );
                                 },

@@ -7,7 +7,7 @@ import 'package:pawsure_app/screens/community/sitter_model.dart';
 import 'package:pawsure_app/services/sitter_service.dart';
 
 class FindSitterTab extends StatefulWidget {
-  final Function(String sitterId) onSitterClick;
+  final Function(String sitterId, DateTime? start, DateTime? end) onSitterClick;
 
   const FindSitterTab({super.key, required this.onSitterClick});
 
@@ -201,7 +201,9 @@ class _FindSitterTabState extends State<FindSitterTab> {
           // ----------------------------------------------------
           // REMOVED: const SizedBox(height: 16),
           // REMOVED: const _MapViewPlaceholder(),
-          const SizedBox(height: 24), // Retained/Adjusted for spacing after search row
+          const SizedBox(
+            height: 24,
+          ), // Retained/Adjusted for spacing after search row
           Text(
             'Available Sitters (${availableSitters.length})',
             style: Theme.of(
@@ -223,26 +225,28 @@ class _FindSitterTabState extends State<FindSitterTab> {
           isLoading
               ? const Center(child: CircularProgressIndicator())
               : availableSitters.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40.0),
-                      child: Center(
-                        child: Text(
-                          'No sitters found matching your criteria.',
-                          style: TextStyle(color: Colors.grey, fontSize: 16),
-                        ),
-                      ),
-                    )
-                  : Column(
-                      children: availableSitters.map((sitter) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12.0),
-                          child: SitterCard(
-                            sitter: sitter,
-                            onClick: widget.onSitterClick,
-                          ),
-                        );
-                      }).toList(),
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40.0),
+                  child: Center(
+                    child: Text(
+                      'No sitters found matching your criteria.',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
                     ),
+                  ),
+                )
+              : Column(
+                  children: availableSitters.map((sitter) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: SitterCard(
+                        sitter: sitter,
+                        onClick: (id) {
+                          widget.onSitterClick(id, startDate, endDate);
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
         ],
       ),
     );
@@ -395,7 +399,9 @@ class SitterCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1), // Used withOpacity to fix the withValues issue
+              color: Colors.grey.withOpacity(
+                0.1,
+              ), // Used withOpacity to fix the withValues issue
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 2),
@@ -432,8 +438,8 @@ class SitterCard extends StatelessWidget {
                     Text(
                       sitter.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
