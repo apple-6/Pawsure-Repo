@@ -1,14 +1,8 @@
-import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:get/get.dart';
-//import 'package:pawsure_app/services/pet_service.dart';
 import 'package:pawsure_app/controllers/pet_controller.dart'; // ADDED
 import 'package:pawsure_app/models/pet_model.dart';
-import 'package:pawsure_app/services/booking_service.dart';
 import 'package:pawsure_app/controllers/booking_controller.dart';
 
 class BookingModal extends StatefulWidget {
@@ -36,42 +30,20 @@ class _BookingModalState extends State<BookingModal> {
   final TextEditingController _messageController = TextEditingController();
   final PetController _petController = Get.find<PetController>();
   final BookingController _bookingController = Get.put(BookingController());
-  Pet? _selectedPet;
-  // List<Pet> _myPets = [];
-  // bool _isLoadingPets = true;
 
-  //String? _selectedPetId;
+  Pet? _selectedPet;
   TimeOfDay _dropOffTime = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _pickUpTime = const TimeOfDay(hour: 17, minute: 0);
   bool _isLoading = false;
-
-  // List<Map<String, dynamic>> _myPets = [];
-  // bool _isLoadingPets = true;
 
   @override
   void initState() {
     super.initState();
     _selectedPet = _petController.selectedPet.value;
-    //_fetchMyPets();
     if (_selectedPet == null && _petController.pets.isNotEmpty) {
       _selectedPet = _petController.pets.first;
     }
   }
-
-  // Future<void> _fetchMyPets() async {
-  //   try {
-  //     final fetchedPets = await _petService.fetchPets();
-  //     if (mounted) {
-  //       setState(() {
-  //         _myPets = fetchedPets;
-  //         if (_myPets.isNotEmpty) _selectedPet = _myPets.first;
-  //         _isLoadingPets = false;
-  //       });
-  //     }
-  //   } catch (e) {
-  //     if (mounted) setState(() => _isLoadingPets = false);
-  //   }
-  // }
 
   Future<void> _selectTime(BuildContext context, bool isDropOff) async {
     final TimeOfDay? picked = await showTimePicker(
@@ -125,7 +97,6 @@ class _BookingModalState extends State<BookingModal> {
     setState(() => _isLoading = true);
 
     // 3. Call the Controller
-    // Note: We use _bookingController instead of _bookingService now
     final success = await _bookingController.createBooking(
       startDate: widget.startDate!,
       endDate: widget.endDate!,
@@ -149,8 +120,6 @@ class _BookingModalState extends State<BookingModal> {
           ),
         );
       }
-      // Note: We don't need a catch block here because the controller handles errors internally
-      // and returns 'false' if it failed.
     }
   }
 
@@ -518,47 +487,6 @@ class _BookingModalState extends State<BookingModal> {
       ],
     );
   }
-
-  // Place this at the end of the _BookingModalState class
-  // Widget _buildPetSelector() {
-  //   return _isLoadingPets
-  //       ? const LinearProgressIndicator(color: Color(0xFF34D399))
-  //       : Container(
-  //           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-  //           decoration: BoxDecoration(
-  //             color: Colors.grey[50],
-  //             borderRadius: BorderRadius.circular(16),
-  //           ),
-  //           child: ListTile(
-  //             contentPadding: EdgeInsets.zero,
-  //             leading: const Icon(Icons.favorite, color: Color(0xFF34D399)),
-  //             title: Text(_selectedPet?.name ?? "Select your pet"),
-  //             trailing: PopupMenuButton<Pet>(
-  //               icon: const Icon(Icons.keyboard_arrow_down_rounded),
-  //               onSelected: (Pet pet) => setState(() => _selectedPet = pet),
-  //               itemBuilder: (context) => _myPets
-  //                   .map(
-  //                     (pet) => PopupMenuItem<Pet>(
-  //                       value: pet,
-  //                       child: Row(
-  //                         children: [
-  //                           if (_selectedPet?.id == pet.id)
-  //                             const Icon(
-  //                               Icons.check,
-  //                               size: 20,
-  //                               color: Colors.green,
-  //                             ),
-  //                           const SizedBox(width: 8),
-  //                           Text(pet.name),
-  //                         ],
-  //                       ),
-  //                     ),
-  //                   )
-  //                   .toList(),
-  //             ),
-  //           ),
-  //         );
-  // }
 
   Widget _buildPetSelector() {
     // Obx makes this rebuild if the Controller's isLoadingPets changes

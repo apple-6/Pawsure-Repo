@@ -172,10 +172,10 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
               data['experience'] ??
               data['services'] ??
               "House Sitting,Dog Walking";
-          final List<String> petTypes = [
-            "Dog",
-            "Cat",
-          ]; // This can remain hardcoded or fetched if API has it
+          // final List<String> petTypes = [
+          //   "Dog",
+          //   "Cat",
+          // ]; // This can remain hardcoded or fetched if API has it
 
           return SingleChildScrollView(
             child: Column(
