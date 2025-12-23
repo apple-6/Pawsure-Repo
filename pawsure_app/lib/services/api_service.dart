@@ -142,12 +142,17 @@ class ApiService {
       // Add photo file if provided
       if (photoPath != null && photoPath.isNotEmpty) {
         try {
+          // 🔧 FIX: Generate a clean, unique filename to prevent 'undefined' URLs
+          final String fileName =
+              'pet_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
           final photoFile = await http.MultipartFile.fromPath(
             'photo',
             photoPath,
+            filename: fileName, // Add this line
           );
           request.files.add(photoFile);
-          debugPrint('📸 Added photo file: $photoPath');
+          debugPrint('📸 Added photo file: $photoPath as $fileName');
         } catch (e) {
           debugPrint('⚠️ Error adding photo file: $e');
         }
@@ -237,14 +242,20 @@ class ApiService {
       }
 
       // Add new photo if provided
+      // Add new photo if provided
       if (photoPath != null && photoPath.isNotEmpty) {
         try {
+          // 🔧 FIX: Generate a clean, unique filename
+          final String fileName =
+              'pet_update_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
           final photoFile = await http.MultipartFile.fromPath(
             'photo',
             photoPath,
+            filename: fileName, // Add this line
           );
           request.files.add(photoFile);
-          debugPrint('📸 Updating photo: $photoPath');
+          debugPrint('📸 Updating photo: $photoPath as $fileName');
         } catch (e) {
           debugPrint('⚠️ Error adding photo file: $e');
         }

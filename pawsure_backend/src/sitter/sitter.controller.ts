@@ -16,12 +16,14 @@ import {
   Patch, 
   UseGuards,
   ParseIntPipe,
+  Put,
 } from '@nestjs/common';
 import { SitterService } from './sitter.service';
 import { CreateSitterDto } from './dto/create-sitter.dto';
 import { UpdateSitterDto } from './dto/update-sitter.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 
 @Controller('sitters')
 export class SitterController {
@@ -96,5 +98,15 @@ export class SitterController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id', ParseIntPipe) id: number, @Request() req) {
     await this.sitterService.remove(id, req.user.id);
+  }
+
+  @Put('availability')
+  @UseGuards(JwtAuthGuard) // Assuming you use a guard to get req.user
+  async updateAvailability(
+    @Request() req,
+    @Body() dto: UpdateAvailabilityDto,
+  ) {
+    // Pass the userId from the auth token and the data from the body
+    return this.sitterService.updateAvailability(req.user.id, dto);
   }
 }

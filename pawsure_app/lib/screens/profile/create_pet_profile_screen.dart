@@ -1,4 +1,4 @@
-//pawsure_app\lib\screens\profile\create_pet_profile_screen.dart
+// pawsure_app\lib\screens\profile\create_pet_profile_screen.dart
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -9,7 +9,7 @@ import 'package:pawsure_app/models/pet_model.dart';
 enum AnimalType { dog, cat }
 
 class CreatePetProfileScreen extends StatefulWidget {
-  final Pet? petToEdit; // 🆕 If provided, we're in EDIT mode
+  final Pet? petToEdit;
 
   const CreatePetProfileScreen({super.key, this.petToEdit});
 
@@ -28,18 +28,16 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
   final TextEditingController _lastVetVisitController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  // 🆕 Health Information State
   String _sterilizationStatus = 'unknown';
   double _moodRating = 5.0;
 
-  // Image Picker State
+  // --- IMAGE STATE ---
+  // Mirrors the _selectedDocumentPath logic from the Sitter code
   XFile? _pickedFile;
   final ImagePicker _picker = ImagePicker();
 
-  // API Service
   final ApiService _apiService = Get.find<ApiService>();
 
-  // Breed Options
   final List<String> _dogBreeds = [
     'Golden Retriever',
     'German Shepherd',
@@ -56,34 +54,28 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
   ];
   String? _selectedBreed;
 
-  // 🆕 Edit Mode Indicator
   bool get isEditMode => widget.petToEdit != null;
 
   @override
   void initState() {
     super.initState();
-    // 🆕 Pre-fill form if editing
     if (isEditMode) {
       _populateFormWithPetData();
     }
   }
 
-  // 🆕 Populate form with existing pet data
   void _populateFormWithPetData() {
     final pet = widget.petToEdit!;
-
     _nameController.text = pet.name;
     _breedController.text = pet.breed ?? '';
     _selectedBreed = pet.breed;
 
-    // Set animal type
     if (pet.species?.toLowerCase() == 'dog') {
       _selectedAnimalType = AnimalType.dog;
     } else if (pet.species?.toLowerCase() == 'cat') {
       _selectedAnimalType = AnimalType.cat;
     }
 
-    // Set dates
     if (pet.dob != null && pet.dob!.isNotEmpty) {
       _dobController.text = _formatDateForDisplay(pet.dob!);
     }
@@ -91,7 +83,6 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
       _lastVetVisitController.text = _formatDateForDisplay(pet.lastVetVisit!);
     }
 
-    // Set health info
     if (pet.weight != null) {
       _weightController.text = pet.weight!.toStringAsFixed(1);
     }
@@ -107,7 +98,6 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     }
   }
 
-  // Format ISO date (yyyy-mm-dd) to display format (mm/dd/yyyy)
   String _formatDateForDisplay(String isoDate) {
     try {
       final parts = isoDate.split('-');
@@ -120,7 +110,6 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     }
   }
 
-  // Format display date (mm/dd/yyyy) to ISO (yyyy-mm-dd)
   String? _formatDateForAPI(String displayDate) {
     if (displayDate.isEmpty) return null;
     try {
@@ -158,9 +147,7 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
     );
-
     if (!mounted) return;
-
     if (picked != null) {
       setState(() {
         controller.text =
@@ -169,13 +156,14 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     }
   }
 
+  // --- MODIFIED IMAGE PICKING LOGIC ---
   Future<void> _pickImage(ImageSource source) async {
     final XFile? file = await _picker.pickImage(source: source);
-
     if (!mounted) return;
 
     if (file != null) {
       setState(() {
+        // Store the XFile, which contains the local path
         _pickedFile = file;
       });
 
@@ -185,36 +173,22 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     }
   }
 
-  // 🆕 Enhanced save function (handles both create and update)
+  // --- UPDATED SAVE FUNCTION ---
   Future<void> _savePetProfile() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     if (_selectedAnimalType == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select an animal type (Dog or Cat)'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorSnackBar('Please select an animal type (Dog or Cat)');
       return;
     }
 
     if (_selectedBreed == null || _selectedBreed!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a breed'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorSnackBar('Please select a breed');
       return;
     }
 
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-
-    if (!mounted) return;
 
     scaffoldMessenger.showSnackBar(
       SnackBar(
@@ -225,26 +199,22 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     );
 
     try {
-      // Parse weight
-      double? weight;
-      if (_weightController.text.isNotEmpty) {
-        weight = double.tryParse(_weightController.text);
-      }
-
-      // Format dates
+      double? weight = _weightController.text.isNotEmpty
+          ? double.tryParse(_weightController.text)
+          : null;
       final formattedDob = _formatDateForAPI(_dobController.text);
       final formattedLastVetVisit = _formatDateForAPI(
         _lastVetVisitController.text,
       );
 
       if (isEditMode) {
-        // 🆕 UPDATE existing pet
         await _apiService.updatePet(
           petId: widget.petToEdit!.id,
           name: _nameController.text.trim(),
           breed: _selectedBreed!,
           species: _selectedAnimalType!.name,
           dob: formattedDob,
+          // Passing the path of the picked file, matching the Sitter setup logic
           photoPath: _pickedFile?.path,
           weight: weight,
           sterilizationStatus: _sterilizationStatus,
@@ -254,24 +224,13 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
           moodRating: _moodRating,
           lastVetVisit: formattedLastVetVisit,
         );
-
-        if (!mounted) return;
-
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              '✅ ${_nameController.text}\'s profile updated successfully!',
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
       } else {
-        // CREATE new pet
         await _apiService.createPet(
           name: _nameController.text.trim(),
           breed: _selectedBreed!,
           species: _selectedAnimalType!.name,
           dob: formattedDob,
+          // Passing the path of the picked file, matching the Sitter setup logic
           photoPath: _pickedFile?.path,
           weight: weight,
           sterilizationStatus: _sterilizationStatus,
@@ -281,31 +240,26 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
           moodRating: _moodRating,
           lastVetVisit: formattedLastVetVisit,
         );
-
-        if (!mounted) return;
-
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              '✅ ${_nameController.text}\'s profile created successfully!',
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
       }
 
-      navigator.pop(true); // Signal success
-    } catch (e) {
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
         SnackBar(
-          content: Text(
-            'Failed to ${isEditMode ? "update" : "create"} pet: ${e.toString()}',
-          ),
-          backgroundColor: Colors.red,
+          content: Text('✅ Profile saved successfully!'),
+          backgroundColor: Colors.green,
         ),
       );
+      navigator.pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      _showErrorSnackBar('Failed to save pet: ${e.toString()}');
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 
   @override
@@ -337,55 +291,14 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Colors.green,
-                          child: Icon(Icons.pets, color: Colors.white),
-                        ),
-                        if (!isEditMode)
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text(
-                              'Skip for Now',
-                              style: TextStyle(color: Colors.green),
-                            ),
-                          ),
-                      ],
-                    ),
+                    _buildHeader(),
                     const SizedBox(height: 20),
-
-                    // Title
-                    Text(
-                      isEditMode
-                          ? "Update ${widget.petToEdit!.name}'s Profile"
-                          : "Create Your Pet's Health Profile",
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      isEditMode
-                          ? "Update your pet's information below"
-                          : "Don't worry, you can add more details later",
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
+                    _buildTitleSection(),
                     const SizedBox(height: 30),
-
-                    // Photo Upload
                     _buildPhotoUploadArea(context),
                     const SizedBox(height: 30),
-
-                    // SECTION: Basic Information
                     _buildSectionTitle('Basic Information'),
                     const SizedBox(height: 16),
-
-                    // Pet's Name
                     _buildFieldLabel("Pet's Name", required: true),
                     _buildTextFormField(
                       controller: _nameController,
@@ -393,135 +306,95 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
                       validatorText: 'Please enter your pet\'s name.',
                     ),
                     const SizedBox(height: 20),
-
-                    // Animal Type
                     _buildFieldLabel("Animal Type", required: true),
                     _buildAnimalTypeSelection(),
                     const SizedBox(height: 20),
-
-                    // Breed
                     _buildFieldLabel("Breed", required: true),
                     _buildBreedDropdown(currentBreeds),
                     const SizedBox(height: 20),
-
-                    // Date of Birth
                     _buildFieldLabel("Date of Birth", required: false),
                     _buildDateOfBirthField(context, _dobController),
                     const SizedBox(height: 30),
-
-                    // SECTION: Health Information
                     _buildSectionTitle('Health Information (Optional)'),
                     const SizedBox(height: 16),
-
-                    // Weight
                     _buildFieldLabel("Weight (kg)", required: false),
                     _buildTextFormField(
                       controller: _weightController,
                       hintText: 'e.g., 12.5',
-                      keyboardType: TextInputType.numberWithOptions(
+                      keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      validatorText: null,
                     ),
                     const SizedBox(height: 20),
-
-                    // Sterilization Status
                     _buildFieldLabel("Sterilization Status", required: false),
                     const SizedBox(height: 8),
                     _buildSterilizationButtons(),
                     const SizedBox(height: 20),
-
-                    // Allergies
                     _buildFieldLabel("Allergies", required: false),
                     _buildTextFormField(
                       controller: _allergiesController,
                       hintText: 'e.g., Pollen, Chicken',
-                      validatorText: null,
                       maxLines: 2,
                     ),
                     const SizedBox(height: 20),
-
-                    // Mood Rating
                     _buildFieldLabel("Mood Rating (0-10)", required: false),
                     const SizedBox(height: 8),
                     _buildMoodRatingSlider(),
                     const SizedBox(height: 20),
-
-                    // Last Vet Visit
                     _buildFieldLabel("Last Vet Visit", required: false),
                     _buildDateOfBirthField(context, _lastVetVisitController),
-                    const SizedBox(height: 100), // Space for button
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),
             ),
-
-            // Fixed Save Button
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-                child: ElevatedButton(
-                  onPressed: _savePetProfile,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                  ),
-                  child: Text(
-                    isEditMode ? 'Save Changes' : 'Create Profile',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            _buildFixedSaveButton(),
           ],
         ),
       ),
     );
   }
 
-  // ========================================================================
-  // WIDGET BUILDERS
-  // ========================================================================
+  // --- UI HELPER WIDGETS ---
 
-  Widget _buildSectionTitle(String title) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade300, width: 1.5),
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const CircleAvatar(
+          radius: 20,
+          backgroundColor: Colors.green,
+          child: Icon(Icons.pets, color: Colors.white),
         ),
-      ),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Colors.green,
-        ),
-      ),
+        if (!isEditMode)
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Skip for Now',
+              style: TextStyle(color: Colors.green),
+            ),
+          ),
+      ],
     );
   }
 
-  Widget _buildFieldLabel(String label, {required bool required}) {
-    return Row(
+  Widget _buildTitleSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+          isEditMode
+              ? "Update ${widget.petToEdit!.name}'s Profile"
+              : "Create Your Pet's Health Profile",
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
-        if (required)
-          const Text(
-            ' *',
-            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-          ),
+        const SizedBox(height: 5),
+        Text(
+          isEditMode
+              ? "Update your pet's information below"
+              : "Don't worry, you can add more details later",
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        ),
       ],
     );
   }
@@ -547,11 +420,9 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
           fit: BoxFit.cover,
           width: 120,
           height: 120,
-          errorBuilder: (context, error, stackTrace) {
-            return const Center(
-              child: Icon(Icons.upload, size: 40, color: Colors.grey),
-            );
-          },
+          errorBuilder: (context, error, stackTrace) => const Center(
+            child: Icon(Icons.upload, size: 40, color: Colors.grey),
+          ),
         ),
       );
     } else {
@@ -598,6 +469,65 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     );
   }
 
+  Widget _buildFixedSaveButton() {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: ElevatedButton(
+          onPressed: _savePetProfile,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, 56),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.0),
+            ),
+          ),
+          child: Text(
+            isEditMode ? 'Save Changes' : 'Create Profile',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade300, width: 1.5),
+        ),
+      ),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.green,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFieldLabel(String label, {required bool required}) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        ),
+        if (required)
+          const Text(
+            ' *',
+            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+          ),
+      ],
+    );
+  }
+
   Widget _buildTextFormField({
     required TextEditingController controller,
     required String hintText,
@@ -625,12 +555,7 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
         ),
       ),
       validator: validatorText != null
-          ? (value) {
-              if (value == null || value.isEmpty) {
-                return validatorText;
-              }
-              return null;
-            }
+          ? (value) => (value == null || value.isEmpty) ? validatorText : null
           : null,
     );
   }
@@ -659,29 +584,21 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     required IconData icon,
   }) {
     final bool isSelected = _selectedAnimalType == type;
-    final Color borderColor = isSelected ? Colors.green : Colors.grey.shade300;
-    final Color textColor = isSelected ? Colors.black : Colors.grey.shade700;
-
     return Expanded(
       child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedAnimalType = type;
-            // Don't reset breed if editing
-            if (!isEditMode) {
-              _selectedBreed = null;
-            }
-          });
-        },
+        onTap: () => setState(() {
+          _selectedAnimalType = type;
+          if (!isEditMode) _selectedBreed = null;
+        }),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 20),
           decoration: BoxDecoration(
             border: Border.all(
-              color: borderColor,
+              color: isSelected ? Colors.green : Colors.grey.shade300,
               width: isSelected ? 2.5 : 1.0,
             ),
             borderRadius: BorderRadius.circular(10),
-            color: isSelected ? Colors.green.withAlpha(13) : Colors.white,
+            color: isSelected ? Colors.green.withOpacity(0.05) : Colors.white,
           ),
           child: Column(
             children: [
@@ -693,7 +610,10 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
               const SizedBox(height: 5),
               Text(
                 label,
-                style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.black : Colors.grey.shade700,
+                ),
               ),
             ],
           ),
@@ -716,20 +636,16 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
         ),
       ),
       value: breeds.contains(_selectedBreed) ? _selectedBreed : null,
-      items: breeds.map((String breed) {
-        return DropdownMenuItem<String>(value: breed, child: Text(breed));
-      }).toList(),
-      onChanged: (String? newValue) {
-        setState(() {
-          _selectedBreed = newValue;
-        });
-      },
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please select a breed';
-        }
-        return null;
-      },
+      items: breeds
+          .map(
+            (String breed) =>
+                DropdownMenuItem<String>(value: breed, child: Text(breed)),
+          )
+          .toList(),
+      onChanged: (String? newValue) =>
+          setState(() => _selectedBreed = newValue),
+      validator: (value) =>
+          (value == null || value.isEmpty) ? 'Please select a breed' : null,
     );
   }
 
@@ -762,7 +678,6 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     );
   }
 
-  // 🆕 Sterilization Status Buttons
   Widget _buildSterilizationButtons() {
     return SegmentedButton<String>(
       segments: const [
@@ -783,16 +698,11 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
         ),
       ],
       selected: {_sterilizationStatus},
-      onSelectionChanged: (Set<String> selected) {
-        setState(() {
-          _sterilizationStatus = selected.first;
-        });
-      },
-      style: ButtonStyle(visualDensity: VisualDensity.comfortable),
+      onSelectionChanged: (Set<String> selected) =>
+          setState(() => _sterilizationStatus = selected.first),
     );
   }
 
-  // 🆕 Mood Rating Slider
   Widget _buildMoodRatingSlider() {
     return Column(
       children: [
@@ -803,11 +713,7 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
           divisions: 10,
           label: _moodRating.toStringAsFixed(1),
           activeColor: Colors.green,
-          onChanged: (double value) {
-            setState(() {
-              _moodRating = value;
-            });
-          },
+          onChanged: (double value) => setState(() => _moodRating = value),
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
