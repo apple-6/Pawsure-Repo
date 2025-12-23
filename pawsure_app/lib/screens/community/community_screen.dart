@@ -199,56 +199,56 @@ class _CommunityScreenState extends State<CommunityScreen> {
             body: NestedScrollView(
               headerSliverBuilder:
                   (BuildContext context, bool innerBoxIsScrolled) {
-                return <Widget>[
-                  SliverList(
-                    delegate: SliverChildListDelegate([
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
-                        child: Text(
-                          'Community',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
+                    return <Widget>[
+                      SliverList(
+                        delegate: SliverChildListDelegate([
+                          const Padding(
+                            padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+                            child: Text(
+                              'Community',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                        ]),
                       ),
-                    ]),
-                  ),
-                  SliverAppBar(
-                    automaticallyImplyLeading: false,
-                    pinned: true,
-                    toolbarHeight: 0,
-                    bottom: PreferredSize(
-                      preferredSize: const Size.fromHeight(50.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).scaffoldBackgroundColor,
-                          border: Border(
-                            bottom: BorderSide(
-                              color: Colors.grey.shade300,
-                              width: 1.0,
+                      SliverAppBar(
+                        automaticallyImplyLeading: false,
+                        pinned: true,
+                        toolbarHeight: 0,
+                        bottom: PreferredSize(
+                          preferredSize: const Size.fromHeight(50.0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).scaffoldBackgroundColor,
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: Colors.grey.shade300,
+                                  width: 1.0,
+                                ),
+                              ),
+                            ),
+                            child: TabBar(
+                              indicatorSize: TabBarIndicatorSize.label,
+                              indicatorWeight: 3.0,
+                              labelColor: Theme.of(context).primaryColor,
+                              unselectedLabelColor: Colors.grey.shade600,
+                              dividerColor: Colors.transparent,
+                              tabs: const [
+                                Tab(text: 'Feed'),
+                                Tab(text: 'Find a Sitter'),
+                              ],
+                              onTap: (index) {
+                                setState(() {});
+                              },
                             ),
                           ),
                         ),
-                        child: TabBar(
-                          indicatorSize: TabBarIndicatorSize.label,
-                          indicatorWeight: 3.0,
-                          labelColor: Theme.of(context).primaryColor,
-                          unselectedLabelColor: Colors.grey.shade600,
-                          dividerColor: Colors.transparent,
-                          tabs: const [
-                            Tab(text: 'Feed'),
-                            Tab(text: 'Find a Sitter'),
-                          ],
-                          onTap: (index) {
-                            setState(() {});
-                          },
-                        ),
                       ),
-                    ),
-                  ),
-                ];
-              },
+                    ];
+                  },
               body: TabBarView(
                 // We only need 2 children here, matching the length of the TabBar.
                 children: [
@@ -257,30 +257,40 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
                   // 2. Find a Sitter Tab Content (Corrected and implemented)
                   FindSitterTab(
-                    onSitterClick: (String sitterId) {
-                      print("Navigating to Sitter Profile: $sitterId"); // Retained for debug
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              SitterDetailsScreen(sitterId: sitterId),
-                        ),
-                      );
-                    },
+                    onSitterClick:
+                        (
+                          String sitterId,
+                          DateTime? startDate,
+                          DateTime? endDate,
+                        ) {
+                          print(
+                            "Navigating to Sitter Profile: $sitterId",
+                          ); // Retained for debug
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SitterDetailsScreen(
+                                sitterId: sitterId,
+                                startDate: startDate,
+                                endDate: endDate,
+                              ),
+                            ),
+                          );
+                        },
                   ),
                 ],
               ),
             ),
             floatingActionButton:
                 DefaultTabController.of(innerContext).index == 0
-                    ? FloatingActionButton(
-                        onPressed: _showCreatePostModal,
-                        backgroundColor: Theme.of(innerContext).primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: const CircleBorder(),
-                        child: const Icon(Icons.add),
-                      )
-                    : null,
+                ? FloatingActionButton(
+                    onPressed: _showCreatePostModal,
+                    backgroundColor: Theme.of(innerContext).primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: const CircleBorder(),
+                    child: const Icon(Icons.add),
+                  )
+                : null,
           );
         },
       ),
