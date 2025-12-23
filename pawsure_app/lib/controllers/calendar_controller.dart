@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:pawsure_app/models/event_model.dart';
 import 'package:pawsure_app/services/api_service.dart';
 import 'package:pawsure_app/services/auth_service.dart';
+import 'package:pawsure_app/constants/api_config.dart'; // 1. Import Config
 
 class CalendarController extends GetxController {
   final ApiService _apiService = Get.find<ApiService>();
@@ -350,11 +351,8 @@ class CalendarController extends GetxController {
         debugPrint('⚠️ Could not get auth token: $e');
       }
 
-      // Use appropriate API URL
-      const apiUrl = String.fromEnvironment(
-        'API_BASE_URL',
-        defaultValue: 'http://localhost:3000',
-      );
+      // 2. USE API CONFIG HERE
+      final apiUrl = ApiConfig.baseUrl;
 
       final response = await http.patch(
         Uri.parse('$apiUrl/events/${event.id}'),
