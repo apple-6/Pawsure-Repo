@@ -1,5 +1,16 @@
+// lib/constants/api_endpoints.dart
+import 'api_config.dart'; // 1. Import your smart config
+
 class ApiEndpoints {
-  static const String baseUrl = 'http://localhost:3000';
+  // 2. CHANGE THIS LINE
+  // OLD: static const String baseUrl = 'http://localhost:3000';
+
+  // NEW: Grab the correct IP dynamically from ApiConfig
+  static String get baseUrl => ApiConfig.baseUrl;
+
+  // --------------------------------------------------------
+  // Keep everything else exactly the same below...
+  // --------------------------------------------------------
 
   // Sitter Endpoints
   static const String sitters = '/sitters';
