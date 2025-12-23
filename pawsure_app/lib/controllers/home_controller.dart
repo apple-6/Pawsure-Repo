@@ -4,10 +4,15 @@ import 'package:get/get.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/controllers/pet_controller.dart';
 import 'package:pawsure_app/controllers/profile_controller.dart';
+import 'package:pawsure_app/services/activity_service.dart';
+import 'package:pawsure_app/models/activity_log_model.dart';
 
 class HomeController extends GetxController {
   // 🔧 Use centralized PetController
   PetController get _petController => Get.find<PetController>();
+
+  // 🆕 Activity Service
+  final ActivityService _activityService = ActivityService();
 
   // --- State Variables ---
   var currentMood = "❓".obs;
@@ -16,6 +21,10 @@ class HomeController extends GetxController {
   // Daily Progress
   var dailyProgress = <String, int>{"walks": 0, "meals": 0, "wellbeing": 0}.obs;
   final Map<String, int> dailyGoals = {"walks": 2, "meals": 2, "wellbeing": 1};
+
+  // 🆕 Activity Stats
+  var todayActivityStats = Rx<ActivityStats?>(null);
+  var isLoadingActivityStats = false.obs;
 
   @override
   void onInit() {
@@ -60,6 +69,9 @@ class HomeController extends GetxController {
     ever(_petController.selectedPet, (Pet? pet) {
       if (pet != null) {
         _updatePetData(pet);
+        loadTodayActivityStats(
+          pet.id,
+        ); // 🆕 Load activity stats when pet changes
       }
     });
   }
@@ -80,6 +92,40 @@ class HomeController extends GetxController {
 
     // TODO: Fetch actual activity data from backend
     dailyProgress.value = {"walks": 1, "meals": 2, "wellbeing": 0};
+  }
+
+  /// 🆕 Load today's activity stats
+  Future<void> loadTodayActivityStats(int petId) async {
+    try {
+      isLoadingActivityStats.value = true;
+      final stats = await _activityService.getStats(petId, 'day');
+      todayActivityStats.value = stats;
+    } catch (e) {
+      debugPrint('❌ Error loading today\'s activity stats: $e');
+      todayActivityStats.value = null;
+    } finally {
+      isLoadingActivityStats.value = false;
+    }
+  }
+
+  /// 🆕 Calculate daily progress percentage
+  int calculateDailyProgress() {
+    final stats = todayActivityStats.value;
+    if (stats == null) return 0;
+
+    // Define daily targets (customize as needed)
+    const targetMinutes = 30; // 30 minutes of activity per day
+    const targetActivities = 2; // At least 2 activities per day
+
+    final minutesProgress = (stats.totalDuration / targetMinutes * 100).clamp(
+      0,
+      100,
+    );
+    final activitiesProgress = (stats.totalActivities / targetActivities * 100)
+        .clamp(0, 100);
+
+    // Average of both metrics
+    return ((minutesProgress + activitiesProgress) / 2).round();
   }
 
   /// 🔧 Getters that delegate to PetController
@@ -136,6 +182,8 @@ class HomeController extends GetxController {
     currentMood.value = "❓";
     userName.value = "User";
     dailyProgress.value = {"walks": 0, "meals": 0, "wellbeing": 0};
+    todayActivityStats.value = null;
+    isLoadingActivityStats.value = false;
     debugPrint('✅ HomeController state reset');
   }
 }

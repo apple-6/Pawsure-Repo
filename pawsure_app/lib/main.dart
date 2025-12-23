@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'bindings/initial_bindings.dart';
+import 'controllers/navigation_controller.dart'; // 🆕 Import
 
 // Screens
 import 'screens/auth/onboarding_screen.dart';
@@ -15,8 +16,8 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[DEBUG] PawsureApp: Starting main()');
 
-  // 🗑️ REMOVED: Get.put(PetController...)
-  // Reason: It is now handled in InitialBindings to ensure ApiService loads first.
+  // 🆕 Register NavigationController globally
+  Get.put(NavigationController(), permanent: true);
 
   runApp(const PawsureApp());
 }
