@@ -8,17 +8,9 @@ import 'package:pawsure_app/models/health_record_model.dart';
 import 'package:pawsure_app/models/event_model.dart';
 import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
+import 'package:pawsure_app/constants/api_config.dart';
 
-String get apiBaseUrl {
-  const envUrl = String.fromEnvironment('API_BASE_URL');
-  if (envUrl.isNotEmpty) return envUrl;
-
-  if (Platform.isAndroid) {
-    return 'http://10.0.2.2:3000';
-  } else {
-    return 'http://localhost:3000';
-  }
-}
+String get apiBaseUrl => ApiConfig.baseUrl;
 
 class ApiService {
   Future<Map<String, String>> _getHeaders() async {
@@ -552,6 +544,80 @@ class ApiService {
         );
       }
     } catch (e) {
+      rethrow;
+    }
+  }
+
+  // ========================================================================
+  // BOOKINGS API (Sitter)
+  // ========================================================================
+
+  /// GET /bookings/sitter - Fetch all bookings for the authenticated sitter
+  Future<List<Map<String, dynamic>>> getSitterBookings() async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/bookings/sitter');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/bookings/sitter'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        final bookings = jsonList
+            .map((e) => e as Map<String, dynamic>)
+            .toList();
+
+        debugPrint('✅ Parsed ${bookings.length} sitter bookings');
+        return bookings;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to load sitter bookings (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in getSitterBookings: $e');
+      rethrow;
+    }
+  }
+
+  /// PATCH /bookings/:id/status - Update booking status (accept/decline)
+  Future<Map<String, dynamic>> updateBookingStatus(int bookingId, String status) async {
+    try {
+      debugPrint('✏️ API: PATCH $apiBaseUrl/bookings/$bookingId/status');
+      debugPrint('📤 Updating status to: $status');
+
+      final headers = await _getHeaders();
+      final response = await http.patch(
+        Uri.parse('$apiBaseUrl/bookings/$bookingId/status'),
+        headers: headers,
+        body: jsonEncode({'status': status}),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        debugPrint('✅ Booking status updated successfully');
+        return json;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to update booking status (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in updateBookingStatus: $e');
       rethrow;
     }
   }
