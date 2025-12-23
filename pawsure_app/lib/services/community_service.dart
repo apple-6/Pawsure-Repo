@@ -1,3 +1,4 @@
+//pawsure_app\lib\services\community_service.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -8,8 +9,9 @@ import 'package:pawsure_app/constants/api_endpoints.dart';
 class CommunityService {
   Future<List<PostModel>> getAllPosts() async {
     try {
-      final response = await http
-          .get(Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.posts}'));
+      final response = await http.get(
+        Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.posts}'),
+      );
       if (response.statusCode == 200) {
         final List<dynamic> jsonList =
             jsonDecode(response.body) as List<dynamic>;
@@ -46,7 +48,8 @@ class CommunityService {
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         return PostModel.fromJson(
-            jsonDecode(response.body) as Map<String, dynamic>);
+          jsonDecode(response.body) as Map<String, dynamic>,
+        );
       }
       throw Exception('Failed to add post (${response.statusCode})');
     } catch (e) {
@@ -64,8 +67,10 @@ class CommunityService {
         final List<dynamic> jsonList =
             jsonDecode(response.body) as List<dynamic>;
         return jsonList
-            .map((comment) =>
-                CommentModel.fromJson(comment as Map<String, dynamic>))
+            .map(
+              (comment) =>
+                  CommentModel.fromJson(comment as Map<String, dynamic>),
+            )
             .toList();
       }
       throw Exception('Failed to load comments (${response.statusCode})');
@@ -80,10 +85,7 @@ class CommunityService {
     required String content,
   }) async {
     try {
-      final payload = {
-        'postId': postId,
-        'content': content,
-      };
+      final payload = {'postId': postId, 'content': content};
 
       final response = await http.post(
         Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.addComment}'),
@@ -93,7 +95,8 @@ class CommunityService {
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         return CommentModel.fromJson(
-            jsonDecode(response.body) as Map<String, dynamic>);
+          jsonDecode(response.body) as Map<String, dynamic>,
+        );
       }
       throw Exception('Failed to add comment (${response.statusCode})');
     } catch (e) {

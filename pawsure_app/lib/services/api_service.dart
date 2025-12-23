@@ -8,17 +8,9 @@ import 'package:pawsure_app/models/health_record_model.dart';
 import 'package:pawsure_app/models/event_model.dart';
 import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
+import 'package:pawsure_app/constants/api_config.dart';
 
-String get apiBaseUrl {
-  const envUrl = String.fromEnvironment('API_BASE_URL');
-  if (envUrl.isNotEmpty) return envUrl;
-
-  if (Platform.isAndroid) {
-    return 'http://10.0.2.2:3000';
-  } else {
-    return 'http://localhost:3000';
-  }
-}
+String get apiBaseUrl => ApiConfig.baseUrl;
 
 class ApiService {
   Future<Map<String, String>> _getHeaders() async {
