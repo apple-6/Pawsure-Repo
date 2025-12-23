@@ -1,18 +1,17 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express'; // Important!
+import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.enableCors({ 
-      origin: '*',
-      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-      allowedHeaders: '*',
-    });    
-  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
-  // --- ADD THIS LINE ---
-  // This allows your frontend (e.g., http://localhost:5173)
-  // to make requests to your backend (http://localhost:3000)
-  app.enableCors();
-  // ---------------------
+  // 1. Add <NestExpressApplication> here so TypeScript sees the static methods
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // 2. This maps the URL path to your local folder
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads/', // This matches the start of your database string
+  });
+
+  await app.listen(3000);
 }
 bootstrap();
