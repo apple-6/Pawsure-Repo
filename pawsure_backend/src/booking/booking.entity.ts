@@ -1,4 +1,3 @@
-// src/booking/booking.entity.ts
 import { Payment } from 'src/payment/payment.entity';
 import { Pet } from 'src/pet/pet.entity';
 import { Review } from 'src/review/review.entity';
@@ -10,25 +9,34 @@ import {
 
 @Entity('bookings')
 export class Booking {
-  @PrimaryGeneratedColumn() // 'INT booking_id PK'
+  @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'date' }) // 'DATE start_date'
+  @Column({ type: 'date' })
   start_date: string;
 
-  @Column({ type: 'date' }) // 'DATE end_date'
+  @Column({ type: 'date' })
   end_date: string;
 
-  @Column() // 'STRING status'
+  @Column()
   status: string;
 
-  @Column({ type: 'float' }) // 'FLOAT total_amount'
+  @Column({ type: 'float' })
   total_amount: number;
 
-  @CreateDateColumn() // 'TIMESTAMP created_at'
+  @Column({ type: 'text', nullable: true })
+  message: string;
+
+  @Column()
+  drop_off_time: string;
+
+  @Column() 
+  pick_up_time: string;
+
+  @CreateDateColumn()
   created_at: Date;
 
-  @UpdateDateColumn() // 'TIMESTAMP updated_at'
+  @UpdateDateColumn()
   updated_at: Date;
 
   // --- Relationships ---
