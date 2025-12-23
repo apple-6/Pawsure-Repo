@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Patch, Param,ParseIntPipe, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Patch, Param, ParseIntPipe, Get } from '@nestjs/common';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -9,11 +9,18 @@ import { Pet } from '../pet/pet.entity';
 @Controller('bookings')
 export class BookingController {
   constructor(private readonly bookingService: BookingService) {}
+
 @Get()
 @UseGuards(JwtAuthGuard) 
 async findAll(@Request() req) {
- 
   return this.bookingService.findAllByUser(req.user.id); 
+}
+
+@Get('sitter')
+@UseGuards(JwtAuthGuard)
+async findAllForSitter(@Request() req) {
+  // Fetch bookings where the sitter's userId matches the logged-in user
+  return this.bookingService.findAllBySitterUserId(req.user.id);
 }
 
 @Post()
