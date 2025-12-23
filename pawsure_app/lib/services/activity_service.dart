@@ -1,4 +1,3 @@
-//pawsure_app\lib\services\activity_service.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -10,17 +9,14 @@ class ActivityService {
     try {
       final response = await http.get(
         Uri.parse(
-          '${ApiEndpoints.baseUrl}${ApiEndpoints.activitiesByPet(petId)}',
-        ),
+            '${ApiEndpoints.baseUrl}${ApiEndpoints.activitiesByPet(petId)}'),
       );
       if (response.statusCode == 200) {
         final List<dynamic> jsonList =
             jsonDecode(response.body) as List<dynamic>;
         return jsonList
-            .map(
-              (activity) =>
-                  ActivityModel.fromJson(activity as Map<String, dynamic>),
-            )
+            .map((activity) =>
+                ActivityModel.fromJson(activity as Map<String, dynamic>))
             .toList();
       }
       throw Exception('Failed to load activities (${response.statusCode})');
@@ -60,8 +56,7 @@ class ActivityService {
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         return ActivityModel.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+            jsonDecode(response.body) as Map<String, dynamic>);
       }
       throw Exception('Failed to add activity (${response.statusCode})');
     } catch (e) {

@@ -22,7 +22,6 @@ node_modules/
 .packages
 .pub-cache/
 .pub/
-.metadata
 
 # Flutter generated plugin files
 .flutter-plugins

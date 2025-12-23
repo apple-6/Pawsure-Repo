@@ -1,15 +1,16 @@
-// pawsure_app/lib/screens/community/sitter_details.dart
 import 'dart:convert';
+import 'dart:io'; // Required for Platform detection
+import 'package:flutter/foundation.dart'; // Required for kIsWeb detection
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/screens/community/booking_modal.dart';
-import 'package:pawsure_app/constants/api_config.dart'; // 1. Import Config
 
 class SitterDetailsScreen extends StatefulWidget {
   final String sitterId;
   final DateTime? startDate;
   final DateTime? endDate;
 
+  // UPDATE CONSTRUCTOR
   const SitterDetailsScreen({
     super.key,
     required this.sitterId,
@@ -24,6 +25,18 @@ class SitterDetailsScreen extends StatefulWidget {
 class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
   late Future<Map<String, dynamic>> _sitterFuture;
 
+  // DYNAMIC BASE URL
+  // This automatically selects the correct URL based on the device you are running on.
+  String get baseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:3000'; // For Web
+    } else if (Platform.isAndroid) {
+      return 'http://10.0.2.2:3000'; // For Android Emulator
+    } else {
+      return 'http://localhost:3000'; // For Windows, macOS, and iOS Simulator
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -31,11 +44,10 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
   }
 
   Future<Map<String, dynamic>> _fetchSitterData() async {
-    // 2. Use the central config
-    final url = '${ApiConfig.baseUrl}/sitters/${widget.sitterId}';
+    final url = '$baseUrl/sitters/${widget.sitterId}';
 
     try {
-      print("Attempting to fetch: $url");
+      print("Attempting to fetch: $url"); // Debug print to see exact URL
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -46,6 +58,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
         );
       }
     } catch (e) {
+      // Re-throw with a clearer message for the UI
       throw Exception('Failed to connect to $url.\n\nError: $e');
     }
   }
@@ -107,10 +120,12 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
             return const Center(child: Text("Sitter not found"));
           }
 
-          // 3. Data Loaded
+          // 3. Data Loaded - Map JSON to your existing UI variables
           final data = snapshot.data!;
           final user = data['user'] ?? {};
           final List<dynamic> reviewsData = data['reviews'] ?? [];
+
+          // --- MAPPING BACKEND DATA TO UI ---
 
           // Logic to handle photo_gallery (comma separated string) -> First Image
           String? galleryImage;
@@ -130,6 +145,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
           final bool isVerified = data['status'] == 'approved';
           final String name = user['name'] ?? 'Sitter Name';
 
+          // Handle ratings that might come as int or double
           final double rating = (data['rating'] ?? data['avgRating'] ?? 0)
               .toDouble();
           final int reviewCount =
@@ -138,6 +154,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
           final String location =
               data['address'] ?? data['location'] ?? 'Unknown Location';
 
+          // Handle price parsing safely
           final double price =
               double.tryParse(data['ratePerNight'].toString()) ??
               double.tryParse(data['price'].toString()) ??
@@ -146,13 +163,19 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
           final String bio = data['bio'] ?? 'No bio available';
           final String houseType = data['houseType'] ?? 'Apartment';
 
+          // Logic for bookings
           final int bookingsLen = (data['bookings'] as List? ?? []).length;
           final String bookingsCompleted = "$bookingsLen+ bookings";
 
+          // Mapped services from backend instead of hardcoded
           final String servicesString =
               data['experience'] ??
               data['services'] ??
               "House Sitting,Dog Walking";
+          // final List<String> petTypes = [
+          //   "Dog",
+          //   "Cat",
+          // ]; // This can remain hardcoded or fetched if API has it
 
           return SingleChildScrollView(
             child: Column(
@@ -203,7 +226,9 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF34D399),
+                            color: const Color(
+                              0xFF34D399,
+                            ), // Green verify color
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Row(
@@ -235,6 +260,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Name
                       Text(
                         name,
                         style: const TextStyle(
@@ -244,6 +270,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
+                      // Rating
                       Row(
                         children: [
                           const Icon(
@@ -262,6 +289,8 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                         ],
                       ),
                       const SizedBox(height: 8),
+
+                      // Location
                       Row(
                         children: [
                           const Icon(
@@ -279,6 +308,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 24),
 
                       // --- 3. Rate & Booking Card ---
@@ -286,7 +316,9 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE6F7F0),
+                          color: const Color(
+                            0xFFE6F7F0,
+                          ), // Very light green background
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.grey.shade200),
                         ),
@@ -312,12 +344,17 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                                 onPressed: () {
                                   showModalBottomSheet(
                                     context: context,
-                                    isScrollControlled: true,
-                                    backgroundColor: Colors.transparent,
+                                    isScrollControlled:
+                                        true, // Allows modal to use full height for keyboard
+                                    backgroundColor: Colors
+                                        .transparent, // Keeps the custom rounded corners
                                     builder: (context) => BookingModal(
                                       sitterId: widget.sitterId,
-                                      sitterName: name,
-                                      ratePerNight: price,
+                                      sitterName:
+                                          name, // From the snapshot data mapping
+                                      ratePerNight:
+                                          price, // From the snapshot data mapping
+                                      // Optional: Pass these if you have a date picker in the previous screen
                                       startDate: widget.startDate,
                                       endDate: widget.endDate,
                                     ),
@@ -349,7 +386,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
 
                       const SizedBox(height: 24),
 
-                      // --- 4. Experience ---
+                      // --- 4. Experience (Combined About Me + Experience) ---
                       _buildSectionCard(
                         title: "Experience",
                         icon: Icons.pets,
@@ -385,6 +422,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Display House Type here
                             Row(
                               children: [
                                 const Icon(
@@ -404,6 +442,8 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                               ],
                             ),
                             const SizedBox(height: 12),
+
+                            // Photos Row
                             Row(
                               children: [
                                 _buildEnvironmentPlaceholder(),
@@ -431,12 +471,12 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                       ),
 
                       const SizedBox(height: 16),
-
-                      // --- 8. Reviews ---
+                      // --- 8. Rate / Reviews ---
                       _buildSectionCard(
                         title: "Reviews",
                         trailing: GestureDetector(
                           onTap: () {
+                            // Navigation to full review list would go here
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text("See more clicked")),
                             );
@@ -455,6 +495,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                           ),
                         ),
                         child: Column(
+                          // Only show first 2 reviews here
                           children: reviewsData
                               .take(2)
                               .map((review) => _buildReviewItem(review))
@@ -567,7 +608,9 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
   }
 
   Widget _buildReviewItem(dynamic reviewData) {
+    // Parsing review data safely
     final String userName = reviewData['userName'] ?? 'User';
+    // Handle date formatting as needed
     final String date = reviewData['created_at'] != null
         ? reviewData['created_at'].toString().substring(0, 10)
         : 'Recent';

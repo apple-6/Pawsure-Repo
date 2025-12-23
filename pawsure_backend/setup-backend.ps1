@@ -45,28 +45,20 @@ if ($hasError) {
 Write-Host "System versions look good!`n" -ForegroundColor Green
 
 # ========================================
-# STEP 2: Clean Old Files (MODIFIED)
+# STEP 2: Clean Old Files
 # ========================================
 Write-Host "Cleaning old build files..." -ForegroundColor Yellow
 Remove-Item -Recurse -Force -ErrorAction SilentlyContinue dist
-# Note: We do NOT delete node_modules manually because 'npm ci' does it faster.
-# Note: We do NOT delete package-lock.json. That is the source of truth!
-Write-Host "  Deleted: dist/`n" -ForegroundColor Gray
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue node_modules
+Remove-Item -Force -ErrorAction SilentlyContinue package-lock.json
+Write-Host "  Deleted: dist/, node_modules/, package-lock.json`n" -ForegroundColor Gray
 
 # ========================================
-# STEP 3: Install Dependencies (MODIFIED)
+# STEP 3: Install Dependencies
 # ========================================
-Write-Host "Installing npm packages strictly from lockfile..." -ForegroundColor Cyan
+Write-Host "Installing npm packages...`n" -ForegroundColor Cyan
 
-# Check if lockfile exists
-if (-not (Test-Path "package-lock.json")) {
-    Write-Host "ERROR: package-lock.json is missing!" -ForegroundColor Red
-    Write-Host "One teammate must run 'npm install' to generate it and push it to Git." -ForegroundColor Yellow
-    exit 1
-}
-
-# 'npm ci' deletes node_modules and installs exact versions from the lockfile
-npm ci --legacy-peer-deps
+npm install --legacy-peer-deps
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n==================================" -ForegroundColor Green
@@ -75,6 +67,6 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "To start the backend, run:" -ForegroundColor Cyan
     Write-Host "  npm run start:dev`n" -ForegroundColor White
 } else {
-    Write-Host "`nnpm ci failed. Check errors above.`n" -ForegroundColor Red
+    Write-Host "`nnpm install failed. Check errors above.`n" -ForegroundColor Red
     exit 1
 }
