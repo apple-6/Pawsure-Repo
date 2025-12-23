@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'bindings/initial_bindings.dart';
-import 'controllers/pet_controller.dart'; // 🆕 Import PetController
 
 // Screens
 import 'screens/auth/onboarding_screen.dart';
@@ -16,9 +15,8 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[DEBUG] PawsureApp: Starting main()');
 
-  // 🆕 Register PetController globally FIRST (before any screens load)
-  Get.put(PetController(), permanent: true);
-  debugPrint('[DEBUG] PawsureApp: PetController registered globally');
+  // 🗑️ REMOVED: Get.put(PetController...)
+  // Reason: It is now handled in InitialBindings to ensure ApiService loads first.
 
   runApp(const PawsureApp());
 }
@@ -38,6 +36,7 @@ class PawsureApp extends StatelessWidget {
         useMaterial3: true,
       ),
 
+      // 🛠️ This binds all your services/controllers in the correct order
       initialBinding: InitialBindings(),
 
       // Initial screen

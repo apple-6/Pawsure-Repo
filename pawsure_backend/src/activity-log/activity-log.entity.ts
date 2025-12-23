@@ -1,33 +1,54 @@
-// src/activity-log/activity-log.entity.ts
 import { Pet } from 'src/pet/pet.entity';
 import {
-  Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 
 @Entity('activity_logs')
 export class ActivityLog {
-  @PrimaryGeneratedColumn() // 'INT log_id PK'
+  @PrimaryGeneratedColumn()
   id: number;
 
-  @Column() // 'STRING activity_type'
+  @Column()
   activity_type: string;
 
-  @Column({ type: 'float', nullable: true }) // 'FLOAT duration'
-  duration: number;
+  @Column({ nullable: true })
+  title: string;
 
-  @Column({ type: 'float', nullable: true }) // 'FLOAT distance'
-  distance: number;
+  @Column({ type: 'text', nullable: true })
+  description: string;
 
-  @Column({ type: 'timestamp' }) // 'TIMESTAMP timestamp'
-  timestamp: Date;
+  @Column({ type: 'int' })
+  duration_minutes: number;
 
-  @CreateDateColumn() // 'TIMESTAMP created_at'
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  distance_km: number;
+
+  @Column({ type: 'int', nullable: true })
+  calories_burned: number;
+
+  @Column({ type: 'timestamp' })
+  activity_date: Date;
+
+  @Column({ type: 'jsonb', nullable: true })
+  route_data: Array<{ lat: number; lng: number; timestamp: string }>;
+
+  @CreateDateColumn()
   created_at: Date;
 
-  @UpdateDateColumn() // 'TIMESTAMP updated_at'
+  @UpdateDateColumn()
   updated_at: Date;
 
-  // --- Relationships ---
-  @ManyToOne(() => Pet, (pet) => pet.activityLogs) // 'INT pet_id FK'
+  // 🔧 FIX: Add explicit column name mapping
+  @Column({ name: 'pet_id' })  // 👈 This tells TypeORM the DB column is 'pet_id'
+  petId: number;
+
+  @ManyToOne(() => Pet, (pet) => pet.activityLogs, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'pet_id' })  // 👈 This tells TypeORM how to join
   pet: Pet;
 }
