@@ -1,3 +1,6 @@
+// pawsure_app\lib\models\activity_log_model.dart
+import 'package:flutter/foundation.dart'; // 👈 FIX 1: Needed for debugPrint
+
 class ActivityLog {
   final int id;
   final int petId;
@@ -28,36 +31,60 @@ class ActivityLog {
   });
 
   factory ActivityLog.fromJson(Map<String, dynamic> json) {
-    // 🔧 FIX: Robust pet_id extraction
+    // 🔧 HELPER 1: Robust petId extraction (Updated per Fix 2)
     int extractPetId(Map<String, dynamic> json) {
-      // Try direct pet_id field
+      // Try camelCase petId (Backend standard)
+      if (json['petId'] != null) {
+        if (json['petId'] is int) return json['petId'] as int;
+        if (json['petId'] is String) {
+          final parsed = int.tryParse(json['petId'] as String);
+          if (parsed != null && parsed > 0) return parsed;
+        }
+      }
+
+      // Try snake_case pet_id (Fallback)
       if (json['pet_id'] != null) {
         if (json['pet_id'] is int) return json['pet_id'] as int;
-        if (json['pet_id'] is String)
-          return int.tryParse(json['pet_id'] as String) ?? 0;
+        if (json['pet_id'] is String) {
+          final parsed = int.tryParse(json['pet_id'] as String);
+          if (parsed != null && parsed > 0) return parsed;
+        }
       }
 
       // Try nested pet object
       if (json['pet'] != null && json['pet'] is Map) {
         final petMap = json['pet'] as Map<String, dynamic>;
         if (petMap['id'] != null) {
-          if (petMap['id'] is int) return petMap['id'] as int;
-          if (petMap['id'] is String)
-            return int.tryParse(petMap['id'] as String) ?? 0;
+          final parsed = int.tryParse(petMap['id'].toString());
+          if (parsed != null && parsed > 0) return parsed;
         }
       }
 
-      return 0; // Fallback
+      // 🔧 FIX: Throw error instead of returning 0
+      throw FormatException('Could not extract valid petId from JSON: $json');
+    }
+
+    // 🔧 HELPER 2: Safe Double Parsing (Fixes "0.00" String crash)
+    double? parseDouble(dynamic value) {
+      if (value == null) return null;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value);
+      return null;
     }
 
     return ActivityLog(
-      id: json['id'] as int,
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id'].toString()) ?? 0,
       petId: extractPetId(json),
-      activityType: json['activity_type'] as String,
+      activityType: json['activity_type'] ?? 'unknown',
       title: json['title'] as String?,
       description: json['description'] as String?,
-      durationMinutes: json['duration_minutes'] as int,
-      distanceKm: (json['distance_km'] as num?)?.toDouble(),
+      durationMinutes: (json['duration_minutes'] is int)
+          ? json['duration_minutes']
+          : int.tryParse(json['duration_minutes'].toString()) ?? 0,
+      // 🔧 FIX 2: Use helper to handle String "0.00"
+      distanceKm: parseDouble(json['distance_km']),
       caloriesBurned: json['calories_burned'] as int?,
       activityDate: DateTime.parse(json['activity_date'] as String),
       routeData: json['route_data'] != null

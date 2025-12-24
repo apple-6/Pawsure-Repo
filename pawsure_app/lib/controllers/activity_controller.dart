@@ -19,11 +19,24 @@ class ActivityController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    // 🔧 FIX 1: Load activities immediately if pet is already selected
+    if (_petController.selectedPet.value != null) {
+      final petId = _petController.selectedPet.value!.id;
+      loadActivities(petId);
+      loadStats(petId, selectedPeriod.value);
+    }
+
     // Watch for pet changes
     ever(_petController.selectedPet, (pet) {
       if (pet != null) {
         loadActivities(pet.id);
         loadStats(pet.id, selectedPeriod.value);
+      } else {
+        // 🔧 FIX 2: Clear activities when no pet is selected
+        activities.clear();
+        filteredActivities.clear();
+        stats.value = null;
       }
     });
 
@@ -37,6 +50,12 @@ class ActivityController extends GetxController {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
+    // 🔧 FIX 3: Validate petId before making API call
+    if (petId <= 0) {
+      debugPrint('⚠️ Invalid petId: $petId, skipping loadActivities');
+      return;
+    }
+
     try {
       isLoading.value = true;
       final fetchedActivities = await _activityService.getActivities(

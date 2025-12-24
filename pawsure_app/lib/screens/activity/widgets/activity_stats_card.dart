@@ -1,4 +1,3 @@
-// lib/screens/activity/widgets/activity_stats_card.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/activity_controller.dart';
@@ -17,7 +16,7 @@ class ActivityStatsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Row - Fixed overflow issue
+            // 🔧 FIX 2: Header Row with Flexible Text & Compact SegmentedButton
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -29,7 +28,37 @@ class ActivityStatsCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Obx(() => _buildPeriodSelector(controller)),
+                // 🔧 UPDATED: Used SegmentedButton for better spacing control
+                Obx(
+                  () => SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(
+                        value: 'day',
+                        label: Text('Day', style: TextStyle(fontSize: 12)),
+                      ),
+                      ButtonSegment(
+                        value: 'week',
+                        label: Text('Wk', style: TextStyle(fontSize: 12)),
+                      ),
+                      ButtonSegment(
+                        value: 'month',
+                        label: Text('Mo', style: TextStyle(fontSize: 12)),
+                      ),
+                    ],
+                    selected: {controller.selectedPeriod.value},
+                    onSelectionChanged: (Set<String> selection) {
+                      controller.setPeriod(selection.first);
+                    },
+                    style: ButtonStyle(
+                      visualDensity:
+                          VisualDensity.compact, // Reduces vertical height
+                      padding: WidgetStateProperty.all(
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                      ),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -101,50 +130,6 @@ class ActivityStatsCard extends StatelessWidget {
     );
   }
 
-  Widget _buildPeriodSelector(ActivityController controller) {
-    return Container(
-      decoration: BoxDecoration(
-  color: Colors.grey.withValues(alpha: 0.2), // FIXED
-  borderRadius: BorderRadius.circular(8),
-),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildPeriodButton(controller, 'Day', 'day'),
-          _buildPeriodButton(controller, 'Week', 'week'),
-          _buildPeriodButton(controller, 'Month', 'month'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPeriodButton(
-    ActivityController controller,
-    String label,
-    String period,
-  ) {
-    final isSelected = controller.selectedPeriod.value == period;
-
-    return GestureDetector(
-      onTap: () => controller.setPeriod(period),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.orange : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey[700],
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            fontSize: 12,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildStatBox({
     required IconData icon,
     required String label,
@@ -154,9 +139,7 @@ class ActivityStatsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withValues(
-          alpha: 0.1,
-        ), // FIXED: Use withValues instead of withOpacity
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
