@@ -23,6 +23,7 @@ import { FileService } from './file/file.service';
 import { FileModule } from './file/file.module';
 import { EventsModule } from './events/events.module'; // 👈 Correct Import
 
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -59,6 +60,7 @@ import { EventsModule } from './events/events.module'; // 👈 Correct Import
     RoleModule,
     AuthModule,
     EventsModule, // 👈 Added here
+    
   ],
   controllers: [AppController],
   providers: [AppService, FileService],
