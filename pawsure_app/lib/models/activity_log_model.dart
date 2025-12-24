@@ -1,4 +1,3 @@
-// lib/models/activity_log_model.dart
 class ActivityLog {
   final int id;
   final int petId;
@@ -29,20 +28,36 @@ class ActivityLog {
   });
 
   factory ActivityLog.fromJson(Map<String, dynamic> json) {
+    // 🔧 FIX: Robust pet_id extraction
+    int extractPetId(Map<String, dynamic> json) {
+      // Try direct pet_id field
+      if (json['pet_id'] != null) {
+        if (json['pet_id'] is int) return json['pet_id'] as int;
+        if (json['pet_id'] is String)
+          return int.tryParse(json['pet_id'] as String) ?? 0;
+      }
+
+      // Try nested pet object
+      if (json['pet'] != null && json['pet'] is Map) {
+        final petMap = json['pet'] as Map<String, dynamic>;
+        if (petMap['id'] != null) {
+          if (petMap['id'] is int) return petMap['id'] as int;
+          if (petMap['id'] is String)
+            return int.tryParse(petMap['id'] as String) ?? 0;
+        }
+      }
+
+      return 0; // Fallback
+    }
+
     return ActivityLog(
       id: json['id'] as int,
-      // FIX: Handle both direct pet_id and nested pet object
-      petId:
-          json['pet_id'] as int? ??
-          (json['pet'] != null ? (json['pet']['id'] as int?) : null) ??
-          0, // Fallback to 0 if both are null
+      petId: extractPetId(json),
       activityType: json['activity_type'] as String,
       title: json['title'] as String?,
       description: json['description'] as String?,
       durationMinutes: json['duration_minutes'] as int,
-      distanceKm: json['distance_km'] != null
-          ? (json['distance_km'] as num).toDouble()
-          : null,
+      distanceKm: (json['distance_km'] as num?)?.toDouble(),
       caloriesBurned: json['calories_burned'] as int?,
       activityDate: DateTime.parse(json['activity_date'] as String),
       routeData: json['route_data'] != null

@@ -1,4 +1,3 @@
-// lib/screens/activity/tracking/gps_tracking_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -162,10 +161,16 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
   }
 
   void _updatePosition(Position position) {
-    final newPosition = LatLng(position.latitude, position.longitude);
-    final now = DateTime.now();
+    // 🔧 FIX: Guard against updates after cleanup
+    if (!_isTracking || _hasFinished) {
+      debugPrint('⚠️ Ignoring GPS update (not tracking)');
+      return;
+    }
 
     if (!mounted) return;
+
+    final newPosition = LatLng(position.latitude, position.longitude);
+    final now = DateTime.now();
 
     // FIRST POINT: Just save it, don't calculate distance
     if (_isFirstPoint || _lastPosition == null) {
