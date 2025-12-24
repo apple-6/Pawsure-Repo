@@ -1,3 +1,4 @@
+// pawsure_app/lib/screens/activity/widgets/activity_stats_card.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/activity_controller.dart';
@@ -16,11 +17,10 @@ class ActivityStatsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔧 FIX 2: Header Row with Flexible Text & Compact SegmentedButton
+            // 🔧 FIX: Better responsive header
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Flexible(
+                const Expanded(
                   child: Text(
                     'Activity Summary',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -28,34 +28,39 @@ class ActivityStatsCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // 🔧 UPDATED: Used SegmentedButton for better spacing control
+                // 🔧 FIX: Constrained width for period selector
                 Obx(
-                  () => SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(
-                        value: 'day',
-                        label: Text('Day', style: TextStyle(fontSize: 12)),
+                  () => SizedBox(
+                    width: 160, // Fixed width to prevent overflow
+                    child: SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(
+                          value: 'day',
+                          label: Text('Day', style: TextStyle(fontSize: 11)),
+                        ),
+                        ButtonSegment(
+                          value: 'week',
+                          label: Text('Week', style: TextStyle(fontSize: 11)),
+                        ),
+                        ButtonSegment(
+                          value: 'month',
+                          label: Text('Mon', style: TextStyle(fontSize: 11)),
+                        ),
+                      ],
+                      selected: {controller.selectedPeriod.value},
+                      onSelectionChanged: (Set<String> selection) {
+                        controller.setPeriod(selection.first);
+                      },
+                      style: ButtonStyle(
+                        visualDensity: VisualDensity.compact,
+                        padding: WidgetStateProperty.all(
+                          const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 0,
+                          ),
+                        ),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      ButtonSegment(
-                        value: 'week',
-                        label: Text('Wk', style: TextStyle(fontSize: 12)),
-                      ),
-                      ButtonSegment(
-                        value: 'month',
-                        label: Text('Mo', style: TextStyle(fontSize: 12)),
-                      ),
-                    ],
-                    selected: {controller.selectedPeriod.value},
-                    onSelectionChanged: (Set<String> selection) {
-                      controller.setPeriod(selection.first);
-                    },
-                    style: ButtonStyle(
-                      visualDensity:
-                          VisualDensity.compact, // Reduces vertical height
-                      padding: WidgetStateProperty.all(
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                      ),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                 ),
@@ -137,28 +142,34 @@ class ActivityStatsCard extends StatelessWidget {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12), // Reduced from 16
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
+          Icon(icon, color: color, size: 28), // Reduced from 32
+          const SizedBox(height: 6), // Reduced from 8
+          FittedBox(
+            // 🔧 FIX: Auto-scale text to fit
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 18, // Reduced from 20
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
-            overflow: TextOverflow.ellipsis,
           ),
-          Text(
-            label,
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            overflow: TextOverflow.ellipsis,
+          FittedBox(
+            // 🔧 FIX: Auto-scale label
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+            ),
           ),
         ],
       ),

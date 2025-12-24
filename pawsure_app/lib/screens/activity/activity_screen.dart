@@ -1,4 +1,3 @@
-// pawsure_app/lib/screens/activity/activity_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/activity_controller.dart';
@@ -84,8 +83,8 @@ class ActivityScreen extends StatelessWidget {
               ),
             ),
 
-            // Activity List
-            Expanded(
+            // Activity List - 🔧 FIX: Use Flexible instead of Expanded
+            Flexible(
               child: Obx(() {
                 if (controller.filteredActivities.isEmpty) {
                   return Center(
