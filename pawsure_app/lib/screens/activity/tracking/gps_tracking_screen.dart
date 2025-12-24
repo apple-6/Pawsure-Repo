@@ -30,15 +30,21 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
 
   bool _isTracking = false;
   bool _isPaused = false;
-  bool _hasFinished = false; // NEW: Track if activity is finished
+  bool _hasFinished = false;
+  bool _isFirstPoint = true; // NEW: Track if this is the first GPS point
   double _totalDistance = 0.0;
   int _elapsedSeconds = 0;
   Timer? _timer;
 
   LatLng? _currentPosition;
   LatLng? _lastPosition;
+  DateTime? _lastUpdateTime; // NEW: Track time between updates
 
   models.ActivityType _selectedType = models.ActivityType.walk;
+
+  // Teleport detection threshold (meters)
+  static const double _maxReasonableSpeed = 150.0; // 150 m/s = 540 km/h
+  static const double _minDistanceToCount = 2.0; // Ignore movements < 2 meters
 
   @override
   void initState() {
@@ -48,9 +54,16 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
 
   @override
   void dispose() {
-    _stopTracking();
+    _cleanupTracking();
     _mapController?.dispose();
     super.dispose();
+  }
+
+  void _cleanupTracking() {
+    _positionStream?.cancel();
+    _positionStream = null;
+    _timer?.cancel();
+    _timer = null;
   }
 
   Future<void> _requestLocationPermission() async {
@@ -58,11 +71,13 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     if (status.isGranted) {
       _initializeLocation();
     } else {
-      Get.snackbar(
-        'Permission Required',
-        'Location permission is needed for GPS tracking',
-        backgroundColor: Colors.red.withValues(alpha: 0.1),
-      );
+      if (mounted) {
+        Get.snackbar(
+          'Permission Required',
+          'Location permission is needed for GPS tracking',
+          backgroundColor: Colors.red.withValues(alpha: 0.1),
+        );
+      }
     }
   }
 
@@ -85,7 +100,7 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       if (mounted) {
         Get.snackbar(
           'Location Error',
-          'Failed to get current location',
+          'Failed to get current location. Make sure GPS is enabled.',
           backgroundColor: Colors.red.withValues(alpha: 0.1),
         );
       }
@@ -102,53 +117,45 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       _isTracking = true;
       _isPaused = false;
       _hasFinished = false;
+      _isFirstPoint = true; // Reset first point flag
       _routePoints.clear();
       _routeData.clear();
       _totalDistance = 0.0;
       _elapsedSeconds = 0;
-      _lastPosition = _currentPosition;
+      _lastPosition = null; // IMPORTANT: Reset to null
+      _lastUpdateTime = null;
 
-      _routePoints.add(_currentPosition!);
-      _routeData.add(
-        models.RoutePoint(
-          lat: _currentPosition!.latitude,
-          lng: _currentPosition!.longitude,
-          timestamp: DateTime.now(),
-        ),
-      );
-
+      // Don't add starting point yet - wait for first real GPS update
       _markers.clear();
-      _markers.add(
-        Marker(
-          markerId: const MarkerId('start'),
-          position: _currentPosition!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueGreen,
-          ),
-          infoWindow: const InfoWindow(title: 'Start'),
-        ),
-      );
     });
 
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 5,
+      distanceFilter: 5, // Update every 5 meters
     );
 
     _positionStream =
         Geolocator.getPositionStream(locationSettings: locationSettings).listen(
           (Position position) {
-            if (!_isPaused && mounted && _isTracking) {
+            if (_isTracking && !_isPaused && mounted) {
               _updatePosition(position);
             }
           },
           onError: (error) {
             debugPrint('❌ GPS stream error: $error');
+            if (mounted) {
+              Get.snackbar(
+                'GPS Error',
+                'Lost GPS signal. Pausing tracking.',
+                backgroundColor: Colors.orange.withValues(alpha: 0.1),
+              );
+              _pauseTracking();
+            }
           },
         );
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!_isPaused && mounted && _isTracking) {
+      if (_isTracking && !_isPaused && mounted) {
         setState(() => _elapsedSeconds++);
       }
     });
@@ -156,9 +163,91 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
 
   void _updatePosition(Position position) {
     final newPosition = LatLng(position.latitude, position.longitude);
+    final now = DateTime.now();
 
     if (!mounted) return;
 
+    // FIRST POINT: Just save it, don't calculate distance
+    if (_isFirstPoint || _lastPosition == null) {
+      setState(() {
+        _isFirstPoint = false;
+        _currentPosition = newPosition;
+        _lastPosition = newPosition;
+        _lastUpdateTime = now;
+
+        // Add starting point
+        _routePoints.add(newPosition);
+        _routeData.add(
+          models.RoutePoint(
+            lat: position.latitude,
+            lng: position.longitude,
+            timestamp: now,
+          ),
+        );
+
+        // Add start marker
+        _markers.clear();
+        _markers.add(
+          Marker(
+            markerId: const MarkerId('start'),
+            position: newPosition,
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueGreen,
+            ),
+            infoWindow: const InfoWindow(title: 'Start'),
+          ),
+        );
+      });
+
+      _mapController?.animateCamera(CameraUpdate.newLatLng(newPosition));
+      debugPrint(
+        '📍 First GPS point set: ${newPosition.latitude}, ${newPosition.longitude}',
+      );
+      return;
+    }
+
+    // Calculate distance from last point
+    final distance = Geolocator.distanceBetween(
+      _lastPosition!.latitude,
+      _lastPosition!.longitude,
+      newPosition.latitude,
+      newPosition.longitude,
+    );
+
+    // TELEPORT GUARD: Check if movement is physically possible
+    final timeDiff = now.difference(_lastUpdateTime!).inSeconds;
+    final speed = timeDiff > 0 ? distance / timeDiff : 0;
+
+    if (distance > 500) {
+      // Massive jump (> 500m) - definitely a teleport
+      debugPrint(
+        '⚠️ TELEPORT DETECTED: ${distance.toStringAsFixed(1)}m jump. Ignoring.',
+      );
+      setState(() {
+        _lastPosition = newPosition;
+        _lastUpdateTime = now;
+      });
+      return;
+    }
+
+    if (speed > _maxReasonableSpeed && timeDiff < 10) {
+      // Impossible speed detected
+      debugPrint(
+        '⚠️ Impossible speed: ${speed.toStringAsFixed(1)} m/s. Ignoring.',
+      );
+      setState(() {
+        _lastPosition = newPosition;
+        _lastUpdateTime = now;
+      });
+      return;
+    }
+
+    if (distance < _minDistanceToCount) {
+      // Too small to count (GPS jitter)
+      return;
+    }
+
+    // VALID MOVEMENT - Add it
     setState(() {
       _currentPosition = newPosition;
       _routePoints.add(newPosition);
@@ -166,21 +255,15 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
         models.RoutePoint(
           lat: position.latitude,
           lng: position.longitude,
-          timestamp: DateTime.now(),
+          timestamp: now,
         ),
       );
 
-      if (_lastPosition != null) {
-        final distance = Geolocator.distanceBetween(
-          _lastPosition!.latitude,
-          _lastPosition!.longitude,
-          newPosition.latitude,
-          newPosition.longitude,
-        );
-        _totalDistance += distance / 1000;
-      }
+      _totalDistance += distance / 1000; // Convert to km
       _lastPosition = newPosition;
+      _lastUpdateTime = now;
 
+      // Update polyline
       _polylines.clear();
       _polylines.add(
         Polyline(
@@ -202,21 +285,24 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
 
   void _resumeTracking() {
     if (!mounted) return;
-    setState(() => _isPaused = false);
+    setState(() {
+      _isPaused = false;
+      _lastUpdateTime =
+          DateTime.now(); // Reset time to avoid speed calculation issues
+    });
   }
 
   void _stopTracking() {
-    _positionStream?.cancel();
-    _timer?.cancel();
+    _cleanupTracking();
 
     if (!mounted) return;
 
     setState(() {
       _isTracking = false;
       _isPaused = false;
-      _hasFinished = true; // Mark as finished
+      _hasFinished = true;
 
-      if (_currentPosition != null) {
+      if (_currentPosition != null && _routePoints.length > 1) {
         _markers.add(
           Marker(
             markerId: const MarkerId('end'),
@@ -232,18 +318,18 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
   }
 
   void _cancelTracking() {
-    _positionStream?.cancel();
-    _timer?.cancel();
-
-    if (!mounted) return;
-
-    // Just go back without saving
-    Get.back();
+    _cleanupTracking();
+    if (mounted) {
+      Get.back();
+    }
   }
 
   Future<void> _saveActivity() async {
-    if (_routePoints.isEmpty || _elapsedSeconds == 0) {
-      Get.snackbar('Error', 'No activity data to save');
+    if (_routePoints.length < 2 || _elapsedSeconds < 10) {
+      Get.snackbar(
+        'Insufficient Data',
+        'Activity too short to save. Must be at least 10 seconds with movement.',
+      );
       return;
     }
 
@@ -253,7 +339,10 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       return;
     }
 
-    final result = await Get.dialog<Map<String, dynamic>>(_buildSaveDialog());
+    final result = await Get.dialog<Map<String, dynamic>>(
+      _buildSaveDialog(),
+      barrierDismissible: false,
+    );
 
     if (result != null && mounted) {
       final payload = {
@@ -306,79 +395,82 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     final descriptionController = TextEditingController();
     models.ActivityType selectedTypeLocal = _selectedType;
 
-    return AlertDialog(
-      title: const Text('Save Activity'),
-      content: StatefulBuilder(
-        builder: (context, setDialogState) {
-          return SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<models.ActivityType>(
-                  value: selectedTypeLocal,
-                  decoration: const InputDecoration(
-                    labelText: 'Activity Type',
-                    border: OutlineInputBorder(),
+    return WillPopScope(
+      onWillPop: () async => false, // Prevent dismissal
+      child: AlertDialog(
+        title: const Text('Save Activity'),
+        content: StatefulBuilder(
+          builder: (context, setDialogState) {
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<models.ActivityType>(
+                    value: selectedTypeLocal,
+                    decoration: const InputDecoration(
+                      labelText: 'Activity Type',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: models.ActivityType.values.map((type) {
+                      return DropdownMenuItem(
+                        value: type,
+                        child: Text(type.displayName),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          selectedTypeLocal = value;
+                        });
+                        _selectedType = value;
+                      }
+                    },
                   ),
-                  items: models.ActivityType.values.map((type) {
-                    return DropdownMenuItem(
-                      value: type,
-                      child: Text(type.displayName),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setDialogState(() {
-                        selectedTypeLocal = value;
-                      });
-                      _selectedType = value;
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Title (Optional)',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Title (Optional)',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descriptionController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes (Optional)',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descriptionController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes (Optional)',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-      actions: [
-        TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-        ElevatedButton(
-          onPressed: () {
-            Get.back(
-              result: {
-                'title': titleController.text.isNotEmpty
-                    ? titleController.text
-                    : null,
-                'description': descriptionController.text.isNotEmpty
-                    ? descriptionController.text
-                    : null,
-              },
+                ],
+              ),
             );
           },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('Save'),
         ),
-      ],
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Get.back(
+                result: {
+                  'title': titleController.text.isNotEmpty
+                      ? titleController.text
+                      : null,
+                  'description': descriptionController.text.isNotEmpty
+                      ? descriptionController.text
+                      : null,
+                },
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -386,7 +478,7 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        if (_isTracking) {
+        if (_isTracking && !_hasFinished) {
           final shouldExit = await Get.dialog<bool>(
             AlertDialog(
               title: const Text('Exit Tracking?'),
@@ -399,7 +491,10 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
                   child: const Text('Continue Tracking'),
                 ),
                 ElevatedButton(
-                  onPressed: () => Get.back(result: true),
+                  onPressed: () {
+                    _cleanupTracking();
+                    Get.back(result: true);
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
@@ -475,7 +570,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
               right: 16,
               child: Column(
                 children: [
-                  // Status Badge
                   if (_isTracking && !_hasFinished) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -508,7 +602,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
                     const SizedBox(height: 16),
                   ],
 
-                  // Control Buttons
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -516,7 +609,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           if (!_isTracking && !_hasFinished) ...[
-                            // Initial state: Start and Cancel
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: _startTracking,
@@ -545,7 +637,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
                               ),
                             ),
                           ] else if (_isTracking && !_hasFinished) ...[
-                            // Tracking state: Pause/Resume and Finish
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: _isPaused
@@ -567,9 +658,7 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: ElevatedButton.icon(
-                                onPressed: () {
-                                  _stopTracking();
-                                },
+                                onPressed: _stopTracking,
                                 icon: const Icon(Icons.stop),
                                 label: const Text('Finish'),
                                 style: ElevatedButton.styleFrom(
@@ -582,7 +671,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
                               ),
                             ),
                           ] else if (_hasFinished) ...[
-                            // Finished state: Save and Discard
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: _saveActivity,

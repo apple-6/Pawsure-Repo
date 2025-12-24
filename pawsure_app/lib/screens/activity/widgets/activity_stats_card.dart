@@ -104,9 +104,9 @@ class ActivityStatsCard extends StatelessWidget {
   Widget _buildPeriodSelector(ActivityController controller) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(8),
-      ),
+  color: Colors.grey.withValues(alpha: 0.2), // FIXED
+  borderRadius: BorderRadius.circular(8),
+),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -154,7 +154,9 @@ class ActivityStatsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(
+          alpha: 0.1,
+        ), // FIXED: Use withValues instead of withOpacity
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
