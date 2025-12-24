@@ -1,7 +1,7 @@
+// lib/screens/activity/widgets/activity_stats_card.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/activity_controller.dart';
-import 'package:fl_chart/fl_chart.dart';
 
 class ActivityStatsCard extends StatelessWidget {
   const ActivityStatsCard({super.key});
@@ -17,27 +17,19 @@ class ActivityStatsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Period Selector
+            // Header Row - Fixed overflow issue
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Activity Summary',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                Obx(
-                  () => SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'day', label: Text('Day')),
-                      ButtonSegment(value: 'week', label: Text('Week')),
-                      ButtonSegment(value: 'month', label: Text('Month')),
-                    ],
-                    selected: {controller.selectedPeriod.value},
-                    onSelectionChanged: (Set<String> selection) {
-                      controller.setPeriod(selection.first);
-                    },
+                const Flexible(
+                  child: Text(
+                    'Activity Summary',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
+                Obx(() => _buildPeriodSelector(controller)),
               ],
             ),
             const SizedBox(height: 16),
@@ -45,10 +37,11 @@ class ActivityStatsCard extends StatelessWidget {
             // Stats Grid
             Obx(() {
               final stats = controller.stats.value;
+
               if (stats == null) {
                 return const Center(
                   child: Padding(
-                    padding: EdgeInsets.all(32),
+                    padding: EdgeInsets.all(16.0),
                     child: CircularProgressIndicator(),
                   ),
                 );
@@ -56,80 +49,97 @@ class ActivityStatsCard extends StatelessWidget {
 
               return Column(
                 children: [
-                  // Main Stats
                   Row(
                     children: [
-                      _buildStatBox(
-                        icon: Icons.directions_walk,
-                        label: 'Activities',
-                        value: stats.totalActivities.toString(),
-                        color: Colors.blue,
+                      Expanded(
+                        child: _buildStatBox(
+                          icon: Icons.directions_walk,
+                          label: 'Activities',
+                          value: stats.totalActivities.toString(),
+                          color: Colors.blue,
+                        ),
                       ),
                       const SizedBox(width: 12),
-                      _buildStatBox(
-                        icon: Icons.timer,
-                        label: 'Duration',
-                        value: _formatDuration(stats.totalDuration),
-                        color: Colors.orange,
+                      Expanded(
+                        child: _buildStatBox(
+                          icon: Icons.timer,
+                          label: 'Duration',
+                          value: _formatDuration(stats.totalDuration),
+                          color: Colors.orange,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      _buildStatBox(
-                        icon: Icons.straighten,
-                        label: 'Distance',
-                        value: '${stats.totalDistance.toStringAsFixed(1)} km',
-                        color: Colors.green,
+                      Expanded(
+                        child: _buildStatBox(
+                          icon: Icons.straighten,
+                          label: 'Distance',
+                          value: '${stats.totalDistance.toStringAsFixed(1)} km',
+                          color: Colors.green,
+                        ),
                       ),
                       const SizedBox(width: 12),
-                      _buildStatBox(
-                        icon: Icons.local_fire_department,
-                        label: 'Calories',
-                        value: stats.totalCalories.toString(),
-                        color: Colors.red,
+                      Expanded(
+                        child: _buildStatBox(
+                          icon: Icons.local_fire_department,
+                          label: 'Calories',
+                          value: stats.totalCalories.toString(),
+                          color: Colors.red,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-
-                  // Activity Type Breakdown Chart
-                  if (stats.byType.isNotEmpty) ...[
-                    const Divider(),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Activity Breakdown',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 200,
-                      child: PieChart(
-                        PieChartData(
-                          sections: _buildPieChartSections(stats.byType),
-                          sectionsSpace: 2,
-                          centerSpaceRadius: 40,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 8,
-                      children: stats.byType.entries.map((entry) {
-                        return _buildLegendItem(
-                          entry.key,
-                          entry.value,
-                          _getColorForType(entry.key),
-                        );
-                      }).toList(),
-                    ),
-                  ],
                 ],
               );
             }),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPeriodSelector(ActivityController controller) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildPeriodButton(controller, 'Day', 'day'),
+          _buildPeriodButton(controller, 'Week', 'week'),
+          _buildPeriodButton(controller, 'Month', 'month'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPeriodButton(
+    ActivityController controller,
+    String label,
+    String period,
+  ) {
+    final isSelected = controller.selectedPeriod.value == period;
+
+    return GestureDetector(
+      onTap: () => controller.setPeriod(period),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.orange : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey[700],
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 12,
+          ),
         ),
       ),
     );
@@ -141,93 +151,42 @@ class ActivityStatsCard extends StatelessWidget {
     required String value,
     required Color color,
   }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 32),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-            Text(
-              label,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
-          ],
-        ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            label,
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
 
-  List<PieChartSectionData> _buildPieChartSections(Map<String, int> data) {
-    final total = data.values.fold(0, (sum, val) => sum + val);
-    return data.entries.map((entry) {
-      final percentage = (entry.value / total * 100).toStringAsFixed(1);
-      return PieChartSectionData(
-        value: entry.value.toDouble(),
-        title: '$percentage%',
-        color: _getColorForType(entry.key),
-        radius: 60,
-        titleStyle: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
-      );
-    }).toList();
-  }
-
-  Widget _buildLegendItem(String type, int count, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          '${type.capitalize} ($count)',
-          style: const TextStyle(fontSize: 12),
-        ),
-      ],
-    );
-  }
-
-  Color _getColorForType(String type) {
-    switch (type.toLowerCase()) {
-      case 'walk':
-        return Colors.blue;
-      case 'run':
-        return Colors.orange;
-      case 'play':
-        return Colors.purple;
-      case 'swim':
-        return Colors.cyan;
-      case 'training':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
   String _formatDuration(int minutes) {
-    if (minutes < 60) return '${minutes}m';
     final hours = minutes ~/ 60;
     final mins = minutes % 60;
-    return '${hours}h ${mins}m';
+
+    if (hours > 0) {
+      return '${hours}h ${mins}m';
+    }
+    return '${mins}m';
   }
 }

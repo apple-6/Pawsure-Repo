@@ -30,6 +30,7 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
 
   bool _isTracking = false;
   bool _isPaused = false;
+  bool _hasFinished = false; // NEW: Track if activity is finished
   double _totalDistance = 0.0;
   int _elapsedSeconds = 0;
   Timer? _timer;
@@ -74,7 +75,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
         _currentPosition = LatLng(position.latitude, position.longitude);
       });
 
-      // Center map on current location
       _mapController?.animateCamera(
         CameraUpdate.newCameraPosition(
           CameraPosition(target: _currentPosition!, zoom: 16),
@@ -82,6 +82,13 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       );
     } catch (e) {
       debugPrint('❌ Error getting location: $e');
+      if (mounted) {
+        Get.snackbar(
+          'Location Error',
+          'Failed to get current location',
+          backgroundColor: Colors.red.withValues(alpha: 0.1),
+        );
+      }
     }
   }
 
@@ -94,13 +101,13 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     setState(() {
       _isTracking = true;
       _isPaused = false;
+      _hasFinished = false;
       _routePoints.clear();
       _routeData.clear();
       _totalDistance = 0.0;
       _elapsedSeconds = 0;
       _lastPosition = _currentPosition;
 
-      // Add starting point
       _routePoints.add(_currentPosition!);
       _routeData.add(
         models.RoutePoint(
@@ -110,7 +117,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
         ),
       );
 
-      // Add start marker
       _markers.clear();
       _markers.add(
         Marker(
@@ -124,24 +130,25 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       );
     });
 
-    // Start position stream
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 5, // Update every 5 meters
+      distanceFilter: 5,
     );
 
     _positionStream =
         Geolocator.getPositionStream(locationSettings: locationSettings).listen(
           (Position position) {
-            if (!_isPaused && mounted) {
+            if (!_isPaused && mounted && _isTracking) {
               _updatePosition(position);
             }
           },
+          onError: (error) {
+            debugPrint('❌ GPS stream error: $error');
+          },
         );
 
-    // Start timer
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!_isPaused && mounted) {
+      if (!_isPaused && mounted && _isTracking) {
         setState(() => _elapsedSeconds++);
       }
     });
@@ -163,7 +170,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
         ),
       );
 
-      // Calculate distance
       if (_lastPosition != null) {
         final distance = Geolocator.distanceBetween(
           _lastPosition!.latitude,
@@ -171,11 +177,10 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
           newPosition.latitude,
           newPosition.longitude,
         );
-        _totalDistance += distance / 1000; // Convert to km
+        _totalDistance += distance / 1000;
       }
       _lastPosition = newPosition;
 
-      // Update polyline
       _polylines.clear();
       _polylines.add(
         Polyline(
@@ -187,7 +192,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       );
     });
 
-    // Center map on current position
     _mapController?.animateCamera(CameraUpdate.newLatLng(newPosition));
   }
 
@@ -210,8 +214,8 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     setState(() {
       _isTracking = false;
       _isPaused = false;
+      _hasFinished = true; // Mark as finished
 
-      // Add end marker
       if (_currentPosition != null) {
         _markers.add(
           Marker(
@@ -227,6 +231,16 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     });
   }
 
+  void _cancelTracking() {
+    _positionStream?.cancel();
+    _timer?.cancel();
+
+    if (!mounted) return;
+
+    // Just go back without saving
+    Get.back();
+  }
+
   Future<void> _saveActivity() async {
     if (_routePoints.isEmpty || _elapsedSeconds == 0) {
       Get.snackbar('Error', 'No activity data to save');
@@ -239,7 +253,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       return;
     }
 
-    // Show save dialog
     final result = await Get.dialog<Map<String, dynamic>>(_buildSaveDialog());
 
     if (result != null && mounted) {
@@ -256,13 +269,12 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
 
       await _activityController.createActivity(pet.id, payload);
       if (mounted) {
-        Get.back(); // Close GPS tracking screen
+        Get.back();
       }
     }
   }
 
   int _estimateCalories() {
-    // Simple calorie estimation based on activity type and duration
     final durationMinutes = _elapsedSeconds / 60;
     double caloriesPerMinute;
 
@@ -298,50 +310,50 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       title: const Text('Save Activity'),
       content: StatefulBuilder(
         builder: (context, setDialogState) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Activity Type Selector
-              DropdownButtonFormField<models.ActivityType>(
-                value: selectedTypeLocal,
-                decoration: const InputDecoration(
-                  labelText: 'Activity Type',
-                  border: OutlineInputBorder(),
+          return SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<models.ActivityType>(
+                  value: selectedTypeLocal,
+                  decoration: const InputDecoration(
+                    labelText: 'Activity Type',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: models.ActivityType.values.map((type) {
+                    return DropdownMenuItem(
+                      value: type,
+                      child: Text(type.displayName),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(() {
+                        selectedTypeLocal = value;
+                      });
+                      _selectedType = value;
+                    }
+                  },
                 ),
-                items: models.ActivityType.values.map((type) {
-                  return DropdownMenuItem(
-                    value: type,
-                    child: Text(type.displayName),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setDialogState(() {
-                      selectedTypeLocal = value;
-                    });
-                    // Update parent state but don't call setState on disposed widget
-                    _selectedType = value;
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Title (Optional)',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Title (Optional)',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: descriptionController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Notes (Optional)',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes (Optional)',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
@@ -372,187 +384,243 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Map
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: _currentPosition ?? const LatLng(0, 0),
-              zoom: 16,
-            ),
-            onMapCreated: (controller) {
-              _mapController = controller;
-              if (_currentPosition != null) {
-                controller.animateCamera(
-                  CameraUpdate.newLatLng(_currentPosition!),
-                );
-              }
-            },
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            polylines: _polylines,
-            markers: _markers,
-            zoomControlsEnabled: false,
-          ),
-
-          // Stats Overlay
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
-            left: 16,
-            right: 16,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStatColumn(
-                      icon: Icons.timer,
-                      label: 'Time',
-                      value: _formatDuration(_elapsedSeconds),
-                    ),
-                    _buildStatColumn(
-                      icon: Icons.straighten,
-                      label: 'Distance',
-                      value: '${_totalDistance.toStringAsFixed(2)} km',
-                    ),
-                    _buildStatColumn(
-                      icon: Icons.local_fire_department,
-                      label: 'Calories',
-                      value: _estimateCalories().toString(),
-                    ),
-                  ],
-                ),
+    return WillPopScope(
+      onWillPop: () async {
+        if (_isTracking) {
+          final shouldExit = await Get.dialog<bool>(
+            AlertDialog(
+              title: const Text('Exit Tracking?'),
+              content: const Text(
+                'You have an active tracking session. Are you sure you want to exit?',
               ),
-            ),
-          ),
-
-          // Control Buttons
-          Positioned(
-            bottom: 32,
-            left: 16,
-            right: 16,
-            child: Column(
-              children: [
-                // Status Badge
-                if (_isTracking) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _isPaused ? Colors.orange : Colors.green,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _isPaused ? Icons.pause : Icons.play_arrow,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _isPaused ? 'Paused' : 'Tracking...',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+              actions: [
+                TextButton(
+                  onPressed: () => Get.back(result: false),
+                  child: const Text('Continue Tracking'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Get.back(result: true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
                   ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Control Buttons
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        if (!_isTracking) ...[
-                          // Start Button
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _startTracking,
-                              icon: const Icon(Icons.play_arrow),
-                              label: const Text('Start'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          // Back Button
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => Get.back(),
-                              icon: const Icon(Icons.close),
-                              label: const Text('Cancel'),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ] else ...[
-                          // Pause/Resume Button
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _isPaused
-                                  ? _resumeTracking
-                                  : _pauseTracking,
-                              icon: Icon(
-                                _isPaused ? Icons.play_arrow : Icons.pause,
-                              ),
-                              label: Text(_isPaused ? 'Resume' : 'Pause'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          // Stop Button
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                _stopTracking();
-                                _saveActivity();
-                              },
-                              icon: const Icon(Icons.stop),
-                              label: const Text('Finish'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+                  child: const Text('Exit'),
                 ),
               ],
             ),
-          ),
-        ],
+          );
+          return shouldExit ?? false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        body: Stack(
+          children: [
+            GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: _currentPosition ?? const LatLng(0, 0),
+                zoom: 16,
+              ),
+              onMapCreated: (controller) {
+                _mapController = controller;
+                if (_currentPosition != null) {
+                  controller.animateCamera(
+                    CameraUpdate.newLatLng(_currentPosition!),
+                  );
+                }
+              },
+              myLocationEnabled: true,
+              myLocationButtonEnabled: false,
+              polylines: _polylines,
+              markers: _markers,
+              zoomControlsEnabled: false,
+            ),
+
+            // Stats Overlay
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 16,
+              left: 16,
+              right: 16,
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildStatColumn(
+                        icon: Icons.timer,
+                        label: 'Time',
+                        value: _formatDuration(_elapsedSeconds),
+                      ),
+                      _buildStatColumn(
+                        icon: Icons.straighten,
+                        label: 'Distance',
+                        value: '${_totalDistance.toStringAsFixed(2)} km',
+                      ),
+                      _buildStatColumn(
+                        icon: Icons.local_fire_department,
+                        label: 'Calories',
+                        value: _estimateCalories().toString(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Control Buttons
+            Positioned(
+              bottom: 32,
+              left: 16,
+              right: 16,
+              child: Column(
+                children: [
+                  // Status Badge
+                  if (_isTracking && !_hasFinished) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _isPaused ? Colors.orange : Colors.green,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _isPaused ? Icons.pause : Icons.play_arrow,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _isPaused ? 'Paused' : 'Tracking...',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Control Buttons
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          if (!_isTracking && !_hasFinished) ...[
+                            // Initial state: Start and Cancel
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _startTracking,
+                                icon: const Icon(Icons.play_arrow),
+                                label: const Text('Start'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _cancelTracking,
+                                icon: const Icon(Icons.close),
+                                label: const Text('Cancel'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ] else if (_isTracking && !_hasFinished) ...[
+                            // Tracking state: Pause/Resume and Finish
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _isPaused
+                                    ? _resumeTracking
+                                    : _pauseTracking,
+                                icon: Icon(
+                                  _isPaused ? Icons.play_arrow : Icons.pause,
+                                ),
+                                label: Text(_isPaused ? 'Resume' : 'Pause'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  _stopTracking();
+                                },
+                                icon: const Icon(Icons.stop),
+                                label: const Text('Finish'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ] else if (_hasFinished) ...[
+                            // Finished state: Save and Discard
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _saveActivity,
+                                icon: const Icon(Icons.save),
+                                label: const Text('Save Activity'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _cancelTracking,
+                                icon: const Icon(Icons.delete),
+                                label: const Text('Discard'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
