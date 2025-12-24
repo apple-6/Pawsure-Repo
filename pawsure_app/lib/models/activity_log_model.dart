@@ -1,3 +1,4 @@
+// lib/models/activity_log_model.dart
 class ActivityLog {
   final int id;
   final int petId;
@@ -30,12 +31,18 @@ class ActivityLog {
   factory ActivityLog.fromJson(Map<String, dynamic> json) {
     return ActivityLog(
       id: json['id'] as int,
-      petId: json['pet_id'] as int? ?? json['pet']?['id'] as int,
+      // FIX: Handle both direct pet_id and nested pet object
+      petId:
+          json['pet_id'] as int? ??
+          (json['pet'] != null ? (json['pet']['id'] as int?) : null) ??
+          0, // Fallback to 0 if both are null
       activityType: json['activity_type'] as String,
       title: json['title'] as String?,
       description: json['description'] as String?,
       durationMinutes: json['duration_minutes'] as int,
-      distanceKm: (json['distance_km'] as num?)?.toDouble(),
+      distanceKm: json['distance_km'] != null
+          ? (json['distance_km'] as num).toDouble()
+          : null,
       caloriesBurned: json['calories_burned'] as int?,
       activityDate: DateTime.parse(json['activity_date'] as String),
       routeData: json['route_data'] != null
