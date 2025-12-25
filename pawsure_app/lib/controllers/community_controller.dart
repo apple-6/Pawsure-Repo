@@ -43,7 +43,6 @@ class CommunityController extends GetxController {
       await _apiService.createPost(
         content: content,
         isUrgent: isUrgent,
-        locationName: locationName,
         mediaPaths: mediaPaths,
       );
 

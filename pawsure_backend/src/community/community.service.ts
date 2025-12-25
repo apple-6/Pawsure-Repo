@@ -11,14 +11,10 @@ export class CommunityService {
     @InjectRepository(PostMedia) private mediaRepo: Repository<PostMedia>,
   ) {}
 
-  async findAll(tab: string) {
+  async findAll(tab?: string) {
     const query = this.postRepo.createQueryBuilder('post')
-      .leftJoinAndSelect('post.owner', 'owner')
-      .leftJoinAndSelect('post.post_media', 'media')
-      .select([
-        'post', 'media',
-        'owner.id', 'owner.name', 'owner.profile_picture'
-      ]);
+      .leftJoinAndSelect('post.user', 'user')
+      .leftJoinAndSelect('post.post_media', 'media');
 
     if (tab === 'urgent') {
       query.where('post.is_urgent = :urgent', { urgent: true });
@@ -27,26 +23,41 @@ export class CommunityService {
     return query.orderBy('post.created_at', 'DESC').getMany();
   }
 
-  async create(dto: any, files: Express.Multer.File[], userId: number) {
-    // 1. Create the post object
-    const postObj = this.postRepo.create({
-      content: dto.content,
-      location_name: dto.location_name, // Ensure this property exists in post.entity.ts
-      userId: userId,
-      is_urgent: dto.is_urgent === 'true',
-    });
+  async create(body: any, files: Express.Multer.File[], userId: number) {
+    try {
+      // Parse is_urgent from string to boolean
+      const isUrgent = typeof body.is_urgent === 'string' 
+        ? body.is_urgent === 'true' 
+        : Boolean(body.is_urgent);
 
-    const savedPost = await this.postRepo.save(postObj);
+      // Create post - DO NOT include location_name
+      const savedPost = await this.postRepo.save({
+        content: body.content || '',
+        is_urgent: isUrgent,
+        userId: userId,
+      });
 
-    if (files && files.length > 0) {
-      const mediaRecords = files.map(file => ({
-        media_url: `http://localhost:3000/uploads/post-media/${file.filename}`,
-        post: savedPost,
-        media_type: 'image'
-      }));
-      await this.mediaRepo.save(mediaRecords);
+      // Handle media uploads
+      if (files && files.length > 0) {
+        const mediaRecords = files.map((file) => {
+          const media = new PostMedia();
+          media.media_url = `http://localhost:3000/uploads/post-media/${file.filename}`;
+          media.media_type = file.mimetype.startsWith('video') ? 'video' : 'image';
+          media.post = savedPost;
+          return media;
+        });
+
+        await this.mediaRepo.save(mediaRecords);
+      }
+
+      // Return post with relations loaded
+      return this.postRepo.findOne({
+        where: { id: savedPost.id },
+        relations: ['user', 'post_media'],
+      });
+    } catch (error) {
+      console.error('Error creating post:', error);
+      throw new Error(`Failed to create post: ${error.message}`);
     }
-
-    return savedPost;
   }
 }

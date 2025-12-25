@@ -21,9 +21,6 @@ export class Post {
   @Column({ default: false })
   is_urgent: boolean;
 
-  @Column({ name: 'location_name', nullable: true })
-  location_name: string;
-
   @CreateDateColumn()
   created_at: Date;
 

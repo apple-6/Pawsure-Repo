@@ -647,14 +647,14 @@ class ApiService {
   // POSTS/COMMUNITY API
   // ========================================================================
 
-  /// GET /posts - Fetch all posts (optionally filtered by tab)
+  /// GET /community - Fetch all posts (optionally filtered by tab)
   Future<List<dynamic>> getPosts({String tab = 'all'}) async {
     try {
-      debugPrint('🔍 API: GET $apiBaseUrl/posts?tab=$tab');
+      debugPrint('🔍 API: GET $apiBaseUrl/community?tab=$tab');
 
       final headers = await _getHeaders();
       final response = await http.get(
-        Uri.parse('$apiBaseUrl/posts?tab=$tab'),
+        Uri.parse('$apiBaseUrl/community?tab=$tab'),
         headers: headers,
       );
 
@@ -679,15 +679,14 @@ class ApiService {
     }
   }
 
-  /// POST /posts - Create a new post with media files
+  /// POST /community/create - Create a new post with media files
   Future<void> createPost({
     required String content,
     bool isUrgent = false,
-    String? locationName,
     List<String>? mediaPaths,
   }) async {
     try {
-      debugPrint('➕ API: POST $apiBaseUrl/posts');
+      debugPrint('➕ API: POST $apiBaseUrl/community/create');
       debugPrint('📤 Creating post: $content, urgent: $isUrgent');
 
       // Get headers WITHOUT Content-Type (multipart will set it)
@@ -696,7 +695,7 @@ class ApiService {
 
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('$apiBaseUrl/posts'),
+        Uri.parse('$apiBaseUrl/community/create'),
       );
 
       // Add all headers including Authorization
@@ -706,10 +705,6 @@ class ApiService {
       request.fields['content'] = content.trim();
       request.fields['is_urgent'] = isUrgent
           .toString(); // Sends 'true' or 'false' as string
-
-      if (locationName != null && locationName.trim().isNotEmpty) {
-        request.fields['location_name'] = locationName.trim();
-      }
 
       // Add media files if provided
       if (mediaPaths != null && mediaPaths.isNotEmpty) {

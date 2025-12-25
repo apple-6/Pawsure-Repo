@@ -15,7 +15,6 @@ class CreatePostModal extends StatefulWidget {
 
 class _CreatePostModalState extends State<CreatePostModal> {
   final TextEditingController _captionController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
   final ApiService _apiService = ApiService();
 
   bool _isUrgent = false;
@@ -121,7 +120,6 @@ class _CreatePostModalState extends State<CreatePostModal> {
       await _apiService.createPost(
         content: _captionController.text.trim(),
         isUrgent: _isUrgent,
-        locationName: _locationController.text.trim(),
         mediaPaths: mediaPaths.isNotEmpty ? mediaPaths : null,
       );
 
@@ -141,7 +139,6 @@ class _CreatePostModalState extends State<CreatePostModal> {
   @override
   void dispose() {
     _captionController.dispose();
-    _locationController.dispose();
     super.dispose();
   }
 
@@ -272,20 +269,6 @@ class _CreatePostModalState extends State<CreatePostModal> {
                 maxLines: 4,
                 decoration: const InputDecoration(
                   hintText: 'Share a story about your pet...',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Add Location (Optional)',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _locationController,
-                decoration: const InputDecoration(
-                  hintText: 'e.g., Taman Merdeka Park',
-                  prefixIcon: Icon(Icons.location_on),
                   border: OutlineInputBorder(),
                 ),
               ),

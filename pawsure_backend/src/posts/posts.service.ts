@@ -28,7 +28,6 @@ export class PostsService {
     // Note: Ensure these property names match your post.entity.ts exactly
     const postData = this.postRepo.create({
       content: body.content,
-      location_name: body.location_name, // If this fails, change to 'locationName'
       is_urgent: body.is_urgent === 'true',
       userId: userId,
     });

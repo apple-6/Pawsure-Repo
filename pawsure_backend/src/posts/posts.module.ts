@@ -1,14 +1,14 @@
+// posts.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Post } from './posts.entity';
+import { PostsController } from './posts.controller';
 import { PostsService } from './posts.service';
-import { PostMedia } from './post-media.entity'; // ✅ Imported
+import { Post } from './posts.entity';
+import { PostMedia } from './post-media.entity';
 
 @Module({
-  imports: [
-    // ✅ Register both Post and PostMedia so autoLoadEntities can find them
-    TypeOrmModule.forFeature([Post, PostMedia]), 
-  ],
+  imports: [TypeOrmModule.forFeature([Post, PostMedia])],
+  controllers: [PostsController],
   providers: [PostsService],
   exports: [PostsService],
 })

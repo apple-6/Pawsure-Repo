@@ -21,16 +21,20 @@ export class CommunityController {
     storage: diskStorage({
       destination: './uploads/post-media',
       filename: (req, file, cb) => {
-        const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
+        const randomName = Array(32)
+          .fill(null)
+          .map(() => (Math.round(Math.random() * 16)).toString(16))
+          .join('');
         return cb(null, `${randomName}${extname(file.originalname)}`);
       },
     }),
   }))
-  createPost(
-    @Body() createPostDto: any,
-    @UploadedFiles() files: Express.Multer.File[],
+  async createPost(
+    @Body() body: any,
+    @UploadedFiles() files: Express.Multer.File[] | undefined,
     @GetUser() user: any,
   ) {
-    return this.communityService.create(createPostDto, files, user.id);
+    const uploadedFiles = files && files.length > 0 ? files : [];
+    return this.communityService.create(body, uploadedFiles, user.id);
   }
 }

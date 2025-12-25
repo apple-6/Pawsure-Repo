@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Post } from './posts.entity';
 
 @Entity('post_media')
@@ -13,5 +13,6 @@ export class PostMedia {
   media_type: string;
 
   @ManyToOne(() => Post, (post) => post.post_media, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'post_id' })  // ADD THIS LINE
   post: Post;
 }
