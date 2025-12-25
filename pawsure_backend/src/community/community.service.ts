@@ -31,7 +31,7 @@ export class CommunityService {
     // 1. Create the post object
     const postObj = this.postRepo.create({
       content: dto.content,
-      locationName: dto.location_name, // Ensure this property exists in post.entity.ts
+      location_name: dto.location_name, // Ensure this property exists in post.entity.ts
       userId: userId,
       is_urgent: dto.is_urgent === 'true',
     });

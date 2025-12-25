@@ -9,8 +9,16 @@ import 'package:pawsure_app/models/event_model.dart';
 import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/constants/api_config.dart';
+import 'package:path/path.dart' show extension;
 
 String get apiBaseUrl => ApiConfig.baseUrl;
+
+// Helper function to get file extension (equivalent to Node.js extname)
+String extname(String filename) {
+  final lastDot = filename.lastIndexOf('.');
+  if (lastDot == -1) return '';
+  return filename.substring(lastDot);
+}
 
 class ApiService {
   Future<Map<String, String>> _getHeaders() async {
@@ -600,7 +608,10 @@ class ApiService {
   }
 
   /// PATCH /bookings/:id/status - Update booking status (accept/decline)
-  Future<Map<String, dynamic>> updateBookingStatus(int bookingId, String status) async {
+  Future<Map<String, dynamic>> updateBookingStatus(
+    int bookingId,
+    String status,
+  ) async {
     try {
       debugPrint('✏️ API: PATCH $apiBaseUrl/bookings/$bookingId/status');
       debugPrint('📤 Updating status to: $status');
@@ -629,6 +640,122 @@ class ApiService {
       );
     } catch (e) {
       debugPrint('❌ Error in updateBookingStatus: $e');
+      rethrow;
+    }
+  }
+  // ========================================================================
+  // POSTS/COMMUNITY API
+  // ========================================================================
+
+  /// GET /posts - Fetch all posts (optionally filtered by tab)
+  Future<List<dynamic>> getPosts({String tab = 'all'}) async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/posts?tab=$tab');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/posts?tab=$tab'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> posts = jsonDecode(response.body) as List<dynamic>;
+        debugPrint('✅ Loaded ${posts.length} posts');
+        return posts;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to load posts (${response.statusCode}): ${response.body}',
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in getPosts: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  /// POST /posts - Create a new post with media files
+  Future<void> createPost({
+    required String content,
+    bool isUrgent = false,
+    String? locationName,
+    List<String>? mediaPaths,
+  }) async {
+    try {
+      debugPrint('➕ API: POST $apiBaseUrl/posts');
+      debugPrint('📤 Creating post: $content, urgent: $isUrgent');
+
+      // Get headers WITHOUT Content-Type (multipart will set it)
+      final headers = await _getHeaders();
+      headers.remove('Content-Type');
+
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$apiBaseUrl/posts'),
+      );
+
+      // Add all headers including Authorization
+      request.headers.addAll(headers);
+
+      // Add form fields - match your NestJS backend field names EXACTLY
+      request.fields['content'] = content.trim();
+      request.fields['is_urgent'] = isUrgent
+          .toString(); // Sends 'true' or 'false' as string
+
+      if (locationName != null && locationName.trim().isNotEmpty) {
+        request.fields['location_name'] = locationName.trim();
+      }
+
+      // Add media files if provided
+      if (mediaPaths != null && mediaPaths.isNotEmpty) {
+        for (int i = 0; i < mediaPaths.length; i++) {
+          final path = mediaPaths[i];
+          try {
+            // Generate clean filename
+            final fileName =
+                'post_${DateTime.now().millisecondsSinceEpoch}_$i${extname(path)}';
+
+            final file = await http.MultipartFile.fromPath(
+              'media', // MUST match FilesInterceptor('media') in NestJS
+              path,
+              filename: fileName,
+            );
+            request.files.add(file);
+            debugPrint('📸 Added media file: $path as $fileName');
+          } catch (e) {
+            debugPrint('⚠️ Error adding media file $i: $e');
+          }
+        }
+      }
+
+      // Log request details for debugging
+      debugPrint('📋 Request headers: ${request.headers}');
+      debugPrint('📋 Request fields: ${request.fields}');
+      debugPrint('📋 Request files count: ${request.files.length}');
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        debugPrint('✅ Post created successfully!');
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      } else {
+        throw Exception(
+          'Failed to create post (${response.statusCode}): ${response.body}',
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in createPost: $e');
+      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }

@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
-import 'package:pawsure_app/controllers/profile_controller.dart';
-// Note: If your token is in AuthController, import it here:
-// import 'package:pawsure_app/controllers/auth_controller.dart';
 import 'dart:io';
+import 'package:pawsure_app/services/api_service.dart';
 
 class CreatePostModal extends StatefulWidget {
   final VoidCallback onPostCreated;
@@ -19,6 +16,7 @@ class CreatePostModal extends StatefulWidget {
 class _CreatePostModalState extends State<CreatePostModal> {
   final TextEditingController _captionController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
+  final ApiService _apiService = ApiService();
 
   bool _isUrgent = false;
   final List<XFile> _selectedMedia = [];
@@ -101,7 +99,7 @@ class _CreatePostModalState extends State<CreatePostModal> {
     );
   }
 
-  // --- Unified NestJS Database Logic ---
+  // --- Create Post Using ApiService ---
 
   Future<void> _createPost() async {
     if (_isLoading) return;
@@ -114,56 +112,27 @@ class _CreatePostModalState extends State<CreatePostModal> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Setup Request (Update localhost to your IP if using a real device)
-      final uri = Uri.parse('http://localhost:3000/posts');
-      var request = http.MultipartRequest('POST', uri);
+      // Prepare media paths
+      final List<String> mediaPaths = _selectedMedia
+          .map((xfile) => xfile.path)
+          .toList();
 
-      // 2. Auth Token Retrieval
-      // Replace 'ProfileController' with 'AuthController' if that's where your token is
-      final profileController = Get.find<ProfileController>();
+      // Call the API service method
+      await _apiService.createPost(
+        content: _captionController.text.trim(),
+        isUrgent: _isUrgent,
+        locationName: _locationController.text.trim(),
+        mediaPaths: mediaPaths.isNotEmpty ? mediaPaths : null,
+      );
 
-      // If your controller doesn't have a .token getter, you may need to
-      // pull it from your SecureStorage or wherever you saved it at Login.
-      final String? token = profileController.user['token'] ?? '';
-
-      if (token != null && token.isNotEmpty) {
-        request.headers['Authorization'] = 'Bearer $token';
-      }
-
-      // 3. Add Form Fields
-      request.fields['content'] = _captionController.text.trim();
-      request.fields['location_name'] = _locationController.text.trim();
-      request.fields['is_urgent'] = _isUrgent.toString();
-
-      // 4. Add Media Files
-      for (var file in _selectedMedia) {
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'media', // Matches FilesInterceptor('media') in NestJS
-            file.path,
-          ),
-        );
-      }
-
-      // 5. Execute Request
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        _showSnackBar(
-          'Post successfully created!',
-          backgroundColor: Colors.green,
-        );
-        widget.onPostCreated();
-        if (mounted) Navigator.pop(context);
-      } else {
-        _showSnackBar(
-          'Error ${response.statusCode}: ${response.body}',
-          backgroundColor: Colors.red,
-        );
-      }
+      _showSnackBar(
+        'Post successfully created!',
+        backgroundColor: Colors.green,
+      );
+      widget.onPostCreated();
+      if (mounted) Navigator.pop(context);
     } catch (e) {
-      _showSnackBar('Connection failed: $e', backgroundColor: Colors.red);
+      _showSnackBar('Error creating post: $e', backgroundColor: Colors.red);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
