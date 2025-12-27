@@ -34,27 +34,38 @@ class Post {
   });
 
   factory Post.fromMap(Map<String, dynamic> map) {
-    final List<dynamic> media = map['post_media'] ?? [];
-    // NestJS logic: check for 'owner' or 'user' objects
-    final userData = map['owner'] ?? map['user'];
+    // 1. Handle User Data (Logs show 'user' key, not 'owner')
+    final userData = map['user'] ?? map['owner'];
+
+    // 2. Handle Media (Logs show 'post_media' as an empty list [])
+    final List<dynamic> mediaList = map['post_media'] ?? [];
 
     return Post(
       id: map['id'].toString(),
-      userId: map['ownerId']?.toString() ?? map['user_id']?.toString() ?? '',
-      userName: userData?['name'] ?? 'User',
+      userId:
+          (map['userId'] ?? map['user_id'] ?? userData?['id'])?.toString() ??
+          '',
+      userName: userData?['name'] ?? 'Unknown User',
       profilePicture:
           userData?['profile_picture'] ??
           "https://cdn-icons-png.flaticon.com/512/194/194279.png",
       content: map['content'] ?? '',
-      mediaUrls: media.map((m) {
-        // Handle if media is a list of strings or objects
-        return m is String ? m : m['media_url'].toString();
-      }).toList(),
-      location: map['location_name'],
-      createdAt: DateTime.parse(
-        map['created_at'] ?? DateTime.now().toIso8601String(),
-      ),
+
+      // 3. Robust Media Mapping
+      mediaUrls: mediaList
+          .map((m) {
+            if (m is String) return m;
+            // Check for 'url' or 'media_url' (Common in NestJS/Prisma setups)
+            return (m['url'] ?? m['media_url'] ?? '').toString();
+          })
+          .where((url) => url.isNotEmpty)
+          .toList()
+          .cast<String>(),
+
+      location: map['location_name'] ?? map['location'],
+      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
       isUrgent: map['is_urgent'] ?? false,
+      likes: map['likes_count'] ?? 0,
     );
   }
 }

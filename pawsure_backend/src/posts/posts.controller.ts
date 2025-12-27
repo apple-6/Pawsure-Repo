@@ -20,14 +20,27 @@ import { extname } from 'path';
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
-  @Get()
+  /*@Get()
   async findAll(@Query('tab') tab?: string) {
     try {
       return await this.postsService.findAll(tab);
     } catch (error) {
       throw new BadRequestException(`Failed to fetch posts: ${error.message}`);
     }
+  }*/
+
+  @Get()
+async findAll(@Query('tab') tab?: string) {
+  console.log('🚀 GET /posts called with tab:', tab);
+  try {
+    const posts = await this.postsService.findAll(tab);
+    console.log('✅ Posts service returned:', posts.length, 'posts');
+    return posts;
+  } catch (error) {
+    console.log('❌ Posts service error:', error.message);
+    throw new BadRequestException(`Failed to fetch posts: ${error.message}`);
   }
+}
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -93,4 +106,5 @@ export class PostsController {
       throw new BadRequestException(`Failed to create post: ${error.message}`);
     }
   }
+  
 }
