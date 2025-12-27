@@ -78,12 +78,15 @@ class CommunityScreen extends StatefulWidget {
 }
 
 class _CommunityScreenState extends State<CommunityScreen> {
-  final String baseUrl = "http://localhost:3000/posts";
+  final String baseUrl =
+      "http://localhost:3000"; // ✅ FIXED: Just the base URL without /posts
 
   Future<List<Post>> _fetchFilteredPosts(String tab) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/community?tab=$tab'),
+        Uri.parse(
+          '$baseUrl/posts?tab=$tab',
+        ), // ✅ FIXED: Now correctly calls /posts?tab=...
         headers: {'Content-Type': 'application/json'},
       );
 

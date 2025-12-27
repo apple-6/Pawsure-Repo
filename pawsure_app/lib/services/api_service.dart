@@ -10,6 +10,7 @@ import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/constants/api_config.dart';
 import 'package:path/path.dart' show extension;
+import 'package:http/src/utils.dart';
 
 String get apiBaseUrl => ApiConfig.baseUrl;
 
@@ -647,14 +648,16 @@ class ApiService {
   // POSTS/COMMUNITY API
   // ========================================================================
 
-  /// GET /community - Fetch all posts (optionally filtered by tab)
+  /// GET /posts - Fetch all posts (optionally filtered by tab)
   Future<List<dynamic>> getPosts({String tab = 'all'}) async {
     try {
-      debugPrint('🔍 API: GET $apiBaseUrl/community?tab=$tab');
+      debugPrint('🔍 API: GET $apiBaseUrl/posts?tab=$tab');
 
       final headers = await _getHeaders();
       final response = await http.get(
-        Uri.parse('$apiBaseUrl/community?tab=$tab'),
+        Uri.parse(
+          '$apiBaseUrl/posts?tab=$tab',
+        ), // ✅ FIXED: Changed from /community to /posts
         headers: headers,
       );
 
@@ -679,14 +682,14 @@ class ApiService {
     }
   }
 
-  /// POST /community/create - Create a new post with media files
+  /// POST /posts - Create a new post with media files
   Future<void> createPost({
     required String content,
     bool isUrgent = false,
     List<String>? mediaPaths,
   }) async {
     try {
-      debugPrint('➕ API: POST $apiBaseUrl/community/create');
+      debugPrint('➕ API: POST $apiBaseUrl/posts');
       debugPrint('📤 Creating post: $content, urgent: $isUrgent');
 
       // Get headers WITHOUT Content-Type (multipart will set it)
@@ -695,7 +698,7 @@ class ApiService {
 
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('$apiBaseUrl/community/create'),
+        Uri.parse('$apiBaseUrl/posts'),
       );
 
       // Add all headers including Authorization
@@ -703,8 +706,7 @@ class ApiService {
 
       // Add form fields - match your NestJS backend field names EXACTLY
       request.fields['content'] = content.trim();
-      request.fields['is_urgent'] = isUrgent
-          .toString(); // Sends 'true' or 'false' as string
+      request.fields['is_urgent'] = isUrgent.toString();
 
       // Add media files if provided
       if (mediaPaths != null && mediaPaths.isNotEmpty) {
@@ -715,10 +717,36 @@ class ApiService {
             final fileName =
                 'post_${DateTime.now().millisecondsSinceEpoch}_$i${extname(path)}';
 
+            // ✅ FIXED: Explicitly set the MIME type based on file extension
+            String mimeType = 'application/octet-stream'; // Default
+            final ext = extname(path).toLowerCase();
+
+            if (['.jpg', '.jpeg'].contains(ext)) {
+              mimeType = 'image/jpeg';
+            } else if (ext == '.png') {
+              mimeType = 'image/png';
+            } else if (ext == '.gif') {
+              mimeType = 'image/gif';
+            } else if (ext == '.webp') {
+              mimeType = 'image/webp';
+            } else if (ext == '.mp4') {
+              mimeType = 'video/mp4';
+            } else if (ext == '.mov') {
+              mimeType = 'video/quicktime';
+            } else if (ext == '.avi') {
+              mimeType = 'video/x-msvideo';
+            }
+
+            debugPrint('📸 File MIME type detected: $mimeType for $fileName');
+
             final file = await http.MultipartFile.fromPath(
               'media', // MUST match FilesInterceptor('media') in NestJS
               path,
               filename: fileName,
+              contentType: http.MediaType(
+                'image',
+                mimeType.split('/')[1],
+              ), // ✅ Explicitly set MIME type
             );
             request.files.add(file);
             debugPrint('📸 Added media file: $path as $fileName');

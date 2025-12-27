@@ -123,28 +123,43 @@ class _PostCardState extends State<PostCard> {
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             child: Row(
               children: [
-                IconButton(
-                  icon: Icon(
-                    widget.post.isLiked
-                        ? Icons.favorite
-                        : Icons.favorite_border,
-                    color: widget.post.isLiked ? Colors.red : Colors.grey,
+                // ✅ FIXED: Wrap in Flexible to prevent overflow
+                Flexible(
+                  child: IconButton(
+                    icon: Icon(
+                      widget.post.isLiked
+                          ? Icons.favorite
+                          : Icons.favorite_border,
+                      color: widget.post.isLiked ? Colors.red : Colors.grey,
+                    ),
+                    onPressed: () => widget.onLike(widget.post.id),
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
                   ),
-                  onPressed: () => widget.onLike(widget.post.id),
                 ),
-                Text('${widget.post.likes}'),
+                Flexible(child: Text('${widget.post.likes}')),
                 const SizedBox(width: 16),
-                const Icon(
-                  Icons.chat_bubble_outline,
-                  size: 22,
-                  color: Colors.grey,
+                const Flexible(
+                  child: Icon(
+                    Icons.chat_bubble_outline,
+                    size: 22,
+                    color: Colors.grey,
+                  ),
                 ),
                 const SizedBox(width: 4),
-                const Text('0'),
+                const Flexible(child: Text('0')),
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.share_outlined, color: Colors.grey),
-                  onPressed: () => widget.onShare(widget.post.id),
+                Flexible(
+                  child: IconButton(
+                    icon: const Icon(Icons.share_outlined, color: Colors.grey),
+                    onPressed: () => widget.onShare(widget.post.id),
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
+                  ),
                 ),
               ],
             ),
