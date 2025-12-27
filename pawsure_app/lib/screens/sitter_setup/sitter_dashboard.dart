@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // <--- Import GetX
+import 'package:pawsure_app/screens/sitter_setup/view_pet_profile.dart';
 import 'sitter_calendar.dart';
 import 'sitter_inbox.dart';
 import 'sitter_setting_screen.dart';
@@ -368,7 +369,16 @@ class _RequestCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    Get.to(
+                      () => const PetProfileView(),
+                      arguments: {
+                        'petName': request.petName,
+                        'ownerName': request.requester,
+                        // add more fields as needed
+                      },
+                    );
+                  },
                   child: const Text('View Details'),
                 ),
               ),
