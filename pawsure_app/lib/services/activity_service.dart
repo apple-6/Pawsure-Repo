@@ -1,21 +1,16 @@
-// lib/services/activity_service.dart
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/models/activity_log_model.dart';
 import 'package:pawsure_app/services/auth_service.dart';
+import 'package:pawsure_app/constants/api_config.dart'; // Import your config
 import 'package:get/get.dart';
-import 'dart:io';
+
+// Use the centralized base URL from your config
+String get apiBaseUrl => ApiConfig.baseUrl;
 
 class ActivityService {
-  String get apiBaseUrl {
-    if (Platform.isAndroid) {
-      return 'http://10.0.2.2:3000';
-    } else {
-      return 'http://localhost:3000';
-    }
-  }
-
+  // Helper to get headers with Auth Token
   Future<Map<String, String>> _getHeaders() async {
     final headers = {
       'Content-Type': 'application/json; charset=UTF-8',
@@ -66,18 +61,9 @@ class ActivityService {
       debugPrint('📦 ActivityService: Response ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        debugPrint('📦 Raw response body: ${response.body}');
+        // debugPrint('📦 Raw response body: ${response.body}');
         final List<dynamic> jsonList = jsonDecode(response.body);
         debugPrint('✅ Parsed ${jsonList.length} activities from JSON');
-
-        // Debug: Print first activity if exists
-        if (jsonList.isNotEmpty) {
-          debugPrint('🔍 First activity raw JSON: ${jsonList[0]}');
-          debugPrint('🔍 Checking for pet_id field: ${jsonList[0]['pet_id']}');
-          debugPrint(
-            '🔍 Checking for pet.id field: ${jsonList[0]['pet']?['id']}',
-          );
-        }
 
         return jsonList.map((e) {
           try {
