@@ -11,6 +11,19 @@ import 'package:get/get.dart';
 import 'package:pawsure_app/constants/api_config.dart';
 
 String get apiBaseUrl => ApiConfig.baseUrl;
+// Detect platform and use appropriate localhost address
+// 10.0.2.2 is for Android emulator, localhost for Windows/Web/iOS
+String get apiBaseUrl {
+  const envUrl = String.fromEnvironment('API_BASE_URL');
+  if (envUrl.isNotEmpty) return envUrl;
+  
+  // Use 10.0.2.2 for Android emulator, localhost for other platforms
+  if (Platform.isAndroid) {
+    return 'http://10.0.2.2:3000';
+  } else {
+    return 'http://localhost:3000';
+  }
+}
 
 class ApiService {
   // Get authenticated headers with JWT token

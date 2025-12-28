@@ -3,7 +3,9 @@ import 'package:get/get.dart';
 import 'sitter_dashboard.dart'; // Adjust path if needed
 import 'chat_screen.dart'; 
 import 'sitter_calendar.dart'; // Import SitterCalendar screen
-// --- Mock Data Models ---
+import 'package:pawsure_app/services/api_service.dart';
+
+// --- Data Models ---
 
 class SitterInboxItem {
   final int id;
