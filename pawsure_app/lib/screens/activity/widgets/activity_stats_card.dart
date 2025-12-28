@@ -17,21 +17,22 @@ class ActivityStatsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔧 FIX: Better responsive header
+            // 🔧 FIX: Use Flexible for text and constrained width for buttons
             Row(
               children: [
-                const Expanded(
+                const Flexible(
                   child: Text(
                     'Activity Summary',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
                 const SizedBox(width: 8),
-                // 🔧 FIX: Constrained width for period selector
+                // 🔧 FIX: Constrained width prevents overflow
                 Obx(
                   () => SizedBox(
-                    width: 160, // Fixed width to prevent overflow
+                    width: 165, // Precise width for 3 buttons
                     child: SegmentedButton<String>(
                       segments: const [
                         ButtonSegment(
@@ -40,11 +41,11 @@ class ActivityStatsCard extends StatelessWidget {
                         ),
                         ButtonSegment(
                           value: 'week',
-                          label: Text('Week', style: TextStyle(fontSize: 11)),
+                          label: Text('Wk', style: TextStyle(fontSize: 11)),
                         ),
                         ButtonSegment(
                           value: 'month',
-                          label: Text('Mon', style: TextStyle(fontSize: 11)),
+                          label: Text('Mo', style: TextStyle(fontSize: 11)),
                         ),
                       ],
                       selected: {controller.selectedPeriod.value},
@@ -142,29 +143,27 @@ class ActivityStatsCard extends StatelessWidget {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12), // Reduced from 16
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 28), // Reduced from 32
-          const SizedBox(height: 6), // Reduced from 8
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 6),
           FittedBox(
-            // 🔧 FIX: Auto-scale text to fit
             fit: BoxFit.scaleDown,
             child: Text(
               value,
               style: TextStyle(
-                fontSize: 18, // Reduced from 20
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
             ),
           ),
           FittedBox(
-            // 🔧 FIX: Auto-scale label
             fit: BoxFit.scaleDown,
             child: Text(
               label,
