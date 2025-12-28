@@ -90,4 +90,44 @@ class PetController extends GetxController {
     isLoadingPets.value = true;
     debugPrint('✅ PetController state reset');
   }
+
+  // Inside PetController
+  String calculateAge(String? dobString) {
+    if (dobString == null || dobString.isEmpty) return "N/A";
+
+    try {
+      // Convert the String dob into a DateTime object
+      DateTime dob = DateTime.parse(dobString);
+      DateTime now = DateTime.now();
+
+      int years = now.year - dob.year;
+      int months = now.month - dob.month;
+
+      if (months < 0 || (months == 0 && now.day < dob.day)) {
+        years--;
+        months = (months < 0) ? months + 12 : months;
+      }
+
+      if (years == 0) return "$months m";
+      return "${years}y ${months}m";
+    } catch (e) {
+      debugPrint("❌ Error parsing DOB string: $e");
+      return "N/A";
+    }
+  }
+
+  // 2. ADD: Booking Actions (Calling your NestJS backend)
+  Future<void> acceptBooking(String bookingId) async {
+    try {
+      // await _apiService.updateBookingStatus(bookingId, 'accepted');
+      Get.snackbar(
+        "Success",
+        "Booking accepted!",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar("Error", "Failed to accept booking");
+    }
+  }
 }

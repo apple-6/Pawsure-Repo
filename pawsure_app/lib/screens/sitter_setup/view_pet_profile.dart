@@ -1,41 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../controllers/pet_controller.dart';
+import '../../models/pet_model.dart';
 
 class PetProfileView extends StatelessWidget {
   const PetProfileView({super.key});
 
   static const Color _accent = Color(0xFF1CCA5B);
-  static const Color _bgGrey = Color(0xFFF8F9FA);
 
   @override
   Widget build(BuildContext context) {
-    // Retrieving arguments passed from Get.to()
-    final Map<String, dynamic> petData = Get.arguments ?? {};
+    final petController = Get.find<PetController>();
 
-    // Mock behavior notes logic
-    final List<Map<String, dynamic>> behaviorNotes = [
-      {
-        'type': 'warning',
-        'text': 'Gets tired easily',
-        'icon': Icons.report_problem_outlined,
-      },
-      {
-        'type': 'success',
-        'text': 'Eat 3 times a day',
-        'icon': Icons.check_circle_outline,
-      },
-      {
-        'type': 'danger',
-        'text': 'Can get anxious around new people',
-        'icon': Icons.cancel_outlined,
-      },
-    ];
+    // Retrieve arguments (The Pet model object from your Dashboard)
+    final Pet pet = Get.arguments['pet'];
+    final String dateRange = Get.arguments['dateRange'] ?? "N/A";
+    final String estEarning = Get.arguments['estEarning'] ?? "RM 0.00";
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0.5,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Get.back(),
@@ -49,14 +35,22 @@ class PetProfileView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Pet Photo Section
+            // Photo Section
             Container(
               width: double.infinity,
               height: 250,
-              color: Colors.grey.shade200,
-              child: const Center(
-                child: Text("🐕", style: TextStyle(fontSize: 80)),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                image: pet.photoUrl != null
+                    ? DecorationImage(
+                        image: NetworkImage(pet.photoUrl!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
               ),
+              child: pet.photoUrl == null
+                  ? const Icon(Icons.pets, size: 80, color: Colors.grey)
+                  : null,
             ),
 
             Padding(
@@ -64,151 +58,122 @@ class PetProfileView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Name and Breed
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            petData['petName'] ?? "Bella",
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const Text(
-                            "Border Collie",
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: _accent,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.pink.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text("❤️", style: TextStyle(fontSize: 20)),
-                      ),
-                    ],
+                  Text(
+                    pet.name,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    pet.breed ?? "Unknown Breed",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: _accent,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
 
                   const SizedBox(height: 24),
-                  _buildSectionTitle(
-                    "🐾",
-                    "About ${petData['petName'] ?? 'Bella'}",
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Stats Grid
-                  Row(
-                    children: [
-                      _buildStatItem("Age", "1y 4m"),
-                      _buildStatItem("Weight", "7.5 kg"),
-                      _buildStatItem("Height", "54 cm"),
-                      _buildStatItem("Color", "Black"),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
                   const Text(
-                    "My first dog which was gifted by my mother for my 20th birthday.",
-                    style: TextStyle(color: Colors.black54, height: 1.5),
+                    "🐾 About",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Stats (Age and Weight Only)
+                  Row(
+                    children: [
+                      // No more error here because calculateAge now accepts String?
+                      _buildStatItem(
+                        "Age",
+                        petController.calculateAge(pet.dob),
+                      ),
+                      _buildStatItem("Weight", "${pet.weight ?? '-'} kg"),
+                    ],
                   ),
 
                   const SizedBox(height: 24),
-                  _buildSectionTitle("🎯", "Behavior Notes"),
-                  const SizedBox(height: 12),
+                  const Text(
+                    "📝 Notes:",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
 
-                  // Behavior Notes List
-                  ...behaviorNotes
-                      .map((note) => _buildBehaviorNote(note))
-                      .toList(),
+                  // Allergy Note
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Text(
+                      "Allergies: ${pet.allergies ?? 'None reported'}",
+                      style: const TextStyle(
+                        color: Colors.brown,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
 
                   const SizedBox(height: 24),
-                  // Booking Details Card
+                  // Booking Summary Card
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: _bgGrey,
+                      color: const Color(0xFFF8F9FA),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
+                      border: Border.all(color: Colors.grey.shade100),
                     ),
                     child: Column(
                       children: [
-                        _buildDetailRow(
-                          Icons.calendar_month,
+                        _buildBookingRow(
+                          Icons.calendar_today,
                           "Booking Date",
-                          "25 - 27 October 2025",
+                          dateRange,
                         ),
                         const Divider(height: 24),
-                        _buildDetailRow(
-                          Icons.access_time_filled,
-                          "Pet Sitting Duration",
-                          "2 Days",
-                        ),
-                        const Divider(height: 24),
-                        _buildDetailRow(
-                          Icons.monetization_on,
-                          "Rate",
-                          "RM30.00/h",
+                        _buildBookingRow(
+                          Icons.payments,
+                          "Est. Earning",
+                          estEarning,
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 32),
+
                   // Action Buttons
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _accent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      onPressed: () =>
-                          Get.snackbar("Success", "Booking Accepted"),
-                      child: const Text(
-                        "Accept Booking",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
+                  _buildActionButton(
+                    "Accept Booking",
+                    _accent,
+                    Colors.white,
+                    () {
+                      Get.snackbar(
+                        "Success",
+                        "Booking for ${pet.name} accepted!",
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.grey),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: () {},
-                      child: const Text(
-                        "Message Owner",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
+                  _buildActionButton(
+                    "Decline Booking",
+                    Colors.red.shade50,
+                    Colors.red,
+                    () {
+                      Get.back(); // Simple go back for now
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildActionButton(
+                    "Message Owner",
+                    Colors.white,
+                    Colors.black,
+                    () {},
+                    isOutlined: true,
                   ),
                 ],
               ),
@@ -216,19 +181,6 @@ class PetProfileView extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSectionTitle(String emoji, String title) {
-    return Row(
-      children: [
-        Text(emoji, style: const TextStyle(fontSize: 18)),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-      ],
     );
   }
 
@@ -247,7 +199,6 @@ class PetProfileView extends StatelessWidget {
               label,
               style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
-            const SizedBox(height: 4),
             Text(
               value,
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
@@ -258,66 +209,55 @@ class PetProfileView extends StatelessWidget {
     );
   }
 
-  Widget _buildBehaviorNote(Map<String, dynamic> note) {
-    Color bgColor;
-    Color iconColor;
-
-    switch (note['type']) {
-      case 'warning':
-        bgColor = Colors.orange.shade50;
-        iconColor = Colors.orange.shade700;
-        break;
-      case 'success':
-        bgColor = Colors.green.shade50;
-        iconColor = Colors.green.shade700;
-        break;
-      case 'danger':
-        bgColor = Colors.red.shade50;
-        iconColor = Colors.red.shade700;
-        break;
-      default:
-        bgColor = Colors.grey.shade50;
-        iconColor = Colors.grey;
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(note['icon'], size: 20, color: iconColor),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(note['text'], style: const TextStyle(fontSize: 14)),
-          ),
-        ],
-      ),
+  Widget _buildBookingRow(IconData icon, String title, String val) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: _accent),
+        const SizedBox(width: 8),
+        Text("$title: ", style: const TextStyle(color: Colors.grey)),
+        Text(val, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ],
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, color: _accent, size: 22),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+  Widget _buildActionButton(
+    String text,
+    Color bg,
+    Color textCol,
+    VoidCallback tap, {
+    bool isOutlined = false,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: isOutlined
+          ? OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: Colors.grey.shade300),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              onPressed: tap,
+              child: Text(
+                text,
+                style: TextStyle(color: textCol, fontWeight: FontWeight.bold),
+              ),
+            )
+          : ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: bg,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              onPressed: tap,
+              child: Text(
+                text,
+                style: TextStyle(color: textCol, fontWeight: FontWeight.bold),
+              ),
             ),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }

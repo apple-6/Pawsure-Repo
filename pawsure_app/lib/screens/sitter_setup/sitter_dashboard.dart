@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // <--- Import GetX
+import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/screens/sitter_setup/view_pet_profile.dart';
 import 'sitter_calendar.dart';
 import 'sitter_inbox.dart';
@@ -369,13 +370,22 @@ class _RequestCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
+                  // Inside SitterDashboard -> _RequestCard
                   onPressed: () {
                     Get.to(
                       () => const PetProfileView(),
                       arguments: {
-                        'petName': request.petName,
-                        'ownerName': request.requester,
-                        // add more fields as needed
+                        // Create a dummy Pet object so the Profile page doesn't crash
+                        'pet': Pet(
+                          id: 1,
+                          name: request.petName, // 'Lucky'
+                          breed: 'Golden Retriever',
+                          dob: '2022-05-15',
+                          weight: 25.0,
+                          allergies: 'Peanuts',
+                        ),
+                        'dateRange': request.dateRange,
+                        'estEarning': request.estEarning,
                       },
                     );
                   },

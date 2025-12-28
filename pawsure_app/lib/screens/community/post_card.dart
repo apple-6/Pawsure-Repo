@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart' hide CarouselController;
 import 'package:carousel_slider/carousel_slider.dart'; // 🆕 Import carousel
+import 'package:pawsure_app/models/post_model.dart';
 import 'community_screen.dart';
 
 class PostCard extends StatefulWidget {
   // 🆕 Changed to StatefulWidget for index tracking
-  final Post post;
+  final PostModel post;
   final Function(String) onLike;
   final Function(String) onComment;
   final Function(String) onShare;
