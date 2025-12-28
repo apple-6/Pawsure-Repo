@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'sitter_dashboard.dart'; // Adjust path if needed
+import 'sitter_dashboard.dart'; 
 import 'chat_screen.dart'; 
-import 'sitter_calendar.dart'; // Import SitterCalendar screen
+import 'sitter_calendar.dart'; 
 import 'package:pawsure_app/services/api_service.dart';
+import 'sitter_setting_screen.dart';
 
 // --- Data Models ---
 

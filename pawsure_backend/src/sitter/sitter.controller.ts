@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  NotFoundException,
   Body,
   Controller,
   Delete,
@@ -75,6 +76,17 @@ export class SitterController {
     return await this.sitterService.findByUserId(req.user.id);
   }
 
+  @Get('user/:userId')
+  async findSitterByUserId(@Param('userId', ParseIntPipe) userId: number) {
+    const sitter = await this.sitterService.findByUserId(userId);
+    
+    // Safety Check: If no sitter profile exists for this user, return 404
+    if (!sitter) {
+      throw new NotFoundException(`No Sitter Profile found for User ID ${userId}`);
+    }
+
+    return sitter;
+  }
 
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {

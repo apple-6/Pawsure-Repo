@@ -3,16 +3,16 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Keep this ONE robust configuration
   app.enableCors({ 
-      origin: '*',
+      origin: '*', // Allows all origins (good for development)
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
       allowedHeaders: '*',
-    });    
+  });    
+  
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
-  // --- ADD THIS LINE ---
-  // This allows your frontend (e.g., http://localhost:5173)
-  // to make requests to your backend (http://localhost:3000)
-  app.enableCors();
-  // ---------------------
+
+  console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();
