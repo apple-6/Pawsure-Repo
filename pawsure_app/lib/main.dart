@@ -14,6 +14,10 @@ import 'main_navigation.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[DEBUG] PawsureApp: Starting main()');
+
+  // 🗑️ REMOVED: Get.put(PetController...)
+  // Reason: It is now handled in InitialBindings to ensure ApiService loads first.
+
   runApp(const PawsureApp());
 }
 
@@ -32,6 +36,7 @@ class PawsureApp extends StatelessWidget {
         useMaterial3: true,
       ),
 
+      // 🛠️ This binds all your services/controllers in the correct order
       initialBinding: InitialBindings(),
 
       // Initial screen

@@ -37,11 +37,41 @@ async findAllByUser(userId: any): Promise<Booking[]> {
     where: { 
       owner: { id: uid } 
     },
-    relations: ['pet'], 
+    relations: ['pet', 'sitter', 'sitter.user'], 
     order: { created_at: 'DESC' }
   });
 
   console.log(`📊 Found ${results.length} bookings for user ${uid}`); // DEBUG LOG
+  return results;
+}
+
+async findAllBySitter(sitterId: number): Promise<Booking[]> {
+  console.log(`🔍 Searching bookings for Sitter ID: ${sitterId}`);
+
+  const results = await this.bookingRepository.find({
+    where: {
+      sitter: { id: sitterId }
+    },
+    relations: ['pet', 'owner'],
+    order: { created_at: 'DESC' }
+  });
+
+  console.log(`📊 Found ${results.length} bookings for sitter ${sitterId}`);
+  return results;
+}
+
+async findAllBySitterUserId(userId: number): Promise<Booking[]> {
+  console.log(`🔍 Searching bookings for Sitter with User ID: ${userId}`);
+
+  const results = await this.bookingRepository.find({
+    where: {
+      sitter: { userId: userId }
+    },
+    relations: ['pet', 'owner'],
+    order: { created_at: 'DESC' }
+  });
+
+  console.log(`📊 Found ${results.length} bookings for sitter user ${userId}`);
   return results;
 }
 }

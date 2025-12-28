@@ -6,7 +6,6 @@ class BookingCard extends StatelessWidget {
 
   const BookingCard({super.key, required this.booking});
 
-  // 🎨 Helper for Status Colors and Text
   ({Color color, IconData icon, String text}) _getStatusDetails(String status) {
     switch (status.toLowerCase()) {
       case 'accepted':
@@ -22,7 +21,7 @@ class BookingCard extends StatelessWidget {
     }
   }
 
-  // 📅 Helper to format dates nicer (e.g., "25 Oct")
+ 
   String _formatDate(String dateStr) {
     try {
       final date = DateTime.parse(dateStr);
@@ -88,7 +87,6 @@ class BookingCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                // 🎨 Custom Status Chip
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -134,7 +132,7 @@ class BookingCard extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                // 🗓️ Date Range Flow
+                
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -160,7 +158,6 @@ class BookingCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
 
-                // ⏰ Time Pills Row
                 Row(
                   children: [
                     Expanded(

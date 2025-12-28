@@ -1,23 +1,17 @@
+//pawsure_app\lib\services\auth_service.dart
 import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import './storage_service.dart';
+import 'package:pawsure_app/constants/api_config.dart';
 
 class AuthService {
   // Determine base URL depending on platform so emulator can reach host machine.
   // - Android emulator (AVD): use 10.0.2.2 to reach host localhost
   // - iOS simulator: use localhost
   // - Real devices: replace with your machine's LAN IP (e.g. http://192.168.1.100:3000)
-  static String get _baseUrl {
-    try {
-      if (Platform.isAndroid) return 'http://10.203.105.212:3000';
-      if (Platform.isIOS) return 'http://localhost:3000';
-    } catch (_) {}
-    return 'http://localhost:3000';
-    // return 'http://127.0.0.1:3000';
-    // return 'http://10.202.109.35:3000';
-  }
+  static String get _baseUrl => ApiConfig.baseUrl;
 
   // Use file-based storage implementation
   final StorageService _storage = FileStorageService();

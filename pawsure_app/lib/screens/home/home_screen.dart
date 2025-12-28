@@ -155,61 +155,97 @@ class HomeScreen extends StatelessWidget {
                 UpcomingEventsCard(petId: pet.id),
                 const SizedBox(height: 24),
 
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "My Bookings",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
                 Obx(() {
-                  // 1. Check loading from BookingController
-                  if (bookingController.isLoadingBookings.value) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(20),
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-
-                  final filteredBookings = bookingController.userBookings.where(
-                    (booking) {
-                      final bId = booking['pet']?['id'];
-                      final sId = controller.selectedPet.value?.id;
-                      return bId.toString() == sId.toString();
-                    },
-                  ).toList();
-
-                  if (filteredBookings.isEmpty) {
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.grey.shade100),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          "No bookings scheduled for this pet.",
-                          style: TextStyle(color: Colors.grey),
+                  // We wrap the entire logic in the Obx so the whole container can react to loading states
+                  return Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(top: 12),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
                         ),
-                      ),
-                    );
-                  }
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Now "My Bookings" is INSIDE the white container
+                        const Text(
+                          "My Bookings",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
 
-                  return Column(
-                    children: filteredBookings
-                        .map((booking) => BookingCard(booking: booking))
-                        .toList(),
+                        // Logic for Loading, Empty, or List
+                        if (bookingController.isLoadingBookings.value)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        else ...[
+                          // Filter bookings
+                          (() {
+                            final filteredBookings = bookingController
+                                .userBookings
+                                .where((booking) {
+                                  final bId = booking['pet']?['id'];
+                                  final sId = controller.selectedPet.value?.id;
+                                  return bId.toString() == sId.toString();
+                                })
+                                .toList();
+
+                            if (filteredBookings.isEmpty) {
+                              return Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 20,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.calendar_today_outlined,
+                                        size: 32,
+                                        color: Colors.grey[300],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text(
+                                        "No bookings scheduled for this pet.",
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 14,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return Column(
+                              children: filteredBookings
+                                  .map(
+                                    (booking) => BookingCard(booking: booking),
+                                  )
+                                  .toList(),
+                            );
+                          })(),
+                        ],
+                      ],
+                    ),
                   );
                 }),
 
