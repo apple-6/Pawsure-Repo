@@ -35,12 +35,14 @@ class VacancyPostCard extends StatelessWidget {
             const Divider(height: 24),
 
             // Job Details Section
+            // Inside VacancyPostCard build method
             Row(
               children: [
                 const Icon(Icons.calendar_today, size: 18, color: Colors.blue),
                 const SizedBox(width: 8),
                 Text(
-                  "${DateFormat('MMM d').format(post.createdAt)} - ${DateFormat('MMM d').format(post.createdAt.add(const Duration(days: 2)))}",
+                  // Use the actual dates from the post object instead of .add(Duration(days: 2))
+                  "${DateFormat('MMM d').format(post.startDate)} - ${DateFormat('MMM d').format(post.endDate)}",
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
               ],

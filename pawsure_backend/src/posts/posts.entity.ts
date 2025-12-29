@@ -1,8 +1,16 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+} from 'typeorm';
 import { User } from '../user/user.entity';
 import { PostMedia } from './post-media.entity';
-import { Comment } from '../comments/comments.entity'; // ✅ Import Comment Entity
-import { Like } from '../likes/likes.entity';           // ✅ Import Like Entity
+import { Comment } from '../comments/comments.entity'; // Import your Comment entity
+import { Like } from '../likes/likes.entity';       // Import your Like entity
 
 @Entity('posts')
 export class Post {
@@ -12,32 +20,35 @@ export class Post {
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ nullable: true })
-  image_url: string;
-
-  @Column({ default: 0 })
-  likes_count: number;
+  @Column({ name: 'user_id' })
+  userId: number;
 
   @Column({ default: false })
   is_urgent: boolean;
 
+  @Column({ default: false })
+  is_vacancy: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  start_date: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  end_date: Date;
+
+  @Column({ nullable: true })
+  pet_id: string;
+
   @CreateDateColumn()
   created_at: Date;
 
-  @UpdateDateColumn()
-  updated_at: Date;
-
-  // Link to User (Fixed property name to 'user' to match your error log)
-  @ManyToOne(() => User, (user) => user.posts)
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
   user: User;
-
-  @Column({ nullable: true })
-  userId: number;
 
   @OneToMany(() => PostMedia, (media) => media.post)
   post_media: PostMedia[];
 
-  // ✅ ADD THESE TWO RELATIONSHIPS TO FIX THE ERRORS:
+  // FIX: Add these two lines so Comments and Likes can "see" the post
   @OneToMany(() => Comment, (comment) => comment.post)
   comments: Comment[];
 

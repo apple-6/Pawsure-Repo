@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/models/post_model.dart';
+import 'package:pawsure_app/screens/community/create_vacancy_modal.dart';
 import 'dart:convert';
 import 'post_card.dart';
 import 'create_post_modal.dart';
@@ -112,14 +113,9 @@ class CommunityScreenState extends State<CommunityScreen> {
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        // Logic for different forms
         if (_currentSubTabIndex == 2) {
-          // Placeholder for your Sitter Vacancy Form
-          return Container(
-            padding: const EdgeInsets.all(24),
-            height: MediaQuery.of(context).size.height * 0.8,
-            child: const Center(child: Text("Sitter Vacancy Form Coming Soon")),
-          );
+          // REPLACE THE PLACEHOLDER WITH YOUR ACTUAL MODAL
+          return CreateVacancyModal(onVacancyCreated: _handlePostCreated);
         } else {
           return CreatePostModal(onPostCreated: _handlePostCreated);
         }
