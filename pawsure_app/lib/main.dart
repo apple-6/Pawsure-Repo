@@ -1,8 +1,8 @@
-// pawsure_app/lib/main.dart
+//pawsure_app\lib\main.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'bindings/initial_bindings.dart';
-import 'controllers/navigation_controller.dart'; // 🆕 Import
+import 'controllers/navigation_controller.dart';
 
 // Screens
 import 'screens/auth/onboarding_screen.dart';
@@ -16,8 +16,9 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[DEBUG] PawsureApp: Starting main()');
 
-  // 🆕 Register NavigationController globally
+  // ✅ Register NavigationController FIRST (before InitialBindings)
   Get.put(NavigationController(), permanent: true);
+  debugPrint('✅ NavigationController registered globally');
 
   runApp(const PawsureApp());
 }
@@ -37,7 +38,7 @@ class PawsureApp extends StatelessWidget {
         useMaterial3: true,
       ),
 
-      // 🛠️ This binds all your services/controllers in the correct order
+      // ✅ InitialBindings loads all services and controllers in correct order
       initialBinding: InitialBindings(),
 
       // Initial screen

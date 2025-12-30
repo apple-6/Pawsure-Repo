@@ -1,5 +1,4 @@
-//Pawsure-Repo\pawsure_app\lib\services\storage_service.dart
-
+//pawsure_app\lib\services\storage_service.dart
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
@@ -11,8 +10,6 @@ abstract class StorageService {
   Future<String?> read({required String key});
   Future<void> delete({required String key});
   Future<void> clear();
-
-  // Helper method for auth token
   Future<void> deleteToken() async {
     await delete(key: 'auth_token');
   }
@@ -22,38 +19,75 @@ abstract class StorageService {
 class FileStorageService implements StorageService {
   static const String _fileName = 'secure_storage.json';
 
+  // ✅ Singleton instance
+  static FileStorageService? _instance;
+
+  // ✅ In-memory cache to avoid constant file reads
+  Map<String, String>? _cache;
+  bool _isInitialized = false;
+  File? _file;
+
+  // ✅ Private constructor for singleton
+  FileStorageService._internal();
+
+  // ✅ Factory constructor returns singleton
+  factory FileStorageService() {
+    _instance ??= FileStorageService._internal();
+    return _instance!;
+  }
+
+  /// ✅ Initialize storage once
+  Future<void> _ensureInitialized() async {
+    if (_isInitialized && _cache != null) {
+      return; // Already initialized
+    }
+
+    try {
+      _file = await _getFile();
+      _cache = await _loadFromFile();
+      _isInitialized = true;
+
+      debugPrint('✅ FileStorageService initialized');
+      debugPrint(
+        '📋 Loaded ${_cache!.length} keys: ${_cache!.keys.join(", ")}',
+      );
+
+      if (_cache!.containsKey('jwt')) {
+        debugPrint('🔑 JWT token found in storage');
+      }
+    } catch (e) {
+      debugPrint('❌ Storage initialization error: $e');
+      _cache = {};
+      _isInitialized = true;
+    }
+  }
+
   Future<File> _getFile() async {
     final directory = await getApplicationSupportDirectory();
     return File('${directory.path}/$_fileName');
   }
 
-  /// 🔧 FIX: Robust file reading with empty/corrupted file handling
-  Future<Map<String, String>> _readMap() async {
+  /// ✅ Load from file WITHOUT clearing existing cache
+  Future<Map<String, String>> _loadFromFile() async {
     try {
-      final file = await _getFile();
+      final file = _file ?? await _getFile();
 
-      // Check if file exists
       if (!await file.exists()) {
-        debugPrint('📄 Storage file does not exist, creating new one');
-        await _writeMap({});
+        debugPrint(
+          '📄 Storage file does not exist, will create on first write',
+        );
         return {};
       }
 
-      // Read file content
       final content = await file.readAsString();
 
-      // 🔧 FIX: Handle empty file
       if (content.trim().isEmpty) {
-        debugPrint('📄 Storage file is empty, initializing with empty map');
-        await _writeMap({});
+        debugPrint('📄 Storage file is empty');
         return {};
       }
 
-      // Try to decode JSON
       try {
         final decoded = json.decode(content);
-
-        // Ensure it's a Map<String, String>
         if (decoded is Map) {
           return Map<String, String>.from(
             decoded.map(
@@ -62,111 +96,85 @@ class FileStorageService implements StorageService {
           );
         } else {
           debugPrint('⚠️ Invalid storage format, resetting');
-          await _writeMap({});
           return {};
         }
       } on FormatException catch (e) {
         debugPrint('⚠️ Corrupted JSON in storage file, resetting: $e');
-        // Reset corrupted file
-        await _writeMap({});
         return {};
       }
-    } catch (e, st) {
+    } catch (e) {
       debugPrint('❌ Error reading storage file: $e');
-      debugPrint('Stack trace: $st');
-
-      // Try to create a fresh file
-      try {
-        await _writeMap({});
-      } catch (_) {
-        // If we can't even create a file, return empty map
-      }
       return {};
     }
   }
 
-  /// 🔧 FIX: Safe write operation with error handling
-  Future<void> _writeMap(Map<String, String> data) async {
-    try {
-      final file = await _getFile();
+  /// ✅ Save cache to file
+  Future<void> _saveToFile() async {
+    if (_cache == null) return;
 
-      // Ensure directory exists
+    try {
+      final file = _file ?? await _getFile();
       final directory = file.parent;
+
       if (!await directory.exists()) {
         await directory.create(recursive: true);
       }
 
-      // Write JSON data
-      final jsonString = json.encode(data);
+      final jsonString = json.encode(_cache);
       await file.writeAsString(jsonString);
-
-      debugPrint('✅ Storage written successfully (${data.length} keys)');
-    } catch (e, st) {
-      debugPrint('❌ Error writing storage file: $e');
-      debugPrint('Stack trace: $st');
-      rethrow; // Let caller handle the error
+      debugPrint('💾 Storage saved (${_cache!.length} keys)');
+    } catch (e) {
+      debugPrint('❌ Failed to save storage: $e');
+      rethrow;
     }
   }
 
   @override
   Future<void> write({required String key, required String value}) async {
-    try {
-      final map = await _readMap();
-      map[key] = value;
-      await _writeMap(map);
-      debugPrint('✅ Stored key: $key');
-    } catch (e) {
-      debugPrint('❌ Error writing key "$key": $e');
-      rethrow;
-    }
+    await _ensureInitialized();
+
+    _cache![key] = value;
+    await _saveToFile();
+    debugPrint('✅ Stored key: $key');
   }
 
   @override
   Future<String?> read({required String key}) async {
-    try {
-      final map = await _readMap();
-      final value = map[key];
+    await _ensureInitialized();
 
-      if (value != null) {
-        debugPrint('✅ Read key: $key');
-      } else {
-        debugPrint('⚠️ Key not found: $key');
-      }
+    final value = _cache![key];
 
-      return value;
-    } catch (e) {
-      debugPrint('❌ Error reading key "$key": $e');
-      return null;
+    if (value != null) {
+      debugPrint('✅ Read key: $key');
+    } else {
+      debugPrint('! Key not found: $key');
+      debugPrint('📋 Available keys: ${_cache!.keys.join(", ")}');
     }
+
+    return value;
   }
 
   @override
   Future<void> delete({required String key}) async {
-    try {
-      final map = await _readMap();
-      final existed = map.remove(key) != null;
-      await _writeMap(map);
+    await _ensureInitialized();
 
-      if (existed) {
-        debugPrint('✅ Deleted key: $key');
-      } else {
-        debugPrint('⚠️ Key not found for deletion: $key');
-      }
-    } catch (e) {
-      debugPrint('❌ Error deleting key "$key": $e');
-      rethrow;
+    final existed = _cache!.remove(key) != null;
+    await _saveToFile();
+
+    if (existed) {
+      debugPrint('✅ Deleted key: $key');
+    } else {
+      debugPrint('⚠️ Key not found for deletion: $key');
     }
   }
 
   @override
   Future<void> clear() async {
-    try {
-      await _writeMap({});
-      debugPrint('✅ Storage cleared');
-    } catch (e) {
-      debugPrint('❌ Error clearing storage: $e');
-      rethrow;
-    }
+    await _ensureInitialized();
+
+    debugPrint('🗑️ Clearing all storage (${_cache!.length} keys)');
+    _cache!.clear();
+    await _saveToFile();
   }
 
   @override
@@ -176,12 +184,8 @@ class FileStorageService implements StorageService {
 
   /// Debug helper: Print all stored keys (without values for security)
   Future<void> debugPrintKeys() async {
-    try {
-      final map = await _readMap();
-      debugPrint('📋 Stored keys: ${map.keys.join(", ")}');
-    } catch (e) {
-      debugPrint('❌ Error printing keys: $e');
-    }
+    await _ensureInitialized();
+    debugPrint('📋 Stored keys: ${_cache!.keys.join(", ")}');
   }
 
   /// Debug helper: Check if storage file exists and its size
@@ -200,5 +204,11 @@ class FileStorageService implements StorageService {
     } catch (e) {
       debugPrint('❌ Error getting file info: $e');
     }
+  }
+
+  /// Force reload from file (useful for debugging)
+  Future<void> reload() async {
+    _cache = await _loadFromFile();
+    debugPrint('🔄 Storage reloaded (${_cache!.length} keys)');
   }
 }
