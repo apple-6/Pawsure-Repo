@@ -6,8 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:pawsure_app/constants/api_config.dart';
 import 'package:pawsure_app/services/auth_service.dart';
 // Note: Ensure these imports point to your actual file locations
-// import 'sitter_dashboard.dart';
-// import 'sitter_inbox.dart';
+import 'sitter_dashboard.dart';
+import 'sitter_inbox.dart';
 
 enum DateStatus { available, booked, unavailable }
 
@@ -272,6 +272,32 @@ class _SitterCalendarState extends State<SitterCalendar> {
                 ),
               ],
             ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 2, // Highlight "calendar"
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: _accentColor,
+        unselectedItemColor: Colors.grey.shade600,
+        onTap: (index) {
+          if (index == 0) Get.offAll(() => const SitterDashboard());
+          // Add other navigation logic here if needed
+        
+          if (index == 2) { // Index 2 is Calendar
+            Get.to(() => const SitterCalendar());
+          }
+          // Index 3: Go to Inbox 
+          if (index == 3) {
+            Get.to(() => const SitterInbox());
+          }
+          
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Dashboard'),
+          BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), label: 'Discover'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'Calendar'),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Inbox'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Setting'),
+        ],
+      ),      
       bottomSheet: _isEditMode && _selectedDates.isNotEmpty
           ? _buildBulkEditBar()
           : null,
