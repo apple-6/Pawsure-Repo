@@ -1,6 +1,7 @@
-// pawsure_app/lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // Added for Supabase
+import 'constants/api_config.dart'; // Added to access your URL/Key
 import 'bindings/initial_bindings.dart';
 
 // Screens
@@ -11,13 +12,23 @@ import 'screens/calendar/calendar_screen.dart';
 import 'screens/health/add_health_record_screen.dart';
 import 'main_navigation.dart';
 
-void main() {
+// Changed to Future<void> and added async to allow Supabase to initialize
+Future<void> main() async {
+  // 1. Ensure Flutter bindings are initialized first
   WidgetsFlutterBinding.ensureInitialized();
+
+  debugPrint('[DEBUG] PawsureApp: Initializing Supabase');
+
+  // 2. Initialize Supabase using the constants from your ApiConfig
+  // This prevents the "Supabase not initialized" error in your modal
+  await Supabase.initialize(
+    url: ApiConfig.supabaseUrl,
+    anonKey: ApiConfig.supabaseAnonKey,
+  );
+
   debugPrint('[DEBUG] PawsureApp: Starting main()');
 
-  // 🗑️ REMOVED: Get.put(PetController...)
-  // Reason: It is now handled in InitialBindings to ensure ApiService loads first.
-
+  // 3. Start the application
   runApp(const PawsureApp());
 }
 
@@ -36,10 +47,9 @@ class PawsureApp extends StatelessWidget {
         useMaterial3: true,
       ),
 
-      // 🛠️ This binds all your services/controllers in the correct order
+      // Your existing GetX logic remains untouched
       initialBinding: InitialBindings(),
 
-      // Initial screen
       home: const OnboardingScreen(),
 
       getPages: [

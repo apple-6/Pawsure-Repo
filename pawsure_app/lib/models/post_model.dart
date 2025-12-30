@@ -1,81 +1,82 @@
 class PostModel {
   final String id;
   final String userId;
-  final String title;
+  final String userName;
+  final String profilePicture;
   final String content;
-  final String? imageUrl;
-  final List<String> tags;
-  final int likesCount;
-  final int commentsCount;
+  final List<String> mediaUrls; // This name must match PostCard
+  final String? location;
+  final bool isUrgent;
+  final bool isLiked;
+  final int likes;
   final DateTime createdAt;
-  final DateTime updatedAt;
+
+  // Vacancy fields for the new Sitter Vacancy logic
+  final bool isVacancy;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final String? petId;
 
   PostModel({
     required this.id,
     required this.userId,
-    required this.title,
+    required this.userName,
+    required this.profilePicture,
     required this.content,
-    this.imageUrl,
-    required this.tags,
-    required this.likesCount,
-    required this.commentsCount,
+    required this.mediaUrls,
+    this.location,
+    this.isUrgent = false,
+    this.isLiked = false,
+    this.likes = 0,
     required this.createdAt,
-    required this.updatedAt,
+    this.isVacancy = false,
+    this.startDate,
+    this.endDate,
+    this.petId,
   });
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
-    return PostModel(
-      id: json['id'] as String,
-      userId: json['userId'] as String,
-      title: json['title'] as String,
-      content: json['content'] as String,
-      imageUrl: json['imageUrl'] as String?,
-      tags: List<String>.from(json['tags'] as List? ?? []),
-      likesCount: json['likesCount'] as int? ?? 0,
-      commentsCount: json['commentsCount'] as int? ?? 0,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-    );
-  }
+    // 1. Handle nested user data from your NestJS/Prisma backend
+    final userData = json['user'] ?? json['owner'] ?? {};
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'userId': userId,
-      'title': title,
-      'content': content,
-      'imageUrl': imageUrl,
-      'tags': tags,
-      'likesCount': likesCount,
-      'commentsCount': commentsCount,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-    };
-  }
+    // 2. Extract media: Checks both potential API keys
+    final List<dynamic> rawMedia =
+        json['post_media'] ?? json['mediaUrls'] ?? [];
 
-  PostModel copyWith({
-    String? id,
-    String? userId,
-    String? title,
-    String? content,
-    String? imageUrl,
-    List<String>? tags,
-    int? likesCount,
-    int? commentsCount,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
     return PostModel(
-      id: id ?? this.id,
-      userId: userId ?? this.userId,
-      title: title ?? this.title,
-      content: content ?? this.content,
-      imageUrl: imageUrl ?? this.imageUrl,
-      tags: tags ?? this.tags,
-      likesCount: likesCount ?? this.likesCount,
-      commentsCount: commentsCount ?? this.commentsCount,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      id: json['id'].toString(),
+      userId: (json['userId'] ?? userData['id'] ?? '').toString(),
+      userName: userData['name'] ?? 'Unknown User',
+      profilePicture:
+          userData['profile_picture'] ??
+          "https://cdn-icons-png.flaticon.com/512/194/194279.png",
+      content: json['content'] ?? '',
+
+      // 3. Mapping the images correctly so they show up in your Carousel
+      mediaUrls: rawMedia
+          .map((m) {
+            if (m is String) return m;
+            return (m['url'] ?? m['media_url'] ?? '').toString();
+          })
+          .where((url) => url.isNotEmpty)
+          .toList()
+          .cast<String>(),
+
+      location: json['location_name'] ?? json['location'],
+      isUrgent: json['is_urgent'] ?? false,
+      likes: json['likes_count'] ?? json['likes'] ?? 0,
+      isLiked: json['isLiked'] ?? false,
+      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+
+      // Vacancy fields mapping
+      isVacancy: json['is_vacancy'] ?? false,
+      startDate: json['start_date'] != null
+          ? DateTime.tryParse(json['start_date'])
+          : null,
+      endDate: json['end_date'] != null
+          ? DateTime.tryParse(json['end_date'])
+          : null,
+      petId: json['petId']?.toString(),
     );
   }
 }

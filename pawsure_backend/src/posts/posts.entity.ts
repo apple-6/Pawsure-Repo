@@ -1,35 +1,54 @@
-// src/posts/posts.entity.ts
-import { User } from 'src/user/user.entity';
-import { Comment } from 'src/comments/comments.entity';
-import { Like } from 'src/likes/likes.entity';
 import {
-  Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
 } from 'typeorm';
+import { User } from '../user/user.entity';
+import { PostMedia } from './post-media.entity';
+import { Comment } from '../comments/comments.entity'; // Import your Comment entity
+import { Like } from '../likes/likes.entity';       // Import your Like entity
 
 @Entity('posts')
 export class Post {
-  @PrimaryGeneratedColumn() // 'INT post_id PK'
+  @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'text' }) // 'TEXT content'
+  @Column({ type: 'text' })
   content: string;
 
-  @Column({ nullable: true }) // 'STRING image_url'
-  image_url: string;
+  @Column({ name: 'user_id' })
+  userId: number;
 
-  @Column({ default: 0 }) // 'INT likes_count'
-  likes_count: number;
+  @Column({ default: false })
+  is_urgent: boolean;
 
-  @CreateDateColumn() // 'TIMESTAMP created_at'
+  @Column({ default: false })
+  is_vacancy: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  start_date: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  end_date: Date;
+
+  @Column({ nullable: true })
+  pet_id: string;
+
+  @CreateDateColumn()
   created_at: Date;
 
-  @UpdateDateColumn() // 'TIMESTAMP updated_at'
-  updated_at: Date;
-
-  // --- Relationships ---
-  @ManyToOne(() => User, (user) => user.posts) // 'INT user_id FK'
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
+  @OneToMany(() => PostMedia, (media) => media.post)
+  post_media: PostMedia[];
+
+  // FIX: Add these two lines so Comments and Likes can "see" the post
   @OneToMany(() => Comment, (comment) => comment.post)
   comments: Comment[];
 
