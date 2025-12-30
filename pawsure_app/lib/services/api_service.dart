@@ -1,6 +1,5 @@
 //Pawsure-Repo\pawsure_app\lib\services\api_service.dart
 import 'dart:convert';
-import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:pawsure_app/models/pet_model.dart';
@@ -181,8 +180,13 @@ class ApiService {
     String? dob,
     String? photoPath,
     double? weight,
+    double? height,
+    int? bodyConditionScore,
+    List<Map<String, dynamic>>? weightHistory,
     String? sterilizationStatus,
     String? allergies,
+    String? foodBrand,
+    String? dailyFoodAmount,
     double? moodRating,
     String? lastVetVisit,
   }) async {
@@ -215,11 +219,26 @@ class ApiService {
       if (weight != null) {
         request.fields['weight'] = weight.toString();
       }
+      if (height != null) {
+        request.fields['height'] = height.toString();
+      }
+      if (bodyConditionScore != null) {
+        request.fields['body_condition_score'] = bodyConditionScore.toString();
+      }
+      if (weightHistory != null) {
+        request.fields['weight_history'] = jsonEncode(weightHistory);
+      }
       if (sterilizationStatus != null && sterilizationStatus.isNotEmpty) {
         request.fields['sterilization_status'] = sterilizationStatus;
       }
       if (allergies != null && allergies.isNotEmpty) {
         request.fields['allergies'] = allergies;
+      }
+      if (foodBrand != null && foodBrand.isNotEmpty) {
+        request.fields['food_brand'] = foodBrand;
+      }
+      if (dailyFoodAmount != null && dailyFoodAmount.isNotEmpty) {
+        request.fields['daily_food_amount'] = dailyFoodAmount;
       }
       if (moodRating != null) {
         request.fields['mood_rating'] = moodRating.toString();
@@ -331,7 +350,7 @@ class ApiService {
       throw Exception(
         'Failed to load health records (${response.statusCode}): ${response.body}',
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint('❌ Error in getHealthRecords: $e');
       rethrow;
     }
@@ -362,7 +381,7 @@ class ApiService {
       throw Exception(
         'Failed to add health record (${response.statusCode}): ${response.body}',
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint('❌ Error in addHealthRecord: $e');
       rethrow;
     }
