@@ -20,7 +20,7 @@ export class Post {
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'userId' })
   userId: number;
 
   @Column({ default: false })
@@ -42,7 +42,7 @@ export class Post {
   created_at: Date;
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'userId' })
   user: User;
 
   @OneToMany(() => PostMedia, (media) => media.post)

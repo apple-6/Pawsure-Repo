@@ -21,28 +21,29 @@ export class PostsService {
     try {
       this.logger.log(`🔍 Fetching posts with tab: ${tab || 'all'}`);
 
-      const query = this.postRepo
-        .createQueryBuilder('post')
-        .leftJoinAndSelect('post.user', 'user')
-        .leftJoinAndSelect('post.post_media', 'media');
+      let where: any = {};
 
       // Logic to separate Vacancies from the Social Feed
       if (tab === 'vacancy') {
         // ONLY show jobs
-        query.andWhere('post.is_vacancy = :vacancy', { vacancy: true });
+        where.is_vacancy = true;
         this.logger.log('💼 Filtering: Sitter Vacancies only');
       } else if (tab === 'urgent') {
         // ONLY show urgent social posts
-        query.andWhere('post.is_urgent = :urgent', { urgent: true });
-        query.andWhere('post.is_vacancy = :vacancy', { vacancy: false });
+        where.is_urgent = true;
+        where.is_vacancy = false;
         this.logger.log('⚡ Filtering: Urgent Social Posts only');
       } else {
         // DEFAULT (For You): Show social posts, hide job vacancies
-        query.andWhere('post.is_vacancy = :vacancy', { vacancy: false });
+        where.is_vacancy = false;
         this.logger.log('📱 Filtering: Standard Social Feed');
       }
 
-      const posts = await query.orderBy('post.created_at', 'DESC').getMany();
+      const posts = await this.postRepo.find({
+        where,
+        relations: ['user', 'post_media'],
+        order: { created_at: 'DESC' },
+      });
 
       this.logger.log(`✅ Successfully fetched ${posts.length} posts`);
       return posts;
@@ -67,23 +68,30 @@ export class PostsService {
       const isVacancy = body.is_vacancy === 'true' || body.is_vacancy === true;
       const isUrgent = body.is_urgent === 'true' || body.is_urgent === true;
 
-      // 1. Create the post object with vacancy fields
-      const postData = this.postRepo.create({
+      // Validate required fields for vacancies
+      if (isVacancy) {
+        if (!body.start_date || !body.end_date) {
+          throw new Error('start_date and end_date are required for vacancy posts');
+        }
+      }
+
+      // Create post object with proper typing
+      const postData: Partial<Post> = {
         content: body.content,
         is_urgent: isUrgent,
         is_vacancy: isVacancy,
-        userId: userId,
-        // Ensure these fields exist in your posts.entity.ts
-        start_date: body.start_date ? new Date(body.start_date) : null,
-        end_date: body.end_date ? new Date(body.end_date) : null,
-        pet_id: body.petId || null, 
-      });
+        userId: userId,  // ✅ Use camelCase property name (maps to user_id column)
+        // For vacancies, dates are required. For social posts, they're optional
+        start_date: body.start_date ? new Date(body.start_date) : undefined,
+        end_date: body.end_date ? new Date(body.end_date) : undefined,
+        pet_id: body.petId || null,
+      };
 
-      // 2. Save the post
-      const savedPost: Post = await this.postRepo.save(postData);
+      // Save the post
+      const savedPost = await this.postRepo.save(postData);
       this.logger.log(`✅ Post created with ID: ${savedPost.id} (IsVacancy: ${isVacancy})`);
 
-      // 3. Handle media uploads
+      // Handle media uploads
       if (files && files.length > 0) {
         this.logger.log(`📁 Saving ${files.length} media files`);
 
@@ -102,7 +110,7 @@ export class PostsService {
         this.logger.log(`✅ Saved ${mediaRecords.length} media files`);
       }
 
-      // 4. Return the post with relations loaded
+      // Return the post with relations loaded
       const fullPost = await this.postRepo.findOne({
         where: { id: savedPost.id },
         relations: ['user', 'post_media'],

@@ -38,7 +38,7 @@ import { EventsModule } from './events/events.module'; // 👈 Correct Import
         type: 'postgres',
         url: configService.get<string>('DATABASE_URL'),
         autoLoadEntities: true,
-        synchronize: true, // Set to false in production
+        synchronize: false, // Set to false in production
         ssl: {
           rejectUnauthorized: false,
         },
