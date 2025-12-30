@@ -1,40 +1,33 @@
-//pawsure_app\lib\services\activity_service.dart
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/models/activity_log_model.dart';
 import 'package:pawsure_app/services/auth_service.dart';
-import 'package:pawsure_app/constants/api_config.dart'; // Import your config
+import 'package:pawsure_app/constants/api_config.dart';
 import 'package:get/get.dart';
 
-// Use the centralized base URL from your config
 String get apiBaseUrl => ApiConfig.baseUrl;
 
 class ActivityService {
-  // Helper to get headers with Auth Token
   Future<Map<String, String>> _getHeaders() async {
     final headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
     };
-
     try {
       final authService = Get.find<AuthService>();
       final token = await authService.getToken();
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
-        debugPrint('🔑 ActivityService: Using auth token');
       } else {
-        debugPrint('⚠️ ActivityService: No auth token available');
+        debugPrint('⚠️ ActivityService: No auth token');
       }
     } catch (e) {
-      debugPrint('⚠️ Could not get auth token: $e');
+      debugPrint('❌ ActivityService: Auth token error: $e');
     }
-
     return headers;
   }
 
-  // Get all activities for a pet
   Future<List<ActivityLog>> getActivities(
     int petId, {
     String? type,
@@ -42,6 +35,9 @@ class ActivityService {
     DateTime? endDate,
   }) async {
     try {
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('🌐 ActivityService.getActivities(petId: $petId)');
+
       final headers = await _getHeaders();
       var url = '$apiBaseUrl/activity-logs/pets/$petId';
       final queryParams = <String, String>{};
@@ -57,89 +53,63 @@ class ActivityService {
             queryParams.entries.map((e) => '${e.key}=${e.value}').join('&');
       }
 
-      debugPrint('🔍 ActivityService: GET $url');
+      debugPrint('📡 Request: $url');
       final response = await http.get(Uri.parse(url), headers: headers);
-      debugPrint('📦 ActivityService: Response ${response.statusCode}');
+      debugPrint('📦 Response: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        // debugPrint('📦 Raw response body: ${response.body}');
         final List<dynamic> jsonList = jsonDecode(response.body);
-        debugPrint('✅ Parsed ${jsonList.length} activities from JSON');
+        if (jsonList.isEmpty) return [];
 
-        return jsonList.map((e) {
+        final activities = <ActivityLog>[];
+        for (int i = 0; i < jsonList.length; i++) {
           try {
-            return ActivityLog.fromJson(e);
-          } catch (parseError) {
-            debugPrint('❌ Error parsing activity: $parseError');
-            debugPrint('❌ Problematic JSON: $e');
-            rethrow;
+            activities.add(ActivityLog.fromJson(jsonList[i]));
+          } catch (itemError) {
+            debugPrint('⚠️ Skipping invalid activity at index $i: $itemError');
           }
-        }).toList();
+        }
+        debugPrint('✅ Parsed ${activities.length} valid activities');
+        return activities;
+      } else if (response.statusCode == 401) {
+        throw Exception('Unauthorized');
       }
 
       throw Exception('Failed to load activities: ${response.statusCode}');
     } catch (e) {
-      debugPrint('❌ Error loading activities: $e');
+      debugPrint('❌ Error in getActivities: $e');
       rethrow;
     }
   }
 
-  // Get activity statistics
   Future<ActivityStats> getStats(int petId, String period) async {
-    try {
-      final headers = await _getHeaders();
-      final url = '$apiBaseUrl/activity-logs/pets/$petId/stats?period=$period';
+    final headers = await _getHeaders();
+    final url = '$apiBaseUrl/activity-logs/pets/$petId/stats?period=$period';
+    final response = await http.get(Uri.parse(url), headers: headers);
 
-      debugPrint('🔍 ActivityService: GET $url');
-      final response = await http.get(Uri.parse(url), headers: headers);
-      debugPrint('📦 ActivityService Stats: Response ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        return ActivityStats.fromJson(jsonDecode(response.body));
-      }
-
-      throw Exception('Failed to load stats: ${response.statusCode}');
-    } catch (e) {
-      debugPrint('❌ Error loading stats: $e');
-      rethrow;
+    if (response.statusCode == 200) {
+      return ActivityStats.fromJson(jsonDecode(response.body));
     }
+    throw Exception('Failed to load stats');
   }
 
-  // Create new activity
   Future<ActivityLog> createActivity(
     int petId,
     Map<String, dynamic> payload,
   ) async {
-    try {
-      final headers = await _getHeaders();
-      final url = '$apiBaseUrl/activity-logs/pets/$petId';
-
-      debugPrint('🔍 ActivityService: POST $url');
-      debugPrint('📤 Payload: ${jsonEncode(payload)}');
-
-      final response = await http.post(
-        Uri.parse(url),
-        headers: headers,
-        body: jsonEncode(payload),
-      );
-
-      debugPrint('📦 Create response: ${response.statusCode}');
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        debugPrint('✅ Activity created successfully');
-        return ActivityLog.fromJson(jsonDecode(response.body));
-      }
-
-      throw Exception(
-        'Failed to create activity: ${response.statusCode} - ${response.body}',
-      );
-    } catch (e) {
-      debugPrint('❌ Error creating activity: $e');
-      rethrow;
+    final headers = await _getHeaders();
+    final response = await http.post(
+      Uri.parse('$apiBaseUrl/activity-logs/pets/$petId'),
+      headers: headers,
+      body: jsonEncode(payload),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return ActivityLog.fromJson(jsonDecode(response.body));
     }
+    throw Exception('Create failed');
   }
 
-  // Update activity
+  // 🔧 FIX: Added the missing updateActivity method
   Future<ActivityLog> updateActivity(
     int id,
     Map<String, dynamic> payload,
@@ -155,7 +125,6 @@ class ActivityService {
       if (response.statusCode == 200) {
         return ActivityLog.fromJson(jsonDecode(response.body));
       }
-
       throw Exception('Failed to update activity: ${response.statusCode}');
     } catch (e) {
       debugPrint('❌ Error updating activity: $e');
@@ -163,21 +132,14 @@ class ActivityService {
     }
   }
 
-  // Delete activity
   Future<void> deleteActivity(int id) async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.delete(
-        Uri.parse('$apiBaseUrl/activity-logs/$id'),
-        headers: headers,
-      );
-
-      if (response.statusCode != 204 && response.statusCode != 200) {
-        throw Exception('Failed to delete activity: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('❌ Error deleting activity: $e');
-      rethrow;
+    final headers = await _getHeaders();
+    final response = await http.delete(
+      Uri.parse('$apiBaseUrl/activity-logs/$id'),
+      headers: headers,
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Delete failed: ${response.statusCode}');
     }
   }
 }

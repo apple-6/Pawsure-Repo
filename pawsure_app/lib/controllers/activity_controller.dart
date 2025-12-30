@@ -1,157 +1,95 @@
-// pawsure_app/lib/controllers/activity_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pawsure_app/models/activity_log_model.dart';
 import 'package:pawsure_app/services/activity_service.dart';
+import 'package:pawsure_app/models/activity_log_model.dart';
 import 'package:pawsure_app/controllers/pet_controller.dart';
 
 class ActivityController extends GetxController {
-  final ActivityService _activityService = ActivityService();
+  final ActivityService _activityService = Get.put(ActivityService());
   final PetController _petController = Get.find<PetController>();
 
+  var isLoading = false.obs;
   var activities = <ActivityLog>[].obs;
   var filteredActivities = <ActivityLog>[].obs;
-  var isLoading = false.obs;
-  var selectedFilter = 'All'.obs;
-  var stats = Rx<ActivityStats?>(null);
+
+  var todayStats = Rx<ActivityStats?>(null);
+  var weekStats = Rx<ActivityStats?>(null);
+
   var selectedPeriod = 'week'.obs;
+  var selectedFilter = 'All'.obs;
+
+  // 🔧 FIX: Return Rx<ActivityStats?> so the UI can call .value on it
+  Rx<ActivityStats?> get stats =>
+      selectedPeriod.value == 'week' ? weekStats : todayStats;
 
   @override
   void onInit() {
     super.onInit();
 
-    // 🔧 FIX 1: Load activities immediately if pet is already selected
-    if (_petController.selectedPet.value != null) {
-      final petId = _petController.selectedPet.value!.id;
-      loadActivities(petId);
-      loadStats(petId, selectedPeriod.value);
-    }
-
-    // Watch for pet changes
+    // Listen to pet changes
     ever(_petController.selectedPet, (pet) {
       if (pet != null) {
-        loadActivities(pet.id);
-        loadStats(pet.id, selectedPeriod.value);
+        debugPrint('🐾 ActivityController: Pet changed to ${pet.name}');
+        loadActivities();
+        loadTodayStats();
+        loadWeekStats();
       } else {
-        // 🔧 FIX 2: Clear activities when no pet is selected
         activities.clear();
         filteredActivities.clear();
-        stats.value = null;
+        todayStats.value = null;
+        weekStats.value = null;
       }
     });
 
     // Watch for filter changes
-    ever(selectedFilter, (_) => _applyFilter());
+    ever(selectedFilter, (val) => applyFilter(val));
+
+    // Initial load
+    if (_petController.selectedPet.value != null) {
+      loadActivities();
+      loadTodayStats();
+      loadWeekStats();
+    }
   }
 
-  Future<void> loadActivities(
-    int petId, {
-    String? type,
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    // 🔧 FIX 3: Validate petId before making API call
-    if (petId <= 0) {
-      debugPrint('⚠️ Invalid petId: $petId, skipping loadActivities');
-      return;
-    }
+  Future<void> loadActivities() async {
+    final pet = _petController.selectedPet.value;
+    if (pet == null) return;
 
     try {
       isLoading.value = true;
-      final fetchedActivities = await _activityService.getActivities(
-        petId,
-        type: type,
-        startDate: startDate,
-        endDate: endDate,
-      );
-      activities.assignAll(fetchedActivities);
-      _applyFilter();
+      debugPrint('🔄 Loading activities for ${pet.name}...');
+
+      final result = await _activityService.getActivities(pet.id);
+
+      activities.value = result;
+      applyFilter(selectedFilter.value);
+
+      debugPrint('✅ Loaded ${result.length} activities');
     } catch (e) {
-      debugPrint('❌ Error loading activities: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to load activities',
-        backgroundColor: Colors.red.withOpacity(0.1),
-      );
+      debugPrint('❌ Error in loadActivities: $e');
     } finally {
       isLoading.value = false;
     }
   }
 
-  Future<void> loadStats(int petId, String period) async {
+  Future<void> loadTodayStats() async {
+    final pet = _petController.selectedPet.value;
+    if (pet == null) return;
     try {
-      final fetchedStats = await _activityService.getStats(petId, period);
-      stats.value = fetchedStats;
+      todayStats.value = await _activityService.getStats(pet.id, 'day');
     } catch (e) {
-      debugPrint('❌ Error loading stats: $e');
+      debugPrint('❌ Error loading today stats: $e');
     }
   }
 
-  Future<void> createActivity(int petId, Map<String, dynamic> payload) async {
+  Future<void> loadWeekStats() async {
+    final pet = _petController.selectedPet.value;
+    if (pet == null) return;
     try {
-      await _activityService.createActivity(petId, payload);
-      await loadActivities(petId);
-      await loadStats(petId, selectedPeriod.value);
-      Get.back();
-      Get.snackbar(
-        'Success',
-        'Activity added!',
-        backgroundColor: Colors.green.withOpacity(0.1),
-      );
+      weekStats.value = await _activityService.getStats(pet.id, 'week');
     } catch (e) {
-      debugPrint('❌ Error creating activity: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to add activity',
-        backgroundColor: Colors.red.withOpacity(0.1),
-      );
-    }
-  }
-
-  Future<void> updateActivity(int id, Map<String, dynamic> payload) async {
-    try {
-      await _activityService.updateActivity(id, payload);
-      if (_petController.selectedPet.value != null) {
-        await loadActivities(_petController.selectedPet.value!.id);
-      }
-      Get.back();
-      Get.snackbar(
-        'Success',
-        'Activity updated!',
-        backgroundColor: Colors.green.withOpacity(0.1),
-      );
-    } catch (e) {
-      debugPrint('❌ Error updating activity: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to update activity',
-        backgroundColor: Colors.red.withOpacity(0.1),
-      );
-    }
-  }
-
-  Future<void> deleteActivity(int id) async {
-    try {
-      await _activityService.deleteActivity(id);
-      if (_petController.selectedPet.value != null) {
-        await loadActivities(_petController.selectedPet.value!.id);
-        await loadStats(
-          _petController.selectedPet.value!.id,
-          selectedPeriod.value,
-        );
-      }
-      Get.snackbar(
-        'Success',
-        'Activity deleted',
-        backgroundColor: Colors.green.withOpacity(0.1),
-      );
-    } catch (e) {
-      debugPrint('❌ Error deleting activity: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to delete activity',
-        backgroundColor: Colors.red.withOpacity(0.1),
-      );
+      debugPrint('❌ Error loading week stats: $e');
     }
   }
 
@@ -159,21 +97,96 @@ class ActivityController extends GetxController {
     selectedFilter.value = filter;
   }
 
+  void applyFilter(String filter) {
+    if (filter == 'All') {
+      filteredActivities.value = activities;
+    } else {
+      filteredActivities.value = activities
+          .where(
+            (activity) =>
+                activity.activityType.toLowerCase() == filter.toLowerCase(),
+          )
+          .toList();
+    }
+    debugPrint(
+      '🔧 Filter applied: $filter (${filteredActivities.length} items)',
+    );
+  }
+
   void setPeriod(String period) {
     selectedPeriod.value = period;
-    if (_petController.selectedPet.value != null) {
-      loadStats(_petController.selectedPet.value!.id, period);
+    // Optional: reload if needed
+    final pet = _petController.selectedPet.value;
+    if (pet != null) {
+      if (period == 'day') {
+        loadTodayStats();
+      } else {
+        loadWeekStats();
+      }
     }
   }
 
-  void _applyFilter() {
-    if (selectedFilter.value == 'All') {
-      filteredActivities.assignAll(activities);
-    } else {
-      filteredActivities.assignAll(
-        activities
-            .where((a) => a.activityType == selectedFilter.value.toLowerCase())
-            .toList(),
+  Future<void> createActivity(int petId, Map<String, dynamic> payload) async {
+    try {
+      await _activityService.createActivity(petId, payload);
+      await loadActivities();
+      await loadTodayStats();
+      await loadWeekStats();
+      Get.back();
+      // 🔧 FIX: Updated deprecated withOpacity
+      Get.snackbar(
+        'Success',
+        'Activity added!',
+        backgroundColor: Colors.green.withValues(alpha: 0.1),
+      );
+    } catch (e) {
+      debugPrint('❌ Create Error: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to add activity',
+        backgroundColor: Colors.red.withValues(alpha: 0.1),
+      );
+    }
+  }
+
+  Future<void> updateActivity(int id, Map<String, dynamic> payload) async {
+    try {
+      await _activityService.updateActivity(id, payload);
+      await loadActivities();
+      Get.back();
+      // 🔧 FIX: Updated deprecated withOpacity
+      Get.snackbar(
+        'Success',
+        'Activity updated!',
+        backgroundColor: Colors.green.withValues(alpha: 0.1),
+      );
+    } catch (e) {
+      debugPrint('❌ Update Error: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to update activity',
+        backgroundColor: Colors.red.withValues(alpha: 0.1),
+      );
+    }
+  }
+
+  Future<void> deleteActivity(int id) async {
+    try {
+      await _activityService.deleteActivity(id);
+      await loadActivities();
+      loadTodayStats();
+      loadWeekStats();
+      // 🔧 FIX: Updated deprecated withOpacity
+      Get.snackbar(
+        'Success',
+        'Activity deleted',
+        backgroundColor: Colors.green.withValues(alpha: 0.1),
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to delete activity',
+        backgroundColor: Colors.red.withValues(alpha: 0.1),
       );
     }
   }

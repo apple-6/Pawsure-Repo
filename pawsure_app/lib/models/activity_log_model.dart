@@ -1,15 +1,14 @@
-// pawsure_app\lib\models\activity_log_model.dart
-import 'package:flutter/foundation.dart'; // 👈 FIX 1: Needed for debugPrint
+import 'package:flutter/foundation.dart';
 
 class ActivityLog {
   final int id;
   final int petId;
   final String activityType;
-  final String? title;
+  final String title;
   final String? description;
   final int durationMinutes;
-  final double? distanceKm;
-  final int? caloriesBurned;
+  final double distanceKm;
+  final int caloriesBurned;
   final DateTime activityDate;
   final List<RoutePoint>? routeData;
   final DateTime createdAt;
@@ -19,11 +18,11 @@ class ActivityLog {
     required this.id,
     required this.petId,
     required this.activityType,
-    this.title,
+    required this.title,
     this.description,
     required this.durationMinutes,
-    this.distanceKm,
-    this.caloriesBurned,
+    required this.distanceKm,
+    required this.caloriesBurned,
     required this.activityDate,
     this.routeData,
     required this.createdAt,
@@ -31,45 +30,21 @@ class ActivityLog {
   });
 
   factory ActivityLog.fromJson(Map<String, dynamic> json) {
-    // 🔧 HELPER 1: Robust petId extraction (Updated per Fix 2)
+    // 🔧 HELPER: Robust petId extraction
     int extractPetId(Map<String, dynamic> json) {
-      // Try camelCase petId (Backend standard)
       if (json['petId'] != null) {
-        if (json['petId'] is int) return json['petId'] as int;
-        if (json['petId'] is String) {
-          final parsed = int.tryParse(json['petId'] as String);
-          if (parsed != null && parsed > 0) return parsed;
-        }
+        if (json['petId'] is int) return json['petId'];
+        return int.tryParse(json['petId'].toString()) ?? 0;
       }
-
-      // Try snake_case pet_id (Fallback)
       if (json['pet_id'] != null) {
-        if (json['pet_id'] is int) return json['pet_id'] as int;
-        if (json['pet_id'] is String) {
-          final parsed = int.tryParse(json['pet_id'] as String);
-          if (parsed != null && parsed > 0) return parsed;
-        }
+        if (json['pet_id'] is int) return json['pet_id'];
+        return int.tryParse(json['pet_id'].toString()) ?? 0;
       }
-
-      // Try nested pet object
       if (json['pet'] != null && json['pet'] is Map) {
         final petMap = json['pet'] as Map<String, dynamic>;
-        if (petMap['id'] != null) {
-          final parsed = int.tryParse(petMap['id'].toString());
-          if (parsed != null && parsed > 0) return parsed;
-        }
+        return int.tryParse(petMap['id'].toString()) ?? 0;
       }
-
-      // 🔧 FIX: Throw error instead of returning 0
-      throw FormatException('Could not extract valid petId from JSON: $json');
-    }
-
-    // 🔧 HELPER 2: Safe Double Parsing (Fixes "0.00" String crash)
-    double? parseDouble(dynamic value) {
-      if (value == null) return null;
-      if (value is num) return value.toDouble();
-      if (value is String) return double.tryParse(value);
-      return null;
+      return 0;
     }
 
     return ActivityLog(
@@ -78,27 +53,42 @@ class ActivityLog {
           : int.tryParse(json['id'].toString()) ?? 0,
       petId: extractPetId(json),
       activityType: json['activity_type'] ?? 'unknown',
-      title: json['title'] as String?,
-      description: json['description'] as String?,
-      durationMinutes: (json['duration_minutes'] is int)
-          ? json['duration_minutes']
-          : int.tryParse(json['duration_minutes'].toString()) ?? 0,
-      // 🔧 FIX 2: Use helper to handle String "0.00"
-      distanceKm: parseDouble(json['distance_km']),
-      caloriesBurned: json['calories_burned'] as int?,
-      activityDate: DateTime.parse(json['activity_date'] as String),
+      title: json['title'] ?? 'Untitled',
+      description: json['description'],
+      durationMinutes: json['duration_minutes'] != null
+          ? (json['duration_minutes'] is int
+                ? json['duration_minutes']
+                : int.tryParse(json['duration_minutes'].toString()) ?? 0)
+          : 0,
+      distanceKm: json['distance_km'] != null
+          ? (json['distance_km'] is num
+                ? (json['distance_km'] as num).toDouble()
+                : double.tryParse(json['distance_km'].toString()) ?? 0.0)
+          : 0.0,
+      caloriesBurned: json['calories_burned'] != null
+          ? (json['calories_burned'] is int
+                ? json['calories_burned']
+                : int.tryParse(json['calories_burned'].toString()) ?? 0)
+          : 0,
+      activityDate: DateTime.parse(json['activity_date'].toString()),
       routeData: json['route_data'] != null
           ? (json['route_data'] as List)
                 .map((e) => RoutePoint.fromJson(e as Map<String, dynamic>))
                 .toList()
           : null,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'].toString())
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'].toString())
+          : DateTime.now(),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
+      'petId': petId,
       'activity_type': activityType,
       'title': title,
       'description': description,
@@ -113,10 +103,7 @@ class ActivityLog {
   String get formattedDuration {
     final hours = durationMinutes ~/ 60;
     final mins = durationMinutes % 60;
-    if (hours > 0) {
-      return '${hours}h ${mins}m';
-    }
-    return '${mins}m';
+    return hours > 0 ? '${hours}h ${mins}m' : '${mins}m';
   }
 
   String get activityIcon {
@@ -132,7 +119,7 @@ class ActivityLog {
       case 'training':
         return '🎓';
       default:
-        return '🐾';
+        return '📝';
     }
   }
 }
@@ -140,23 +127,62 @@ class ActivityLog {
 class RoutePoint {
   final double lat;
   final double lng;
-  final DateTime timestamp;
+  final DateTime? timestamp;
 
-  RoutePoint({required this.lat, required this.lng, required this.timestamp});
+  RoutePoint({required this.lat, required this.lng, this.timestamp});
 
   factory RoutePoint.fromJson(Map<String, dynamic> json) {
     return RoutePoint(
-      lat: (json['lat'] as num).toDouble(),
-      lng: (json['lng'] as num).toDouble(),
-      timestamp: DateTime.parse(json['timestamp'] as String),
+      lat: (json['lat'] is num)
+          ? (json['lat'] as num).toDouble()
+          : double.parse(json['lat'].toString()),
+      lng: (json['lng'] is num)
+          ? (json['lng'] as num).toDouble()
+          : double.parse(json['lng'].toString()),
+      timestamp: json['timestamp'] != null
+          ? DateTime.tryParse(json['timestamp'].toString())
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'lat': lat, 'lng': lng, 'timestamp': timestamp.toIso8601String()};
+    return {
+      'lat': lat,
+      'lng': lng,
+      if (timestamp != null) 'timestamp': timestamp!.toIso8601String(),
+    };
   }
 }
 
+class ActivityStats {
+  final int totalActivities;
+  final int totalDuration;
+  final double totalDistance;
+  final int totalCalories;
+  final Map<String, int>? activityBreakdown;
+
+  ActivityStats({
+    required this.totalActivities,
+    required this.totalDuration,
+    required this.totalDistance,
+    required this.totalCalories,
+    this.activityBreakdown,
+  });
+
+  factory ActivityStats.fromJson(Map<String, dynamic> json) {
+    return ActivityStats(
+      totalActivities: json['totalActivities'] ?? 0,
+      totalDuration: json['totalDuration'] ?? 0,
+      totalDistance: (json['totalDistance'] ?? 0).toDouble(),
+      totalCalories: json['totalCalories'] ?? 0,
+      activityBreakdown: json['activityBreakdown'] != null
+          ? Map<String, int>.from(json['activityBreakdown'])
+          : null,
+    );
+  }
+}
+
+// 🔧 FIX: RESTORED ENUM FOR GPS & MODAL SCREENS
 enum ActivityType {
   walk,
   run,
@@ -167,34 +193,5 @@ enum ActivityType {
 
   String get displayName {
     return name[0].toUpperCase() + name.substring(1);
-  }
-}
-
-class ActivityStats {
-  final String period;
-  final int totalActivities;
-  final int totalDuration;
-  final double totalDistance;
-  final int totalCalories;
-  final Map<String, int> byType;
-
-  ActivityStats({
-    required this.period,
-    required this.totalActivities,
-    required this.totalDuration,
-    required this.totalDistance,
-    required this.totalCalories,
-    required this.byType,
-  });
-
-  factory ActivityStats.fromJson(Map<String, dynamic> json) {
-    return ActivityStats(
-      period: json['period'] as String,
-      totalActivities: json['totalActivities'] as int,
-      totalDuration: json['totalDuration'] as int,
-      totalDistance: (json['totalDistance'] as num).toDouble(),
-      totalCalories: json['totalCalories'] as int,
-      byType: Map<String, int>.from(json['byType'] as Map),
-    );
   }
 }
