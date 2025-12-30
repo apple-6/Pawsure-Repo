@@ -16,6 +16,21 @@ class AuthService {
   // Use file-based storage implementation
   final StorageService _storage = FileStorageService();
 
+  // 1. ✅ ADDED: In-memory token for immediate access by GetX controllers
+  String? _token;
+
+  // 2. ✅ ADDED: Public getter to fix the "undefined_getter" error in ProfileController
+  String? get token => _token;
+
+  /// Constructor: Syncs memory with disk storage on app startup
+  AuthService() {
+    _loadTokenFromStorage();
+  }
+
+  Future<void> _loadTokenFromStorage() async {
+    _token = await _storage.read(key: 'jwt');
+  }
+
   /// Check if user is authenticated
   /// Returns true if a valid token exists
   Future<bool> isAuthenticated() async {
@@ -63,6 +78,7 @@ class AuthService {
       final Map<String, dynamic> data = jsonDecode(resp.body);
       final token = data['access_token'] as String?;
       if (token == null) throw Exception('access_token not found in response');
+      _token = token;
       await _storage.write(key: 'jwt', value: token);
 
       // Fetch and store user profile
@@ -89,13 +105,17 @@ class AuthService {
 
   /// Logout user and clear all stored credentials
   Future<void> logout() async {
+    _token = null;
     await _storage.delete(key: 'jwt');
     await _storage.delete(key: 'user_role');
   }
 
   /// Get stored JWT token
   Future<String?> getToken() async {
-    return _storage.read(key: 'jwt');
+    // 5. ✅ UPDATED: Return memory token if available for better performance
+    if (_token != null) return _token;
+    _token = await _storage.read(key: 'jwt');
+    return _token;
   }
 
   /// Get user role from storage

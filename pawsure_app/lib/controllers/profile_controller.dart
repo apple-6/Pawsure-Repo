@@ -9,6 +9,8 @@ class ProfileController extends GetxController {
   var user = <String, dynamic>{}.obs;
   var isLoading = true.obs;
 
+  String? get token => _authService.token;
+
   @override
   void onInit() {
     super.onInit();
