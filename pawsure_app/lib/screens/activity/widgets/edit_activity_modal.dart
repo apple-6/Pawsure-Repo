@@ -157,7 +157,9 @@ class _EditActivityModalState extends State<EditActivityModal> {
               // Distance
               TextFormField(
                 controller: _distanceController,
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Distance (km)',
                   border: OutlineInputBorder(),
@@ -291,9 +293,19 @@ class _EditActivityModalState extends State<EditActivityModal> {
         actions: [
           TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
           TextButton(
-            onPressed: () {
-              Get.back(); // Close dialog
-              _activityController.deleteActivity(widget.activity.id);
+            onPressed: () async {
+              // 1. Close the Confirmation Dialog immediately
+              Get.back();
+
+              // 2. Perform the delete (wait for it to finish)
+              await _activityController.deleteActivity(widget.activity.id);
+
+              // 3. Robustly close the Edit Modal
+              // We check 'mounted' to ensure the widget is still on screen.
+              // We use Navigator.of(context) to target THIS modal's navigation stack specifically.
+              if (mounted) {
+                Navigator.of(context).pop();
+              }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),

@@ -31,7 +31,7 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
   bool _isPaused = false;
   bool _hasFinished = false;
   bool _isFirstPoint = true;
-  Position? _lastPosition; // ✅ Changed from LatLng to Position
+  Position? _lastPosition;
   DateTime? _lastUpdateTime;
 
   double _totalDistance = 0.0;
@@ -41,10 +41,14 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
   LatLng? _currentPosition;
   models.ActivityType _selectedType = models.ActivityType.walk;
 
-  // 🔧 FIX 1: Enhanced teleport detection constants
-  static const double _maxReasonableSpeed = 150.0; // 150 m/s = 540 km/h
-  static const double _minDistanceToCount = 2.0; // Ignore GPS jitter < 2m
-  static const double _teleportThreshold = 500.0; // Ignore jumps > 500m
+  // 🔧 FIX 1: UPDATED CONSTANTS (More realistic thresholds)
+  static const double _maxReasonableSpeed = 50.0; // 50 m/s = 180 km/h
+  static const double _minDistanceToCount =
+      0.5; // 0.5m instead of 2m (allows slow walking)
+  static const double _teleportThreshold =
+      100.0; // 100m instead of 500m (more sensitive)
+  static const int _minTimeForValidUpdate =
+      2; // Minimum 2 seconds between updates
 
   @override
   void initState() {
@@ -60,16 +64,12 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     super.dispose();
   }
 
-  // 🔧 FIX 2: Enhanced cleanup with null checks
   void _cleanupTracking() {
     debugPrint('🧹 Cleaning up tracking resources...');
-
     _positionStream?.cancel();
     _positionStream = null;
-
     _timer?.cancel();
     _timer = null;
-
     debugPrint('✅ Cleanup complete');
   }
 
@@ -125,26 +125,25 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       _isTracking = true;
       _isPaused = false;
       _hasFinished = false;
-      _isFirstPoint = true; // ✅ Reset flag
+      _isFirstPoint = true;
       _routePoints.clear();
       _routeData.clear();
       _totalDistance = 0.0;
       _elapsedSeconds = 0;
-      _lastPosition = null; // ✅ Reset last position
+      _lastPosition = null;
       _lastUpdateTime = null;
       _markers.clear();
-      _polylines.clear(); // ✅ Clear any existing polylines
+      _polylines.clear();
     });
 
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 5,
+      distanceFilter: 2, // Lowered slightly to match new logic
     );
 
     _positionStream =
         Geolocator.getPositionStream(locationSettings: locationSettings).listen(
           (Position position) {
-            // ✅ Only process if still tracking and mounted
             if (_isTracking && !_isPaused && !_hasFinished && mounted) {
               _updatePosition(position);
             }
@@ -160,15 +159,13 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
               _pauseTracking();
             }
           },
-          cancelOnError: false, // ✅ Don't cancel on errors
+          cancelOnError: false,
         );
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      // 🔧 CRITICAL: Check mounted before setState
       if (_isTracking && !_isPaused && !_hasFinished && mounted) {
         setState(() => _elapsedSeconds++);
       } else if (!mounted) {
-        debugPrint('⚠️ Timer running but widget unmounted, canceling timer');
         timer.cancel();
       }
     });
@@ -176,14 +173,15 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     debugPrint('✅ GPS tracking started');
   }
 
+  // 🔧 FIX 2: REPLACED _updatePosition WITH ENHANCED LOGIC
   void _updatePosition(Position position) {
-    // 🔧 CRITICAL FIX: Check mounted FIRST before any logic
+    // 🔧 CRITICAL FIX: Check mounted FIRST
     if (!mounted) {
       debugPrint('⚠️ Widget not mounted, ignoring GPS update');
       return;
     }
 
-    // 🔧 FIX 3: Guard against updates after tracking stopped
+    // Guard against updates after tracking stopped
     if (!_isTracking || _hasFinished) {
       debugPrint('⚠️ Ignoring GPS update (not tracking)');
       return;
@@ -195,19 +193,15 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     // 🎯 FIRST POINT: Just save it, don't calculate distance
     if (_isFirstPoint || _lastPosition == null) {
       debugPrint(
-        '📍 First GPS point recorded: ${newPosition.latitude}, ${newPosition.longitude}',
+        '📍 FIRST GPS POINT: ${newPosition.latitude}, ${newPosition.longitude}',
       );
 
-      // 🔧 CRITICAL: Check mounted before setState
-      if (!mounted) {
-        debugPrint('⚠️ Widget unmounted, cannot update first point');
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _isFirstPoint = false;
         _currentPosition = newPosition;
-        _lastPosition = position; // ✅ Store Position object
+        _lastPosition = position;
         _lastUpdateTime = now;
 
         // Add starting point
@@ -235,10 +229,10 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       });
 
       _mapController?.animateCamera(CameraUpdate.newLatLng(newPosition));
-      return; // ✅ Exit early - don't calculate distance
+      return;
     }
 
-    // Calculate distance from last point
+    // ✅ Calculate distance from last point
     final distance = Geolocator.distanceBetween(
       _lastPosition!.latitude,
       _lastPosition!.longitude,
@@ -246,16 +240,24 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       position.longitude,
     );
 
-    // 🔧 FIX 4: TELEPORT GUARD - Check if movement is physically possible
+    final timeDiff = now.difference(_lastUpdateTime!).inSeconds;
+
+    debugPrint(
+      '🔍 GPS Update: distance=${distance.toStringAsFixed(2)}m, time=${timeDiff}s',
+    );
+
+    // 🔧 FIX: Time-based filtering (avoid rapid updates)
+    if (timeDiff < _minTimeForValidUpdate) {
+      debugPrint('⏱️ Update too soon (${timeDiff}s), waiting...');
+      return;
+    }
+
+    // 🔧 FIX: Teleport detection (more realistic threshold)
     if (distance > _teleportThreshold) {
       debugPrint(
-        '⚠️ TELEPORT DETECTED: ${distance.toStringAsFixed(1)}m jump. Ignoring.',
+        '🚫 TELEPORT DETECTED: ${distance.toStringAsFixed(1)}m jump. Ignoring.',
       );
-      // Update last position but don't add to route
-      if (!mounted) {
-        debugPrint('⚠️ Widget unmounted during teleport check');
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _lastPosition = position;
         _lastUpdateTime = now;
@@ -263,44 +265,46 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       return;
     }
 
-    // 🔧 FIX 5: Speed validation
-    final timeDiff = now.difference(_lastUpdateTime!).inSeconds;
+    // 🔧 FIX: Speed validation (more realistic for walking/running)
     if (timeDiff > 0) {
       final speed = distance / timeDiff;
+      final speedKmh = speed * 3.6;
+
       if (speed > _maxReasonableSpeed) {
         debugPrint(
-          '⚠️ Impossible speed: ${speed.toStringAsFixed(1)} m/s (${(speed * 3.6).toStringAsFixed(1)} km/h). Ignoring.',
+          '🚫 Impossible speed: ${speed.toStringAsFixed(1)} m/s (${speedKmh.toStringAsFixed(1)} km/h). Ignoring.',
         );
-        if (!mounted) {
-          debugPrint('⚠️ Widget unmounted during speed check');
-          return;
-        }
+        if (!mounted) return;
         setState(() {
           _lastPosition = position;
           _lastUpdateTime = now;
         });
         return;
       }
+
+      debugPrint('✅ Speed: ${speedKmh.toStringAsFixed(2)} km/h');
     }
 
-    // 🔧 FIX 6: Ignore GPS jitter
+    // 🔧 FIX: Distance filter (more lenient for slow walking)
     if (distance < _minDistanceToCount) {
       debugPrint(
-        '⚠️ Movement too small: ${distance.toStringAsFixed(1)}m. Ignoring GPS jitter.',
+        '⏭️ Movement too small: ${distance.toStringAsFixed(2)}m. Ignoring.',
       );
+      // ✅ IMPORTANT: Still update last position to avoid accumulating errors
+      if (!mounted) return;
+      setState(() {
+        _lastPosition = position;
+        _lastUpdateTime = now;
+      });
       return;
     }
 
     // ✅ VALID MOVEMENT - Add to route
     debugPrint(
-      '✅ Valid movement: ${distance.toStringAsFixed(1)}m, Speed: ${timeDiff > 0 ? (distance / timeDiff * 3.6).toStringAsFixed(1) : 'N/A'} km/h',
+      '✅ VALID MOVEMENT: ${distance.toStringAsFixed(2)}m added to route',
     );
 
-    // 🔧 CRITICAL: Final mounted check before setState
-    if (!mounted) {
-      debugPrint('⚠️ Widget unmounted, cannot add route point');
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
       _currentPosition = newPosition;
@@ -316,6 +320,9 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       _totalDistance += distance / 1000; // Convert to km
       _lastPosition = position;
       _lastUpdateTime = now;
+
+      debugPrint('📊 Total distance: ${_totalDistance.toStringAsFixed(3)} km');
+      debugPrint('📍 Route points: ${_routePoints.length}');
 
       // Update polyline
       _polylines.clear();
@@ -343,14 +350,12 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     debugPrint('▶️ Tracking resumed');
     setState(() {
       _isPaused = false;
-      _lastUpdateTime = DateTime.now(); // ✅ Reset to avoid speed calc issues
+      _lastUpdateTime = DateTime.now(); // Reset to avoid speed calc issues
     });
   }
 
   void _stopTracking() {
     debugPrint('⏹️ Stopping tracking...');
-
-    // ✅ Cleanup streams FIRST
     _cleanupTracking();
 
     if (!mounted) return;
@@ -360,7 +365,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       _isPaused = false;
       _hasFinished = true;
 
-      // Add end marker if we have a valid route
       if (_currentPosition != null && _routePoints.length > 1) {
         _markers.add(
           Marker(
@@ -380,23 +384,70 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
 
   void _cancelTracking() {
     debugPrint('❌ Canceling tracking...');
-
-    // ✅ Cleanup BEFORE navigation
     _cleanupTracking();
-
-    // ✅ Check mounted before navigation
     if (mounted) {
       Get.back();
     }
   }
 
+  // 🔧 FIX 3: REPLACED _saveActivity WITH BETTER VALIDATION
   Future<void> _saveActivity() async {
-    if (_routePoints.length < 2 || _elapsedSeconds < 10) {
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('💾 Attempting to save activity...');
+    debugPrint('   Route points: ${_routePoints.length}');
+    debugPrint('   Elapsed time: ${_elapsedSeconds}s');
+    debugPrint('   Total distance: ${_totalDistance.toStringAsFixed(3)} km');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    // ✅ FIXED: More lenient validation
+    if (_routePoints.length < 2) {
       Get.snackbar(
-        'Insufficient Data',
-        'Activity too short to save. Must be at least 10 seconds with movement.',
+        'No Route Recorded',
+        'No GPS movement detected. Please ensure GPS is enabled and try moving around.',
+        backgroundColor: Colors.orange.withValues(alpha: 0.9),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
       );
       return;
+    }
+
+    if (_elapsedSeconds < 5) {
+      Get.snackbar(
+        'Activity Too Short',
+        'Activity must be at least 5 seconds long.',
+        backgroundColor: Colors.orange.withValues(alpha: 0.9),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // ✅ NEW: Warn if distance is very small but allow saving
+    if (_totalDistance < 0.01) {
+      final confirm = await Get.dialog<bool>(
+        AlertDialog(
+          title: const Text('Low Distance Detected'),
+          content: Text(
+            'Only ${(_totalDistance * 1000).toStringAsFixed(1)} meters recorded.\n\n'
+            'This might happen if:\n'
+            '• GPS signal was weak\n'
+            '• You were mostly stationary\n'
+            '• Indoor tracking\n\n'
+            'Do you still want to save?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(result: false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Get.back(result: true),
+              child: const Text('Save Anyway'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
     }
 
     final pet = _petController.selectedPet.value;
@@ -413,7 +464,7 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     if (result != null && mounted) {
       final payload = {
         'activity_type': _selectedType.name,
-        'title': result['title'],
+        'title': result['title'] ?? 'Tracked Activity',
         'description': result['description'],
         'duration_minutes': (_elapsedSeconds / 60).round(),
         'distance_km': _totalDistance,
@@ -422,13 +473,35 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
         'route_data': _routeData.map((e) => e.toJson()).toList(),
       };
 
-      await _activityController.createActivity(pet.id, payload);
+      debugPrint('📤 Sending activity payload:');
+      debugPrint('   Type: ${payload['activity_type']}');
+      debugPrint('   Duration: ${payload['duration_minutes']} min');
+      debugPrint('   Distance: ${payload['distance_km']} km');
+      debugPrint('   Route points: ${_routeData.length}');
 
-      // ✅ Cleanup before navigation
-      _cleanupTracking();
+      try {
+        await _activityController.createActivity(pet.id, payload);
 
-      if (mounted) {
-        Get.back();
+        Get.snackbar(
+          'Success!',
+          'Activity saved successfully',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+
+        _cleanupTracking();
+
+        if (mounted) {
+          Get.back();
+        }
+      } catch (e) {
+        debugPrint('❌ Failed to save activity: $e');
+        Get.snackbar(
+          'Error',
+          'Failed to save activity: $e',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
       }
     }
   }
@@ -583,7 +656,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
           final result = shouldExit ?? false;
           debugPrint('🔙 Dialog result: $result');
 
-          // 🔧 CRITICAL FIX: If user wants to exit, cleanup and allow navigation
           if (result) {
             _cleanupTracking();
           }
@@ -591,7 +663,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
           return result;
         }
 
-        // 🔧 FIX: Cleanup even when not tracking (safety net)
         debugPrint('✅ Not tracking, cleaning up and allowing back');
         _cleanupTracking();
         return true;
