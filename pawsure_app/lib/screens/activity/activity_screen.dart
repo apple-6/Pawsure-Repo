@@ -7,6 +7,7 @@ import 'package:pawsure_app/screens/activity/widgets/activity_stats_card.dart';
 import 'package:pawsure_app/screens/activity/widgets/activity_list_item.dart';
 import 'package:pawsure_app/screens/activity/widgets/add_activity_modal.dart';
 import 'package:pawsure_app/screens/activity/tracking/gps_tracking_screen.dart';
+import 'package:pawsure_app/screens/activity/activity_history_screen.dart';
 
 class ActivityScreen extends StatelessWidget {
   const ActivityScreen({super.key});
@@ -66,7 +67,7 @@ class ActivityScreen extends StatelessWidget {
             // Statistics Card
             const ActivityStatsCard(),
 
-            // Filter Chips
+            // Filter Chips - Only Walk and Run
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -76,15 +77,33 @@ class ActivityScreen extends StatelessWidget {
                     _buildFilterChip(controller, 'All'),
                     _buildFilterChip(controller, 'Walk'),
                     _buildFilterChip(controller, 'Run'),
-                    _buildFilterChip(controller, 'Play'),
-                    _buildFilterChip(controller, 'Swim'),
-                    _buildFilterChip(controller, 'Training'),
                   ],
                 ),
               ),
             ),
 
-            // Activity List - 🔧 FIX: Use Flexible instead of Expanded
+            // Recent Activities Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Recent Activities',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  TextButton.icon(
+                    onPressed: () =>
+                        Get.to(() => const ActivityHistoryScreen()),
+                    icon: const Icon(Icons.history, size: 18),
+                    label: const Text('View All'),
+                    style: TextButton.styleFrom(foregroundColor: Colors.orange),
+                  ),
+                ],
+              ),
+            ),
+
+            // Activity List - Show only last 5 activities
             Flexible(
               child: Obx(() {
                 if (controller.filteredActivities.isEmpty) {
@@ -100,25 +119,37 @@ class ActivityScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         Text(
                           'No activities yet',
-                          style: TextStyle(color: Colors.grey[600]),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           'Track your first activity!',
-                          style: TextStyle(color: Colors.grey),
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ),
                   );
                 }
 
+                // Sort activities by date (most recent first) and take only 5
+                final sortedActivities = List.from(
+                  controller.filteredActivities,
+                )..sort((a, b) => b.activityDate.compareTo(a.activityDate));
+
+                final recentActivities = sortedActivities.take(5).toList();
+
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: controller.filteredActivities.length,
+                  itemCount: recentActivities.length,
                   itemBuilder: (context, index) {
-                    return ActivityListItem(
-                      activity: controller.filteredActivities[index],
-                    );
+                    return ActivityListItem(activity: recentActivities[index]);
                   },
                 );
               }),

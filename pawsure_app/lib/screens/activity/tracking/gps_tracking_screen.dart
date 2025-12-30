@@ -1,3 +1,4 @@
+//pawsure_app/lib/screens/activity/tracking/gps_tracking_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -41,14 +42,16 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
   LatLng? _currentPosition;
   models.ActivityType _selectedType = models.ActivityType.walk;
 
-  // 🔧 FIX 1: UPDATED CONSTANTS (More realistic thresholds)
-  static const double _maxReasonableSpeed = 50.0; // 50 m/s = 180 km/h
-  static const double _minDistanceToCount =
-      0.5; // 0.5m instead of 2m (allows slow walking)
-  static const double _teleportThreshold =
-      100.0; // 100m instead of 500m (more sensitive)
-  static const int _minTimeForValidUpdate =
-      2; // Minimum 2 seconds between updates
+  static const double _maxReasonableSpeed = 50.0;
+  static const double _minDistanceToCount = 0.5;
+  static const double _teleportThreshold = 100.0;
+  static const int _minTimeForValidUpdate = 2;
+
+  // ✅ Only Walk and Run allowed
+  final List<models.ActivityType> _allowedActivityTypes = [
+    models.ActivityType.walk,
+    models.ActivityType.run,
+  ];
 
   @override
   void initState() {
@@ -138,7 +141,7 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
 
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 2, // Lowered slightly to match new logic
+      distanceFilter: 2,
     );
 
     _positionStream =
@@ -173,15 +176,12 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     debugPrint('✅ GPS tracking started');
   }
 
-  // 🔧 FIX 2: REPLACED _updatePosition WITH ENHANCED LOGIC
   void _updatePosition(Position position) {
-    // 🔧 CRITICAL FIX: Check mounted FIRST
     if (!mounted) {
       debugPrint('⚠️ Widget not mounted, ignoring GPS update');
       return;
     }
 
-    // Guard against updates after tracking stopped
     if (!_isTracking || _hasFinished) {
       debugPrint('⚠️ Ignoring GPS update (not tracking)');
       return;
@@ -190,7 +190,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     final newPosition = LatLng(position.latitude, position.longitude);
     final now = DateTime.now();
 
-    // 🎯 FIRST POINT: Just save it, don't calculate distance
     if (_isFirstPoint || _lastPosition == null) {
       debugPrint(
         '📍 FIRST GPS POINT: ${newPosition.latitude}, ${newPosition.longitude}',
@@ -204,7 +203,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
         _lastPosition = position;
         _lastUpdateTime = now;
 
-        // Add starting point
         _routePoints.add(newPosition);
         _routeData.add(
           models.RoutePoint(
@@ -214,7 +212,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
           ),
         );
 
-        // Add start marker
         _markers.clear();
         _markers.add(
           Marker(
@@ -232,7 +229,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       return;
     }
 
-    // ✅ Calculate distance from last point
     final distance = Geolocator.distanceBetween(
       _lastPosition!.latitude,
       _lastPosition!.longitude,
@@ -246,13 +242,11 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       '🔍 GPS Update: distance=${distance.toStringAsFixed(2)}m, time=${timeDiff}s',
     );
 
-    // 🔧 FIX: Time-based filtering (avoid rapid updates)
     if (timeDiff < _minTimeForValidUpdate) {
       debugPrint('⏱️ Update too soon (${timeDiff}s), waiting...');
       return;
     }
 
-    // 🔧 FIX: Teleport detection (more realistic threshold)
     if (distance > _teleportThreshold) {
       debugPrint(
         '🚫 TELEPORT DETECTED: ${distance.toStringAsFixed(1)}m jump. Ignoring.',
@@ -265,7 +259,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       return;
     }
 
-    // 🔧 FIX: Speed validation (more realistic for walking/running)
     if (timeDiff > 0) {
       final speed = distance / timeDiff;
       final speedKmh = speed * 3.6;
@@ -285,12 +278,10 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       debugPrint('✅ Speed: ${speedKmh.toStringAsFixed(2)} km/h');
     }
 
-    // 🔧 FIX: Distance filter (more lenient for slow walking)
     if (distance < _minDistanceToCount) {
       debugPrint(
         '⏭️ Movement too small: ${distance.toStringAsFixed(2)}m. Ignoring.',
       );
-      // ✅ IMPORTANT: Still update last position to avoid accumulating errors
       if (!mounted) return;
       setState(() {
         _lastPosition = position;
@@ -299,7 +290,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       return;
     }
 
-    // ✅ VALID MOVEMENT - Add to route
     debugPrint(
       '✅ VALID MOVEMENT: ${distance.toStringAsFixed(2)}m added to route',
     );
@@ -317,14 +307,13 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
         ),
       );
 
-      _totalDistance += distance / 1000; // Convert to km
+      _totalDistance += distance / 1000;
       _lastPosition = position;
       _lastUpdateTime = now;
 
       debugPrint('📊 Total distance: ${_totalDistance.toStringAsFixed(3)} km');
       debugPrint('📍 Route points: ${_routePoints.length}');
 
-      // Update polyline
       _polylines.clear();
       _polylines.add(
         Polyline(
@@ -350,7 +339,7 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     debugPrint('▶️ Tracking resumed');
     setState(() {
       _isPaused = false;
-      _lastUpdateTime = DateTime.now(); // Reset to avoid speed calc issues
+      _lastUpdateTime = DateTime.now();
     });
   }
 
@@ -390,7 +379,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     }
   }
 
-  // 🔧 FIX 3: REPLACED _saveActivity WITH BETTER VALIDATION
   Future<void> _saveActivity() async {
     debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     debugPrint('💾 Attempting to save activity...');
@@ -399,7 +387,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     debugPrint('   Total distance: ${_totalDistance.toStringAsFixed(3)} km');
     debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    // ✅ FIXED: More lenient validation
     if (_routePoints.length < 2) {
       Get.snackbar(
         'No Route Recorded',
@@ -421,7 +408,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       return;
     }
 
-    // ✅ NEW: Warn if distance is very small but allow saving
     if (_totalDistance < 0.01) {
       final confirm = await Get.dialog<bool>(
         AlertDialog(
@@ -517,15 +503,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       case models.ActivityType.run:
         caloriesPerMinute = 8.0;
         break;
-      case models.ActivityType.play:
-        caloriesPerMinute = 5.0;
-        break;
-      case models.ActivityType.swim:
-        caloriesPerMinute = 7.0;
-        break;
-      case models.ActivityType.training:
-        caloriesPerMinute = 4.0;
-        break;
       default:
         caloriesPerMinute = 4.0;
     }
@@ -533,6 +510,7 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     return (durationMinutes * caloriesPerMinute).round();
   }
 
+  // ✅ FIXED: Only Walk and Run in save dialog
   Widget _buildSaveDialog() {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
@@ -548,42 +526,95 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  DropdownButtonFormField<models.ActivityType>(
-                    value: selectedTypeLocal,
-                    decoration: const InputDecoration(
-                      labelText: 'Activity Type',
-                      border: OutlineInputBorder(),
+                  // ✅ Only Walk and Run options
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    items: models.ActivityType.values.map((type) {
-                      return DropdownMenuItem(
-                        value: type,
-                        child: Text(type.displayName),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() {
-                          selectedTypeLocal = value;
-                        });
-                        _selectedType = value;
-                      }
-                    },
+                    child: Column(
+                      children: _allowedActivityTypes.map((type) {
+                        final isSelected = selectedTypeLocal == type;
+                        return InkWell(
+                          onTap: () {
+                            setDialogState(() {
+                              selectedTypeLocal = type;
+                            });
+                            setState(() {
+                              _selectedType = type;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? (type == models.ActivityType.walk
+                                        ? Colors.blue.withOpacity(0.1)
+                                        : Colors.orange.withOpacity(0.1))
+                                  : null,
+                              border: type == models.ActivityType.walk
+                                  ? Border(
+                                      bottom: BorderSide(
+                                        color: Colors.grey[300]!,
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isSelected
+                                      ? Icons.radio_button_checked
+                                      : Icons.radio_button_unchecked,
+                                  color: isSelected
+                                      ? (type == models.ActivityType.walk
+                                            ? Colors.blue
+                                            : Colors.orange)
+                                      : Colors.grey,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  type == models.ActivityType.walk
+                                      ? '🚶 '
+                                      : '🏃 ',
+                                  style: const TextStyle(fontSize: 24),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  type.displayName,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: titleController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Title (Optional)',
-                      border: OutlineInputBorder(),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: descriptionController,
                     maxLines: 3,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Notes (Optional)',
-                      border: OutlineInputBorder(),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ],

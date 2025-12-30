@@ -12,64 +12,55 @@ class ActivityStatsCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.all(16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔧 FIX: Use Flexible for text and constrained width for buttons
+            // Compact header
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Flexible(
-                  child: Text(
-                    'Activity Summary',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
+                const Text(
+                  'Summary',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(width: 8),
-                // 🔧 FIX: Constrained width prevents overflow
                 Obx(
-                  () => SizedBox(
-                    width: 165, // Precise width for 3 buttons
-                    child: SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(
-                          value: 'day',
-                          label: Text('Day', style: TextStyle(fontSize: 11)),
-                        ),
-                        ButtonSegment(
-                          value: 'week',
-                          label: Text('Wk', style: TextStyle(fontSize: 11)),
-                        ),
-                        ButtonSegment(
-                          value: 'month',
-                          label: Text('Mo', style: TextStyle(fontSize: 11)),
-                        ),
-                      ],
-                      selected: {controller.selectedPeriod.value},
-                      onSelectionChanged: (Set<String> selection) {
-                        controller.setPeriod(selection.first);
-                      },
-                      style: ButtonStyle(
-                        visualDensity: VisualDensity.compact,
-                        padding: WidgetStateProperty.all(
-                          const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 0,
-                          ),
-                        ),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  () => SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(
+                        value: 'day',
+                        label: Text('Day', style: TextStyle(fontSize: 11)),
                       ),
+                      ButtonSegment(
+                        value: 'week',
+                        label: Text('Week', style: TextStyle(fontSize: 11)),
+                      ),
+                      ButtonSegment(
+                        value: 'month',
+                        label: Text('Month', style: TextStyle(fontSize: 11)),
+                      ),
+                    ],
+                    selected: {controller.selectedPeriod.value},
+                    onSelectionChanged: (Set<String> selection) {
+                      controller.setPeriod(selection.first);
+                    },
+                    style: ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      padding: WidgetStateProperty.all(
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      ),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
-            // Stats Grid
+            // Compact Stats Grid
             Obx(() {
               final stats = controller.stats.value;
 
@@ -82,50 +73,32 @@ class ActivityStatsCard extends StatelessWidget {
                 );
               }
 
-              return Column(
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatBox(
-                          icon: Icons.directions_walk,
-                          label: 'Activities',
-                          value: stats.totalActivities.toString(),
-                          color: Colors.blue,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatBox(
-                          icon: Icons.timer,
-                          label: 'Duration',
-                          value: _formatDuration(stats.totalDuration),
-                          color: Colors.orange,
-                        ),
-                      ),
-                    ],
+                  _buildCompactStat(
+                    icon: Icons.directions_walk,
+                    value: stats.totalActivities.toString(),
+                    label: 'Activities',
+                    color: Colors.blue,
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatBox(
-                          icon: Icons.straighten,
-                          label: 'Distance',
-                          value: '${stats.totalDistance.toStringAsFixed(1)} km',
-                          color: Colors.green,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatBox(
-                          icon: Icons.local_fire_department,
-                          label: 'Calories',
-                          value: stats.totalCalories.toString(),
-                          color: Colors.red,
-                        ),
-                      ),
-                    ],
+                  _buildCompactStat(
+                    icon: Icons.timer,
+                    value: _formatDuration(stats.totalDuration),
+                    label: 'Duration',
+                    color: Colors.orange,
+                  ),
+                  _buildCompactStat(
+                    icon: Icons.straighten,
+                    value: '${stats.totalDistance.toStringAsFixed(1)}',
+                    label: 'km',
+                    color: Colors.green,
+                  ),
+                  _buildCompactStat(
+                    icon: Icons.local_fire_department,
+                    value: stats.totalCalories.toString(),
+                    label: 'cal',
+                    color: Colors.red,
                   ),
                 ],
               );
@@ -136,42 +109,36 @@ class ActivityStatsCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatBox({
+  Widget _buildCompactStat({
     required IconData icon,
-    required String label,
     required String value,
+    required String label,
     required Color color,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 6),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 6),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              label,
-              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-            ),
+        ),
+        const SizedBox(height: 2),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 10, color: Colors.grey[600]),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
