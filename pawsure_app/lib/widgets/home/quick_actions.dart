@@ -92,19 +92,29 @@ class QuickActions extends StatelessWidget {
     }
   }
 
-  /// Navigate to Health page, Records tab
+  /// Navigate to Health page Profile tab (for dietary info)
   void _navigateToHealthRecords() {
     if (Get.isRegistered<NavigationController>()) {
       final navController = Get.find<NavigationController>();
       navController.changePage(1); // Health is index 1
       
-      // Switch to Records tab (index 1)
+      // Stay on Profile tab (index 0) where dietary info is
       Future.delayed(const Duration(milliseconds: 100), () {
         if (Get.isRegistered<HealthController>()) {
           final healthController = Get.find<HealthController>();
-          healthController.tabController.animateTo(1);
+          healthController.tabController.animateTo(0);
         }
       });
+
+      // Show snackbar to guide user
+      Get.snackbar(
+        'Add Meal Info',
+        'Tap the edit icon on Dietary Information to update',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF22C55E).withOpacity(0.1),
+        colorText: const Color(0xFF166534),
+        duration: const Duration(seconds: 3),
+      );
     }
   }
 
