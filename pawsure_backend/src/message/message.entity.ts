@@ -1,5 +1,5 @@
 // src/chat/message.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../user/user.entity';
 
 @Entity('messages')
@@ -14,7 +14,8 @@ export class Message {
   @Column()
   room: string; 
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, (user) => user.messages)
+  @JoinColumn({ name: 'senderId' }) 
   sender: User;
 
   @CreateDateColumn()

@@ -86,17 +86,19 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
   }
 
   Future<void> _loadCurrentUser() async {
-    final user = await _authService.getUserId(); // Assuming this returns user data or decode token
-    // If you don't have getUser(), decode the token or fetch profile
-    // For now, let's assume you fetch it or have it stored.
-    // If getting the ID is complex, you can fetch it from the backend profile call.
-    
-    // TEMPORARY FIX: If you don't have the ID ready, grab it from the API profile call you already have
-    // or just fetch it here:
-    final profile = await _apiService.getSitterBookings(); // This loads bookings, not profile.
-    
-    // Better approach: Use AuthService to decode token if possible, or fetch simple profile
-    // setState(() { _currentUserId = decodedId; });
+    try {
+      final userId = await _authService.getUserId();
+      if (userId != null) {
+        setState(() {
+          _currentUserId = userId;
+        });
+        print("✅ Inbox loaded for User ID: $userId");
+      } else {
+        print("⚠️ No User ID found. User might not be logged in.");
+      }
+    } catch (e) {
+      print("Error loading user ID: $e");
+    }
   }
 
   // 2. UPDATE THE NAVIGATION FUNCTION
@@ -105,10 +107,16 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
     // If _currentUserId is null, fetch it quickly or grab from storage
     int myId = _currentUserId ?? 0; 
     if (myId == 0) {
-       // Fallback: fetch ID if missing
-       final token = await _authService.getToken();
-       // Decode token here OR make an API call to get 'me'
-       // For this fix, ensure you have the ID.
+       // Try fetching one last time
+      final fetchedId = await _authService.getUserId();
+      if (fetchedId != null) {
+        myId = fetchedId;
+        setState(() => _currentUserId = myId);
+      } else {
+        // Stop here if we still don't have an ID
+        Get.snackbar("Error", "Could not identify user. Please log in again.", backgroundColor: Colors.red, colorText: Colors.white);
+        return;
+      }
     }
 
     Get.to(() => ChatScreen(
@@ -118,6 +126,7 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
       isRequest: isRequest,
       room: 'booking-$bookingId', // ✅ Generates unique room ID
       currentUserId: myId,        // ✅ Passes required ID
+      bookingId: bookingId,
     ));
   }
   Future<void> _loadBookings() async {

@@ -10,6 +10,7 @@ class ChatScreen extends StatefulWidget {
   final bool isRequest; // Controls if we show Accept/Decline buttons
   final String room;
   final int currentUserId;
+  final int bookingId;
 
   const ChatScreen({
     super.key,
@@ -19,6 +20,7 @@ class ChatScreen extends StatefulWidget {
     required this.isRequest,
     required this.room,
     required this.currentUserId,
+    required this.bookingId,
   });
 
   @override
@@ -235,10 +237,7 @@ class _ChatScreenState extends State<ChatScreen> {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {
-                    // TODO: Call ApiService().updateBookingStatus(id, 'accepted');
-                    // You might need to pass the bookingID to this screen to make this work
-                  },
+                  onPressed: () => _updateStatus('accepted'), 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _brandGreen,
                     foregroundColor: Colors.white,
@@ -252,9 +251,7 @@ class _ChatScreenState extends State<ChatScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {
-                    // TODO: Call ApiService().updateBookingStatus(id, 'declined');
-                  },
+                  onPressed: () => _updateStatus('declined'), 
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.grey[800],
                     side: BorderSide(color: Colors.grey.shade300),
@@ -372,5 +369,32 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
     );
+  }
+  //handle clicks
+  Future<void> _updateStatus(String status) async {
+    try {
+      // 1. Call the API
+      await ApiService().updateBookingStatus(widget.bookingId, status);
+      
+      // 2. Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Booking marked as $status"),
+            backgroundColor: status == 'accepted' ? Colors.green : Colors.orange,
+          ),
+        );
+        
+        // 3. Go back to Inbox (since the status changed, this screen is old)
+        Navigator.pop(context); 
+      }
+    } catch (e) {
+      print("Error updating status: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to update: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 }

@@ -7,6 +7,8 @@ import { Sitter } from 'src/sitter/sitter.entity';
 import { Post } from 'src/posts/posts.entity';
 import { Comment } from 'src/comments/comments.entity';
 import { Like } from 'src/likes/likes.entity';
+import { Message } from '../message/message.entity';
+
 import {
   Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany, OneToOne
 } from 'typeorm';
@@ -71,4 +73,7 @@ export class User {
 
   @OneToMany(() => Like, (like) => like.user)
   likes: Like[];
+
+  @OneToMany(() => Message, (message) => message.sender)
+  messages: Message[];
 }

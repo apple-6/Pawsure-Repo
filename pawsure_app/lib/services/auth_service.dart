@@ -82,11 +82,30 @@ class AuthService {
       _token = token;
       await _storage.write(key: 'jwt', value: token);
 
+      final prefs = await SharedPreferences.getInstance();
+
+      // Attempt to get ID from login response directly (if backend sends it)
+      if (data.containsKey('user') && data['user'] != null) {
+        final userId = data['user']['id'];
+        if (userId is int) {
+          await prefs.setInt('userId', userId);
+          print("✅ Saved User ID from Login: $userId");
+        }
+      }
+
       // Fetch and store user profile
       try {
         final profile = await this.profile();
-        if (profile != null && profile.containsKey('role')) {
-          await _storage.write(key: 'user_role', value: profile['role']);
+        if (profile != null) {
+          // Update User ID from profile if we didn't get it earlier
+          if (profile.containsKey('id') && profile['id'] is int) {
+             await prefs.setInt('userId', profile['id']);
+             print("✅ Saved User ID from Profile: ${profile['id']}");
+          }
+
+          if (profile.containsKey('role')) {
+            await _storage.write(key: 'user_role', value: profile['role']);
+          }
         }
       } catch (e) {
         // ignore: avoid_print
@@ -109,6 +128,11 @@ class AuthService {
     _token = null;
     await _storage.delete(key: 'jwt');
     await _storage.delete(key: 'user_role');
+
+    // ✅ FIX 2: Clear User ID on logout
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('userId');
+    print("🔒 Logged out and cleared User ID");
   }
 
   /// Get stored JWT token
