@@ -13,7 +13,17 @@ export class BookingController {
 @Get()
 @UseGuards(JwtAuthGuard) 
 async findAll(@Request() req) {
-  return this.bookingService.findAllByUser(req.user.id); 
+  return await this.bookingService.findAllByUser(req.user.id); 
+}
+
+// 2. Accept/Decline Endpoint
+@UseGuards(JwtAuthGuard)
+@Patch(':id/status')
+async updateStatus(
+  @Param('id') id: number, 
+  @Body('status') status: 'accepted' | 'declined'
+) {
+  return await this.bookingService.updateStatus(id, status);
 }
 
 @Get('sitter')
