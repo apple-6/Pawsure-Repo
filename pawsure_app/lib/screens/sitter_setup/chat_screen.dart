@@ -109,15 +109,6 @@ class _ChatScreenState extends State<ChatScreen> {
       "text": text,
       "senderId": widget.currentUserId,
     });
-    
-    // Optional: Optimistic update
-    setState(() {
-       _messages.add({
-        "text": text,
-        "isMe": true, // We sent it
-        "time": DateTime.now().toString(),
-      });
-    });
 
     _controller.clear();
     _scrollToBottom();
