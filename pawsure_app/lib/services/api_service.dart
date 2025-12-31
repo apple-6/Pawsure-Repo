@@ -21,6 +21,8 @@ String extname(String filename) {
 }
 
 class ApiService {
+  final AuthService _authService = AuthService();
+  
   Future<Map<String, String>> _getHeaders() async {
     final headers = {
       'Content-Type': 'application/json; charset=UTF-8',
@@ -799,6 +801,28 @@ class ApiService {
       debugPrint('❌ Error in createPost: $e');
       debugPrint('Stack trace: $stackTrace');
       rethrow;
+    }
+  }
+
+  //chat api
+  Future<List<dynamic>> getChatHistory(String room) async {
+    final token = await _authService.getToken();
+    
+    // Matches NestJS @Get('chat/:room')
+    final url = Uri.parse('${ApiConfig.baseUrl}/chat/$room');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load chat history');
     }
   }
 }

@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import './storage_service.dart';
 import 'package:pawsure_app/constants/api_config.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   // Determine base URL depending on platform so emulator can reach host machine.
@@ -351,5 +352,12 @@ class AuthService {
   Future<bool> validateToken() async {
     final profile = await this.profile();
     return profile != null;
+  }
+
+  // Add this method to get the ID from storage
+  Future<int?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Assuming you saved 'userId' or 'id' during login
+    return prefs.getInt('userId'); 
   }
 }

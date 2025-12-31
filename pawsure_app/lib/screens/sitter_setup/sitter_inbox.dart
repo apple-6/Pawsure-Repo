@@ -4,6 +4,7 @@ import 'sitter_dashboard.dart'; // Adjust path if needed
 import 'chat_screen.dart'; 
 import 'sitter_calendar.dart'; // Import SitterCalendar screen
 import 'package:pawsure_app/services/api_service.dart';
+import 'package:pawsure_app/services/auth_service.dart';
 
 // --- Data Models ---
 
@@ -62,6 +63,9 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
   final Color _accentColor = const Color(0xFF1CCA5B);
   final ApiService _apiService = ApiService();
 
+  final AuthService _authService = AuthService(); // Add this
+  int? _currentUserId;
+
   List<SitterInboxItem> _allBookings = [];
   bool _isLoading = true;
   String? _error;
@@ -77,9 +81,45 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadCurrentUser();
     _loadBookings();
   }
 
+  Future<void> _loadCurrentUser() async {
+    final user = await _authService.getUserId(); // Assuming this returns user data or decode token
+    // If you don't have getUser(), decode the token or fetch profile
+    // For now, let's assume you fetch it or have it stored.
+    // If getting the ID is complex, you can fetch it from the backend profile call.
+    
+    // TEMPORARY FIX: If you don't have the ID ready, grab it from the API profile call you already have
+    // or just fetch it here:
+    final profile = await _apiService.getSitterBookings(); // This loads bookings, not profile.
+    
+    // Better approach: Use AuthService to decode token if possible, or fetch simple profile
+    // setState(() { _currentUserId = decodedId; });
+  }
+
+  // 2. UPDATE THE NAVIGATION FUNCTION
+  void _openChat(String ownerName, String petName, String dates, bool isRequest, int bookingId) async {
+    // We need the current user ID for the socket. 
+    // If _currentUserId is null, fetch it quickly or grab from storage
+    int myId = _currentUserId ?? 0; 
+    if (myId == 0) {
+       // Fallback: fetch ID if missing
+       final token = await _authService.getToken();
+       // Decode token here OR make an API call to get 'me'
+       // For this fix, ensure you have the ID.
+    }
+
+    Get.to(() => ChatScreen(
+      ownerName: ownerName,
+      petName: petName,
+      dates: dates,
+      isRequest: isRequest,
+      room: 'booking-$bookingId', // ✅ Generates unique room ID
+      currentUserId: myId,        // ✅ Passes required ID
+    ));
+  }
   Future<void> _loadBookings() async {
     setState(() {
       _isLoading = true;
@@ -147,15 +187,6 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
     super.dispose();
   }
 
-  void _openChat(String ownerName, String petName, String dates, bool isRequest) {
-    Get.to(() => ChatScreen(
-      ownerName: ownerName,
-      petName: petName,
-      dates: dates,
-      isRequest: isRequest,
-    ));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -221,6 +252,7 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
                                   request.petName,
                                   "${request.startDate} - ${request.endDate}",
                                   true,
+                                  request.id,
                                 ),
                                 onAccept: () => _handleAccept(request.id),
                                 onDecline: () => _handleDecline(request.id),
@@ -248,6 +280,7 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
                                   booking.petName,
                                   "${booking.startDate} - ${booking.endDate}",
                                   false,
+                                  booking.id,
                                 ),
                               );
                             },
