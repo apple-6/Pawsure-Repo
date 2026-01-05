@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/screens/community/booking_modal.dart';
-import 'package:pawsure_app/constants/api_config.dart'; 
+import 'package:pawsure_app/constants/api_config.dart';
 
 class SitterDetailsScreen extends StatefulWidget {
   final String sitterId;
@@ -111,20 +111,47 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
           final user = data['user'] ?? {};
           final List<dynamic> reviewsData = data['reviews'] ?? [];
 
-          String? galleryImage;
+          // String? galleryImage;
+          // if (data['photo_gallery'] != null &&
+          //     data['photo_gallery'].toString().isNotEmpty) {
+          //   galleryImage = data['photo_gallery']
+          //       .toString()
+          //       .split(',')
+          //       .first
+          //       .trim();
+          // }
+          // final String imageUrl =
+          //     galleryImage ??
+          //     user['profile_picture'] ??
+          //     'https://via.placeholder.com/400';
+
+String? rawFilename;
           if (data['photo_gallery'] != null &&
               data['photo_gallery'].toString().isNotEmpty) {
-            galleryImage = data['photo_gallery']
+            rawFilename = data['photo_gallery']
                 .toString()
                 .split(',')
                 .first
                 .trim();
           }
-          final String imageUrl =
-              galleryImage ??
-              user['profile_picture'] ??
-              'https://via.placeholder.com/400';
 
+          // 2. Construct the Full URL
+          String imageUrl;
+          
+          if (rawFilename != null) {
+            if (rawFilename.startsWith('http')) {
+              // It's already a full link
+              imageUrl = rawFilename;
+            } else {
+              // It's a filename, manually build Supabase URL
+              // Ensure 'sitter_gallery' matches your actual bucket name
+              imageUrl = "${ApiConfig.supabaseUrl}/storage/v1/object/public/sitter_gallery/$rawFilename";
+            }
+          } else {
+            // Fallback
+            imageUrl = user['profile_picture'] ?? 'https://via.placeholder.com/400';
+          }
+          // ---------------------------
           final bool isVerified = data['status'] == 'approved';
           final String name = user['name'] ?? 'Sitter Name';
 
@@ -147,10 +174,53 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
           final int bookingsLen = (data['bookings'] as List? ?? []).length;
           final String bookingsCompleted = "$bookingsLen+ bookings";
 
-          final String servicesString =
-              data['experience'] ??
-              data['services'] ??
-              "House Sitting,Dog Walking";
+          // final String servicesString =
+          //     data['services'] ?? "House Sitting,Dog Walking";
+
+// --- MODIFIED: PARSE SERVICES FROM DATABASE JSON ---
+          List<String> serviceNames = [];
+          final dynamic rawServices = data['services'];
+
+          if (rawServices is List) {
+            // Case 1: Database returns a JSON List (e.g., [{"name": "Pet Boarding", ...}])
+            for (var item in rawServices) {
+              if (item is Map && item['name'] != null) {
+                // Check 'isActive' field from your DB (default to true if missing)
+                if (item['isActive'] != false) {
+                  serviceNames.add(item['name'].toString());
+                }
+              }
+            }
+          } else if (rawServices is String) {
+            // Case 2: Fallback for legacy comma-separated strings
+            if (rawServices.trim().startsWith('[')) {
+               // If it's a JSON string, decode it first (just in case)
+               try {
+                 final List decoded = jsonDecode(rawServices);
+                 for (var item in decoded) {
+                   if (item is Map && item['name'] != null && item['isActive'] != false) {
+                     serviceNames.add(item['name'].toString());
+                   }
+                 }
+               } catch (_) {}
+            } else {
+               // It's a simple comma string
+               serviceNames = rawServices.split(',').map((s) => s.trim()).toList();
+            }
+          }
+
+          // Default fallback if nothing found
+          if (serviceNames.isEmpty) {
+            serviceNames = ["House Sitting", "Dog Walking"]; 
+          }
+
+
+          String rawExp = data['experience']?.toString() ?? "1";
+
+          String yearsExp = rawExp.replaceAll(RegExp(r'[^0-9]'), '');
+          if (yearsExp.isEmpty) yearsExp = "0"; 
+
+          final String experienceText = "$yearsExp Years Experience";
 
           return SingleChildScrollView(
             child: Column(
@@ -168,12 +238,12 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                             Container(color: Colors.grey[300]),
                       ),
                     ),
-            
+
                     SafeArea(
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: InkWell(
-                          onTap: () => Navigator.pop(context), 
+                          onTap: () => Navigator.pop(context),
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
@@ -186,7 +256,11 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                                 ),
                               ],
                             ),
-                            child: const Icon(Icons.arrow_back, size: 20, color: Colors.black87),
+                            child: const Icon(
+                              Icons.arrow_back,
+                              size: 20,
+                              color: Colors.black87,
+                            ),
                           ),
                         ),
                       ),
@@ -363,14 +437,80 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                                 fontSize: 14,
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              bookingsCompleted,
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.w500,
-                                fontSize: 13,
-                              ),
+                            const SizedBox(height: 16),
+
+                            // 2. Stats Row (Bookings & Years of Experience)
+                            Row(
+                              children: [
+                                // Bookings Badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFFF0FDF4,
+                                    ), // Light Green
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFFDCFCE7),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.calendar_today,
+                                        size: 14,
+                                        color: Color(0xFF059669),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        bookingsCompleted,
+                                        style: const TextStyle(
+                                          color: Color(0xFF059669),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+
+                                // Years of Experience Badge (Moved Here)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.blue.shade100,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.history,
+                                        size: 16,
+                                        color: Colors.blue.shade700,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        experienceText,
+                                        style: TextStyle(
+                                          color: Colors.blue.shade700,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -422,9 +562,9 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                         child: Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: servicesString
-                              .split(',')
-                              .map((service) => _buildChip(service.trim()))
+                          children: serviceNames
+                              .where((s) => s.isNotEmpty)
+                              .map((service) => _buildChip(service))
                               .toList(),
                         ),
                       ),
