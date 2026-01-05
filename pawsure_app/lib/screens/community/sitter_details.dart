@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/screens/community/booking_modal.dart';
-import 'package:pawsure_app/constants/api_config.dart'; // 1. Import Config
+import 'package:pawsure_app/constants/api_config.dart'; 
 
 class SitterDetailsScreen extends StatefulWidget {
   final String sitterId;
@@ -31,7 +31,6 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
   }
 
   Future<Map<String, dynamic>> _fetchSitterData() async {
-    // 2. Use the central config
     final url = '${ApiConfig.baseUrl}/sitters/${widget.sitterId}';
 
     try {
@@ -112,7 +111,6 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
           final user = data['user'] ?? {};
           final List<dynamic> reviewsData = data['reviews'] ?? [];
 
-          // Logic to handle photo_gallery (comma separated string) -> First Image
           String? galleryImage;
           if (data['photo_gallery'] != null &&
               data['photo_gallery'].toString().isNotEmpty) {
@@ -158,7 +156,6 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- 1. Top Image & Back Button ---
                 Stack(
                   children: [
                     SizedBox(
@@ -171,11 +168,12 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                             Container(color: Colors.grey[300]),
                       ),
                     ),
+            
                     SafeArea(
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: InkWell(
-                          onTap: () => Navigator.pop(context),
+                          onTap: () => Navigator.pop(context), 
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
@@ -188,11 +186,12 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                                 ),
                               ],
                             ),
-                            child: const Icon(Icons.arrow_back, size: 20),
+                            child: const Icon(Icons.arrow_back, size: 20, color: Colors.black87),
                           ),
                         ),
                       ),
                     ),
+
                     if (isVerified)
                       Positioned(
                         top: 40,
