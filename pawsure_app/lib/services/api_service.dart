@@ -1,16 +1,15 @@
-//Pawsure-Repo\pawsure_app\lib\services\api_service.dart
+// Pawsure-Repo\pawsure_app\lib\services\api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart'; // Added for MediaType
 import 'package:flutter/foundation.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/models/health_record_model.dart';
 import 'package:pawsure_app/models/event_model.dart';
-import 'package:pawsure_app/models/sitter_model.dart';
+import 'package:pawsure_app/models/sitter_model.dart'; // Ensure you have this model or UserProfile
 import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/constants/api_config.dart';
-import 'package:path/path.dart' show extension;
-import 'package:http/src/utils.dart';
 
 String get apiBaseUrl => ApiConfig.baseUrl;
 
@@ -20,12 +19,10 @@ String extname(String filename) {
   if (lastDot == -1) return '';
   return filename.substring(lastDot);
 }
-// Detect platform and use appropriate localhost address
-// 10.0.2.2 is for Android emulator, localhost for Windows/Web/iOS
 
 class ApiService {
   final AuthService _authService = AuthService();
-  
+
   Future<Map<String, String>> _getHeaders() async {
     final headers = {
       'Content-Type': 'application/json; charset=UTF-8',
@@ -98,6 +95,11 @@ class ApiService {
     String? species,
     String? dob,
     String? photoPath,
+    double? weight,
+    String? sterilizationStatus,
+    String? allergies,
+    double? moodRating,
+    String? lastVetVisit,
   }) async {
     try {
       debugPrint('➕ API: POST $apiBaseUrl/pets');
@@ -107,7 +109,8 @@ class ApiService {
       // Remove Content-Type for multipart - it will be set automatically
       headers.remove('Content-Type');
 
-      final request = http.MultipartRequest('POST', Uri.parse('$apiBaseUrl/pets'));
+      final request =
+          http.MultipartRequest('POST', Uri.parse('$apiBaseUrl/pets'));
 
       // Add headers (including auth token)
       request.headers.addAll(headers);
@@ -119,8 +122,22 @@ class ApiService {
         request.fields['species'] = species;
       }
       if (dob != null && dob.isNotEmpty) {
-        // Convert mm/dd/yyyy to ISO format if needed
         request.fields['dob'] = dob;
+      }
+      if (weight != null) {
+        request.fields['weight'] = weight.toString();
+      }
+      if (sterilizationStatus != null && sterilizationStatus.isNotEmpty) {
+        request.fields['sterilization_status'] = sterilizationStatus;
+      }
+      if (allergies != null && allergies.isNotEmpty) {
+        request.fields['allergies'] = allergies;
+      }
+      if (moodRating != null) {
+        request.fields['mood_rating'] = moodRating.toString();
+      }
+      if (lastVetVisit != null && lastVetVisit.isNotEmpty) {
+        request.fields['last_vet_visit'] = lastVetVisit;
       }
 
       // Add photo file if provided
@@ -133,13 +150,12 @@ class ApiService {
           final photoFile = await http.MultipartFile.fromPath(
             'photo',
             photoPath,
-            filename: fileName, // Add this line
+            filename: fileName,
           );
           request.files.add(photoFile);
           debugPrint('📸 Added photo file: $photoPath as $fileName');
         } catch (e) {
           debugPrint('⚠️ Error adding photo file: $e');
-          // Continue without photo
         }
       }
 
@@ -171,7 +187,7 @@ class ApiService {
     }
   }
 
-  /// 🆕 PUT /pets/:id - Update an existing pet
+  /// PUT /pets/:id - Update an existing pet
   Future<Pet> updatePet({
     required int petId,
     String? name,
@@ -248,7 +264,6 @@ class ApiService {
       }
 
       // Add new photo if provided
-      // Add new photo if provided
       if (photoPath != null && photoPath.isNotEmpty) {
         try {
           // 🔧 FIX: Generate a clean, unique filename
@@ -258,7 +273,7 @@ class ApiService {
           final photoFile = await http.MultipartFile.fromPath(
             'photo',
             photoPath,
-            filename: fileName, // Add this line
+            filename: fileName,
           );
           request.files.add(photoFile);
           debugPrint('📸 Updating photo: $photoPath as $fileName');
@@ -297,7 +312,6 @@ class ApiService {
   /// DELETE /pets/:petId - Delete a pet
   Future<void> deletePet(int petId) async {
     try {
-      // ⚠️ NOTE: Ensure 'apiBaseUrl' is correctly defined in this file
       debugPrint('🗑️ API: DELETE $apiBaseUrl/pets/$petId');
 
       final headers = await _getHeaders();
@@ -308,7 +322,6 @@ class ApiService {
 
       debugPrint('📦 API Response: ${response.statusCode}');
 
-      // Assuming your backend returns 200 (OK) or 204 (No Content) on success
       if (response.statusCode != 200 && response.statusCode != 204) {
         if (response.statusCode == 401) {
           throw Exception('Authentication failed. Please log in again.');
@@ -325,8 +338,6 @@ class ApiService {
       rethrow;
     }
   }
-
-// --------------------------------------------------------------------------
 
   // ========================================================================
   // HEALTH RECORDS API
@@ -362,7 +373,7 @@ class ApiService {
       throw Exception(
         'Failed to load health records (${response.statusCode}): ${response.body}',
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ Error in getHealthRecords: $e');
       debugPrint('Stack trace: $stackTrace');
       rethrow;
@@ -402,7 +413,7 @@ class ApiService {
       throw Exception(
         'Failed to add health record (${response.statusCode}): ${response.body}',
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ Error in addHealthRecord: $e');
       debugPrint('Stack trace: $stackTrace');
       rethrow;
@@ -410,7 +421,6 @@ class ApiService {
   }
 
   /// PUT /health-records/:recordId - Update an existing health record
-  /// 🔧 FIXED: Corrected the API endpoint
   Future<HealthRecord> updateHealthRecord(
     int recordId,
     Map<String, dynamic> payload,
@@ -421,7 +431,7 @@ class ApiService {
 
       final headers = await _getHeaders();
       final response = await http.put(
-        Uri.parse('$apiBaseUrl/health-records/$recordId'), // ✅ Correct endpoint
+        Uri.parse('$apiBaseUrl/health-records/$recordId'),
         headers: headers,
         body: jsonEncode(payload),
       );
@@ -448,14 +458,13 @@ class ApiService {
   }
 
   /// DELETE /health-records/:recordId - Delete a health record
-  /// 🔧 FIXED: Corrected the API endpoint
   Future<void> deleteHealthRecord(int recordId) async {
     try {
       debugPrint('🗑️ API: DELETE $apiBaseUrl/health-records/$recordId');
 
       final headers = await _getHeaders();
       final response = await http.delete(
-        Uri.parse('$apiBaseUrl/health-records/$recordId'), // ✅ Correct endpoint
+        Uri.parse('$apiBaseUrl/health-records/$recordId'),
         headers: headers,
       );
 
@@ -479,7 +488,7 @@ class ApiService {
   }
 
   // ========================================================================
-  // 🆕 EVENTS API
+  // EVENTS API
   // ========================================================================
 
   /// GET /events?petId=X - Fetch all events for a specific pet
@@ -654,7 +663,9 @@ class ApiService {
           'Failed to delete event (${response.statusCode}): ${response.body}',
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in deleteEvent: $e');
+      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -735,6 +746,7 @@ class ApiService {
       rethrow;
     }
   }
+
   // ========================================================================
   // POSTS/COMMUNITY API
   // ========================================================================
@@ -746,9 +758,7 @@ class ApiService {
 
       final headers = await _getHeaders();
       final response = await http.get(
-        Uri.parse(
-          '$apiBaseUrl/posts?tab=$tab',
-        ), // ✅ FIXED: Changed from /community to /posts
+        Uri.parse('$apiBaseUrl/posts?tab=$tab'),
         headers: headers,
       );
 
@@ -834,7 +844,7 @@ class ApiService {
               'media', // MUST match FilesInterceptor('media') in NestJS
               path,
               filename: fileName,
-              contentType: http.MediaType(
+              contentType: MediaType(
                 'image',
                 mimeType.split('/')[1],
               ), // ✅ Explicitly set MIME type
@@ -874,10 +884,13 @@ class ApiService {
     }
   }
 
-  //chat api
+  // ========================================================================
+  // CHAT API
+  // ========================================================================
+
   Future<List<dynamic>> getChatHistory(String room) async {
     final token = await _authService.getToken();
-    
+
     // Matches NestJS @Get('chat/:room')
     final url = Uri.parse('${ApiConfig.baseUrl}/chat/$room');
 
@@ -901,11 +914,12 @@ class ApiService {
   // ========================================================================
 
   /// PATCH /sitters/user/:userId - Update sitter profile by USER ID
-  Future<UserProfile> updateSitterProfile(int userId, Map<String, dynamic> payload) async {
+  Future<UserProfile> updateSitterProfile(
+      int userId, Map<String, dynamic> payload) async {
     try {
       // ✅ Calls the new endpoint: /sitters/user/23
       debugPrint('🔄 API: PATCH $apiBaseUrl/sitters/user/$userId');
-      
+
       final headers = await _getHeaders();
       final response = await http.patch(
         Uri.parse('$apiBaseUrl/sitters/user/$userId'),
@@ -915,7 +929,8 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json = jsonDecode(response.body);
-        return UserProfile.fromJson(json); 
+        // Assuming UserProfile is the correct return type model
+        return UserProfile.fromJson(json);
       } else {
         throw Exception('Failed to update: ${response.body}');
       }
@@ -925,4 +940,3 @@ class ApiService {
     }
   }
 }
-
