@@ -33,4 +33,8 @@ export class CreateBookingDto {
   @IsString()
   message?: string;
 
+  @IsOptional()
+  @IsNumber()
+  payment_method_id?: number;
+
 }
