@@ -5,12 +5,15 @@ import {
   CreateDateColumn,
   ManyToOne,
   OneToMany,
+  ManyToMany,
+  JoinTable,
   JoinColumn,
 } from 'typeorm';
 import { User } from '../user/user.entity';
 import { PostMedia } from './post-media.entity';
-import { Comment } from '../comments/comments.entity'; // Import your Comment entity
-import { Like } from '../likes/likes.entity';       // Import your Like entity
+import { Comment } from '../comments/comments.entity';
+import { Like } from '../likes/likes.entity';
+import { Pet } from '../pet/pet.entity'; // Make sure this path is correct
 
 @Entity('posts')
 export class Post {
@@ -35,9 +38,6 @@ export class Post {
   @Column({ type: 'timestamp', nullable: true })
   end_date: Date;
 
-  @Column({ nullable: true })
-  pet_id: string;
-
   @CreateDateColumn()
   created_at: Date;
 
@@ -48,10 +48,18 @@ export class Post {
   @OneToMany(() => PostMedia, (media) => media.post)
   post_media: PostMedia[];
 
-  // FIX: Add these two lines so Comments and Likes can "see" the post
   @OneToMany(() => Comment, (comment) => comment.post)
   comments: Comment[];
 
   @OneToMany(() => Like, (like) => like.post)
   likes: Like[];
+
+  // UPDATED: Many-to-Many relationship for multiple pets
+  @ManyToMany(() => Pet)
+  @JoinTable({
+    name: 'post_pets', // This creates the junction table in Supabase
+    joinColumn: { name: 'post_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'pet_id', referencedColumnName: 'id' }
+  })
+  pets: Pet[];
 }
