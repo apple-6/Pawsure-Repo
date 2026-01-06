@@ -23,7 +23,7 @@ import { AuthModule } from './auth/auth.module';
 import { FileService } from './file/file.service';
 import { FileModule } from './file/file.module';
 import { EventsModule } from './events/events.module'; // 👈 Correct Import
-
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -62,7 +62,7 @@ import { EventsModule } from './events/events.module'; // 👈 Correct Import
     RoleModule,
     AuthModule,
     EventsModule, // 👈 Added here
-    
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService, FileService],

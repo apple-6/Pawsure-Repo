@@ -1,11 +1,11 @@
 // pawsure_app\lib\screens\profile\create_pet_profile_screen.dart
 import 'package:flutter/material.dart';
-import 'dart:io'; // ⬅️ ADDED: Required for File access (e.g., displaying the image)
-import 'package:image_picker/image_picker.dart'; // ⬅️ ADDED: Required for photo picking logic
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/services/api_service.dart';
+import 'package:pawsure_app/models/pet_model.dart';
 
-// Enum to manage the selected animal type
 enum AnimalType { dog, cat }
 
 class CreatePetProfileScreen extends StatefulWidget {
@@ -23,6 +23,9 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _breedController = TextEditingController();
   final TextEditingController _dobController = TextEditingController();
+  final TextEditingController _weightController = TextEditingController();
+  final TextEditingController _allergiesController = TextEditingController();
+  final TextEditingController _lastVetVisitController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   String _sterilizationStatus = 'unknown';
@@ -39,8 +42,16 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     'Golden Retriever',
     'German Shepherd',
     'Poodle',
+    'Beagle',
+    'Bulldog',
   ];
-  final List<String> _catBreeds = ['Persian Cat', 'Siamese', 'Ragdoll'];
+  final List<String> _catBreeds = [
+    'Persian',
+    'Siamese',
+    'Ragdoll',
+    'Maine Coon',
+    'British Shorthair',
+  ];
   String? _selectedBreed;
 
   bool get isEditMode => widget.petToEdit != null;
@@ -120,11 +131,16 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     _nameController.dispose();
     _breedController.dispose();
     _dobController.dispose();
+    _weightController.dispose();
+    _allergiesController.dispose();
+    _lastVetVisitController.dispose();
     super.dispose();
   }
 
-  // 🗓️ ADDED: Helper method to display the date picker
-  Future<void> _selectDate(BuildContext context) async {
+  Future<void> _selectDate(
+    BuildContext context,
+    TextEditingController controller,
+  ) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -134,8 +150,7 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     if (!mounted) return;
     if (picked != null) {
       setState(() {
-        // Format the date as mm/dd/yyyy
-        _dobController.text =
+        controller.text =
             "${picked.month.toString().padLeft(2, '0')}/${picked.day.toString().padLeft(2, '0')}/${picked.year}";
       });
     }
@@ -155,10 +170,6 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Image selected: ${file.name}')));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Image selection cancelled.')),
-      );
     }
   }
 
@@ -180,7 +191,11 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     final navigator = Navigator.of(context);
 
     scaffoldMessenger.showSnackBar(
-      const SnackBar(content: Text('Creating pet profile...')),
+      SnackBar(
+        content: Text(
+          isEditMode ? 'Updating pet profile...' : 'Creating pet profile...',
+        ),
+      ),
     );
 
     try {
@@ -249,7 +264,6 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Determine which list of breeds to use
     final List<String> currentBreeds = _selectedAnimalType == AnimalType.dog
         ? _dogBreeds
         : _selectedAnimalType == AnimalType.cat
@@ -258,12 +272,11 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        // Added AppBar for better screen structure
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text("New Pet Profile"),
+        title: Text(isEditMode ? "Edit Pet Profile" : "New Pet Profile"),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
@@ -271,7 +284,6 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Scrollable Content
             SingleChildScrollView(
               padding: const EdgeInsets.all(20.0),
               child: Form(
@@ -388,11 +400,9 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
   }
 
   Widget _buildPhotoUploadArea(BuildContext context) {
-    // Determine the content based on whether an image has been selected
     Widget imageContent;
 
     if (_pickedFile != null) {
-      // Display the selected image from the File path
       imageContent = ClipOval(
         child: Image.file(
           File(_pickedFile!.path),
@@ -416,7 +426,6 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
         ),
       );
     } else {
-      // Display the default upload icon
       imageContent = const Center(
         child: Icon(Icons.upload, size: 40, color: Colors.grey),
       );
@@ -431,14 +440,13 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
             shape: BoxShape.circle,
             border: Border.all(color: Colors.grey.shade300),
           ),
-          child: imageContent, // Use the determined content
+          child: imageContent,
         ),
         const SizedBox(height: 15),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextButton.icon(
-              // ⬅️ FIX: Connect to camera
               onPressed: () => _pickImage(ImageSource.camera),
               icon: const Icon(Icons.camera_alt, color: Colors.grey, size: 16),
               label: const Text(
@@ -448,7 +456,6 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
             ),
             const Text(' | ', style: TextStyle(color: Colors.grey)),
             TextButton.icon(
-              // ⬅️ FIX: Connect to gallery
               onPressed: () => _pickImage(ImageSource.gallery),
               icon: const Icon(Icons.image, color: Colors.green, size: 16),
               label: const Text(
@@ -521,76 +528,17 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     );
   }
 
-  Widget _buildFixedSaveButton() {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: ElevatedButton(
-          onPressed: _savePetProfile,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 56),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.0),
-            ),
-          ),
-          child: Text(
-            isEditMode ? 'Save Changes' : 'Create Profile',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade300, width: 1.5),
-        ),
-      ),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Colors.green,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFieldLabel(String label, {required bool required}) {
-    return Row(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-        ),
-        if (required)
-          const Text(
-            ' *',
-            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-          ),
-      ],
-    );
-  }
-
-  // ... (Rest of the widget builders are unchanged)
-
   Widget _buildTextFormField({
     required TextEditingController controller,
     required String hintText,
-    required String validatorText,
+    String? validatorText,
     TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
+      maxLines: maxLines,
       decoration: InputDecoration(
         hintText: hintText,
         border: OutlineInputBorder(
@@ -618,13 +566,13 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
         _buildAnimalTypeCard(
           type: AnimalType.dog,
           label: 'Dog',
-          icon: Icons.pets, // Using a generic icon for illustration
+          icon: Icons.pets,
         ),
         const SizedBox(width: 15),
         _buildAnimalTypeCard(
           type: AnimalType.cat,
           label: 'Cat',
-          icon: Icons.pets, // Using a generic icon for illustration
+          icon: Icons.pets,
         ),
       ],
     );
@@ -654,8 +602,6 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
           ),
           child: Column(
             children: [
-              // In a real app, you would use an Image or SvgPicture here
-              // For now, using a Material Icon to simulate the dog/cat icon
               Icon(
                 icon,
                 size: 30,
@@ -703,15 +649,18 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
     );
   }
 
-  Widget _buildDateOfBirthField(BuildContext context) {
+  Widget _buildDateOfBirthField(
+    BuildContext context,
+    TextEditingController controller,
+  ) {
     return TextFormField(
-      controller: _dobController,
-      readOnly: true, // Prevents manual keyboard entry
+      controller: controller,
+      readOnly: true,
       decoration: InputDecoration(
         hintText: 'mm/dd/yyyy',
         suffixIcon: IconButton(
           icon: const Icon(Icons.calendar_today, color: Colors.grey),
-          onPressed: () => _selectDate(context),
+          onPressed: () => _selectDate(context, controller),
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
