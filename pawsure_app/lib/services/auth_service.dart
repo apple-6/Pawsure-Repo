@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import './storage_service.dart';
 import 'package:pawsure_app/constants/api_config.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   // Determine base URL depending on platform so emulator can reach host machine.
@@ -81,11 +82,30 @@ class AuthService {
       _token = token;
       await _storage.write(key: 'jwt', value: token);
 
+      final prefs = await SharedPreferences.getInstance();
+
+      // Attempt to get ID from login response directly (if backend sends it)
+      if (data.containsKey('user') && data['user'] != null) {
+        final userId = data['user']['id'];
+        if (userId is int) {
+          await prefs.setInt('userId', userId);
+          print("✅ Saved User ID from Login: $userId");
+        }
+      }
+
       // Fetch and store user profile
       try {
         final profile = await this.profile();
-        if (profile != null && profile.containsKey('role')) {
-          await _storage.write(key: 'user_role', value: profile['role']);
+        if (profile != null) {
+          // Update User ID from profile if we didn't get it earlier
+          if (profile.containsKey('id') && profile['id'] is int) {
+             await prefs.setInt('userId', profile['id']);
+             print("✅ Saved User ID from Profile: ${profile['id']}");
+          }
+
+          if (profile.containsKey('role')) {
+            await _storage.write(key: 'user_role', value: profile['role']);
+          }
         }
       } catch (e) {
         // ignore: avoid_print
@@ -108,6 +128,11 @@ class AuthService {
     _token = null;
     await _storage.delete(key: 'jwt');
     await _storage.delete(key: 'user_role');
+
+    // ✅ FIX 2: Clear User ID on logout
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('userId');
+    print("🔒 Logged out and cleared User ID");
   }
 
   /// Get stored JWT token
@@ -351,5 +376,12 @@ class AuthService {
   Future<bool> validateToken() async {
     final profile = await this.profile();
     return profile != null;
+  }
+
+  // Add this method to get the ID from storage
+  Future<int?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Assuming you saved 'userId' or 'id' during login
+    return prefs.getInt('userId'); 
   }
 }

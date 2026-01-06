@@ -4,6 +4,7 @@ import 'sitter_dashboard.dart'; // Adjust path if needed
 import 'chat_screen.dart'; 
 import 'sitter_calendar.dart'; // Import SitterCalendar screen
 import 'package:pawsure_app/services/api_service.dart';
+import 'package:pawsure_app/services/auth_service.dart';
 
 // --- Data Models ---
 
@@ -62,6 +63,9 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
   final Color _accentColor = const Color(0xFF1CCA5B);
   final ApiService _apiService = ApiService();
 
+  final AuthService _authService = AuthService(); // Add this
+  int? _currentUserId;
+
   List<SitterInboxItem> _allBookings = [];
   bool _isLoading = true;
   String? _error;
@@ -77,9 +81,54 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadCurrentUser();
     _loadBookings();
   }
 
+  Future<void> _loadCurrentUser() async {
+    try {
+      final userId = await _authService.getUserId();
+      if (userId != null) {
+        setState(() {
+          _currentUserId = userId;
+        });
+        print("✅ Inbox loaded for User ID: $userId");
+      } else {
+        print("⚠️ No User ID found. User might not be logged in.");
+      }
+    } catch (e) {
+      print("Error loading user ID: $e");
+    }
+  }
+
+  // 2. UPDATE THE NAVIGATION FUNCTION
+  void _openChat(String ownerName, String petName, String dates, bool isRequest, int bookingId) async {
+    // We need the current user ID for the socket. 
+    // If _currentUserId is null, fetch it quickly or grab from storage
+    int myId = _currentUserId ?? 0; 
+    if (myId == 0) {
+       // Try fetching one last time
+      final fetchedId = await _authService.getUserId();
+      if (fetchedId != null) {
+        myId = fetchedId;
+        setState(() => _currentUserId = myId);
+      } else {
+        // Stop here if we still don't have an ID
+        Get.snackbar("Error", "Could not identify user. Please log in again.", backgroundColor: Colors.red, colorText: Colors.white);
+        return;
+      }
+    }
+
+    Get.to(() => ChatScreen(
+      ownerName: ownerName,
+      petName: petName,
+      dates: dates,
+      isRequest: isRequest,
+      room: 'booking-$bookingId', // ✅ Generates unique room ID
+      currentUserId: myId,        // ✅ Passes required ID
+      bookingId: bookingId,
+    ));
+  }
   Future<void> _loadBookings() async {
     setState(() {
       _isLoading = true;
@@ -147,15 +196,6 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
     super.dispose();
   }
 
-  void _openChat(String ownerName, String petName, String dates, bool isRequest) {
-    Get.to(() => ChatScreen(
-      ownerName: ownerName,
-      petName: petName,
-      dates: dates,
-      isRequest: isRequest,
-    ));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -221,6 +261,7 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
                                   request.petName,
                                   "${request.startDate} - ${request.endDate}",
                                   true,
+                                  request.id,
                                 ),
                                 onAccept: () => _handleAccept(request.id),
                                 onDecline: () => _handleDecline(request.id),
@@ -248,6 +289,7 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
                                   booking.petName,
                                   "${booking.startDate} - ${booking.endDate}",
                                   false,
+                                  booking.id,
                                 ),
                               );
                             },
