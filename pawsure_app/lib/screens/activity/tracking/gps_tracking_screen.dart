@@ -1,4 +1,4 @@
-//pawsure_app/lib/screens/activity/tracking/gps_tracking_screen.dart
+// pawsure_app/lib/screens/activity/tracking/gps_tracking_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -376,6 +376,17 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     _cleanupTracking();
     if (mounted) {
       Get.back();
+    }
+  }
+
+  // ✅ Recenter Map Function
+  void _recenterMap() {
+    if (_currentPosition != null && _mapController != null) {
+      _mapController!.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: _currentPosition!, zoom: 16),
+        ),
+      );
     }
   }
 
@@ -895,6 +906,20 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+
+            // ✅ ADDED: Recenter Button (Bottom Right)
+            Positioned(
+              bottom:
+                  220, // Comfortable thumb position above the bottom controls
+              right: 16,
+              child: FloatingActionButton(
+                mini: false,
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black87,
+                onPressed: _recenterMap,
+                child: const Icon(Icons.my_location, size: 30),
               ),
             ),
           ],

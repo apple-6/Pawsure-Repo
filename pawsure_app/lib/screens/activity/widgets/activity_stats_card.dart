@@ -28,31 +28,39 @@ class ActivityStatsCard extends StatelessWidget {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Obx(
-                  () => SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(
-                        value: 'day',
-                        label: Text('Day', style: TextStyle(fontSize: 11)),
+                  () => SizedBox(
+                    width: 180, // Fixed width prevents resizing jitter
+                    child: SegmentedButton<String>(
+                      showSelectedIcon:
+                          false, // Fix: Hides the checkmark icon to save space
+                      segments: const [
+                        ButtonSegment(
+                          value: 'day',
+                          label: Text('Day', style: TextStyle(fontSize: 11)),
+                        ),
+                        ButtonSegment(
+                          value: 'week',
+                          label: Text('Week', style: TextStyle(fontSize: 11)),
+                        ),
+                        ButtonSegment(
+                          value: 'month',
+                          label: Text('Mon', style: TextStyle(fontSize: 11)),
+                        ),
+                      ],
+                      selected: {controller.selectedPeriod.value},
+                      onSelectionChanged: (Set<String> selection) {
+                        controller.setPeriod(selection.first);
+                      },
+                      style: ButtonStyle(
+                        visualDensity: VisualDensity.compact,
+                        padding: WidgetStateProperty.all(
+                          const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                        ),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      ButtonSegment(
-                        value: 'week',
-                        label: Text('Week', style: TextStyle(fontSize: 11)),
-                      ),
-                      ButtonSegment(
-                        value: 'month',
-                        label: Text('Month', style: TextStyle(fontSize: 11)),
-                      ),
-                    ],
-                    selected: {controller.selectedPeriod.value},
-                    onSelectionChanged: (Set<String> selection) {
-                      controller.setPeriod(selection.first);
-                    },
-                    style: ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                      padding: WidgetStateProperty.all(
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      ),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                 ),
