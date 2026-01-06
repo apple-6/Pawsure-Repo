@@ -66,12 +66,23 @@ class HomeController extends GetxController {
 
   /// 🆕 Observe pet changes from PetController
   void _observePetChanges() {
+    // Initial load when first pet is available
+    if (_petController.selectedPet.value != null) {
+      final pet = _petController.selectedPet.value!;
+      _updatePetData(pet);
+      loadTodayActivityStats(pet.id);
+    }
+
+    // Listen for subsequent changes
     ever(_petController.selectedPet, (Pet? pet) {
       if (pet != null) {
+        debugPrint('🔄 Pet changed to: ${pet.name} (ID: ${pet.id})');
+
+        // Clear old stats immediately to avoid showing stale data
+        todayActivityStats.value = null;
+
         _updatePetData(pet);
-        loadTodayActivityStats(
-          pet.id,
-        ); // 🆕 Load activity stats when pet changes
+        loadTodayActivityStats(pet.id);
       }
     });
   }
@@ -97,14 +108,29 @@ class HomeController extends GetxController {
   /// 🆕 Load today's activity stats
   Future<void> loadTodayActivityStats(int petId) async {
     try {
+      debugPrint('📊 Loading activity stats for pet ID: $petId');
       isLoadingActivityStats.value = true;
+
       final stats = await _activityService.getStats(petId, 'day');
+
       todayActivityStats.value = stats;
+      debugPrint(
+        '✅ Activity stats loaded: ${stats.totalActivities} activities, ${stats.totalDuration} min',
+      );
     } catch (e) {
-      debugPrint('❌ Error loading today\'s activity stats: $e');
+      debugPrint('❌ Error loading today\'s activity stats for pet $petId: $e');
       todayActivityStats.value = null;
     } finally {
       isLoadingActivityStats.value = false;
+    }
+  }
+
+  /// 🆕 REFRESH METHOD: Call this to force a refresh of the home data
+  Future<void> refreshHomeData() async {
+    final pet = _petController.selectedPet.value;
+    if (pet != null) {
+      debugPrint('🔄 Refreshing home data for ${pet.name}...');
+      await loadTodayActivityStats(pet.id);
     }
   }
 

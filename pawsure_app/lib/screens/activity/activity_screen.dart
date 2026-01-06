@@ -1,7 +1,8 @@
-//pawsure_app\lib\screens\activity\activity_screen.dart
+// pawsure_app/lib/screens/activity/activity_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/activity_controller.dart';
+import 'package:pawsure_app/controllers/home_controller.dart'; // 🆕 IMPORTED
 import 'package:pawsure_app/controllers/pet_controller.dart';
 import 'package:pawsure_app/screens/activity/widgets/activity_stats_card.dart';
 import 'package:pawsure_app/screens/activity/widgets/activity_list_item.dart';
@@ -163,7 +164,13 @@ class ActivityScreen extends StatelessWidget {
           // Start GPS Tracking Button
           FloatingActionButton.extended(
             heroTag: 'gps',
-            onPressed: () => Get.to(() => const GPSTrackingScreen()),
+            // 🆕 FIX: Await GPS screen result, then refresh Home data
+            onPressed: () async {
+              await Get.to(() => const GPSTrackingScreen());
+              if (Get.isRegistered<HomeController>()) {
+                Get.find<HomeController>().refreshHomeData();
+              }
+            },
             backgroundColor: Colors.orange,
             icon: const Icon(Icons.gps_fixed),
             label: const Text('Start Tracking'),
@@ -172,7 +179,13 @@ class ActivityScreen extends StatelessWidget {
           // Manual Add Button
           FloatingActionButton(
             heroTag: 'manual',
-            onPressed: () => _showAddActivityModal(context),
+            // 🆕 FIX: Await Modal result, then refresh Home data
+            onPressed: () async {
+              await _showAddActivityModal(context);
+              if (Get.isRegistered<HomeController>()) {
+                Get.find<HomeController>().refreshHomeData();
+              }
+            },
             backgroundColor: Colors.green,
             child: const Icon(Icons.add),
           ),
@@ -195,8 +208,9 @@ class ActivityScreen extends StatelessWidget {
     );
   }
 
-  void _showAddActivityModal(BuildContext context) {
-    showModalBottomSheet(
+  // 🆕 FIX: Changed to return Future<void> so we can await it
+  Future<void> _showAddActivityModal(BuildContext context) async {
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
