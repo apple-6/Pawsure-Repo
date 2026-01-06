@@ -123,8 +123,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       };
 
       final apiService = Get.find<ApiService>();
-      final updatedProfile =
-          await apiService.updateSitterProfile(widget.user.id, payload);
+      final updatedProfile = await apiService.updateSitterProfile(widget.user.id, payload);
 
       // Create optimistic profile for UI (prevents flicker)
       final newProfile = UserProfile(
