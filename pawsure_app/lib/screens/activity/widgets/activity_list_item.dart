@@ -1,9 +1,10 @@
-//pawsure_app\lib\screens\activity\widgets\activity_list_item.dart
+// pawsure_app/lib/screens/activity/widgets/activity_list_item.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pawsure_app/models/activity_log_model.dart';
 import 'package:pawsure_app/screens/activity/widgets/edit_activity_modal.dart';
+import 'package:pawsure_app/screens/activity/tracking/route_view_screen.dart'; // 1. Added Import
 
 class ActivityListItem extends StatelessWidget {
   final ActivityLog activity;
@@ -169,34 +170,38 @@ class ActivityListItem extends StatelessWidget {
                 ),
               ],
 
-              // Route Badge
+              // Route Badge - Clickable (2. Updated Section)
               if (activity.routeData != null &&
                   activity.routeData!.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.route, size: 16, color: Colors.blue[700]),
-                      const SizedBox(width: 6),
-                      Text(
-                        'GPS Route Saved',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue[700],
-                          fontWeight: FontWeight.w500,
+                InkWell(
+                  onTap: () => _showRouteOnMap(context),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.route, size: 16, color: Colors.blue[700]),
+                        const SizedBox(width: 6),
+                        Text(
+                          'GPS Route Saved',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[700],
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -252,6 +257,15 @@ class ActivityListItem extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => EditActivityModal(activity: activity),
+    );
+  }
+
+  // 3. Added Navigation Method
+  void _showRouteOnMap(BuildContext context) {
+    Get.to(
+      () => RouteViewScreen(activity: activity),
+      transition: Transition.cupertino,
+      duration: const Duration(milliseconds: 300),
     );
   }
 }
