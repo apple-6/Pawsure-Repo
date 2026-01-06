@@ -44,6 +44,7 @@ class BookingController extends GetxController {
     required String dropOffTime,
     required String pickUpTime,
     String? message,
+    int? paymentMethodId,
   }) async {
     try {
       isCreatingBooking.value = true;
@@ -57,6 +58,7 @@ class BookingController extends GetxController {
         dropOffTime: dropOffTime,
         pickUpTime: pickUpTime,
         message: message,
+        paymentMethodId: paymentMethodId,
       );
 
       await fetchMyBookings();

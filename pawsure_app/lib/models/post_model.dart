@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+
 class PostModel {
   final String id;
   final String userId;
@@ -35,6 +38,19 @@ class PostModel {
     this.petId,
   });
 
+  /// Fix localhost URLs for Android emulator
+  static String _fixImageUrl(String url) {
+    if (url.isEmpty) return url;
+    
+    // On Android emulator, replace localhost with 10.0.2.2
+    if (!kIsWeb && Platform.isAndroid) {
+      return url
+          .replaceAll('http://localhost:', 'http://10.0.2.2:')
+          .replaceAll('https://localhost:', 'https://10.0.2.2:');
+    }
+    return url;
+  }
+
   factory PostModel.fromJson(Map<String, dynamic> json) {
     // 1. Handle nested user data from your NestJS/Prisma backend
     final userData = json['user'] ?? json['owner'] ?? {};
@@ -47,16 +63,22 @@ class PostModel {
       id: json['id'].toString(),
       userId: (json['userId'] ?? userData['id'] ?? '').toString(),
       userName: userData['name'] ?? 'Unknown User',
-      profilePicture:
+      profilePicture: _fixImageUrl(
           userData['profile_picture'] ??
-          "https://cdn-icons-png.flaticon.com/512/194/194279.png",
+          "https://cdn-icons-png.flaticon.com/512/194/194279.png"),
       content: json['content'] ?? '',
 
       // 3. Mapping the images correctly so they show up in your Carousel
+      // Also fix localhost URLs for Android emulator
       mediaUrls: rawMedia
           .map((m) {
-            if (m is String) return m;
-            return (m['url'] ?? m['media_url'] ?? '').toString();
+            String url;
+            if (m is String) {
+              url = m;
+            } else {
+              url = (m['url'] ?? m['media_url'] ?? '').toString();
+            }
+            return _fixImageUrl(url);
           })
           .where((url) => url.isNotEmpty)
           .toList()
@@ -66,7 +88,7 @@ class PostModel {
       isUrgent: json['is_urgent'] ?? false,
       likes: json['likes_count'] ?? json['likes'] ?? 0,
       isLiked: json['isLiked'] ?? false,
-      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(json['created_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
 
       // Vacancy fields mapping
       isVacancy: json['is_vacancy'] ?? false,
