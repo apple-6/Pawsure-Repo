@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../models/sitter_model.dart';
+import '../../services/api_service.dart';
 
 class EditProfilePage extends StatefulWidget {
-  // We pass the current user data to this page
   final UserProfile user;
 
   const EditProfilePage({super.key, required this.user});
@@ -14,288 +15,246 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
 
-  // Colors
-  final Color brandColor = const Color(0xFF2ECA6A);
-
-  // Controllers
   late TextEditingController _nameController;
-  late TextEditingController _locationController;
   late TextEditingController _bioController;
-  late TextEditingController _staysController;
+  late TextEditingController _locationController;
 
-  // State Variables
-  late int _experienceYears;
-  late List<ServiceModel> _services; 
+  final Map<String, TextEditingController> _priceControllers = {};
+  final Map<String, bool> _activeStatus = {};
+
+  final List<String> _serviceTypes = [
+    "Pet Boarding",
+    "House Sitting",
+    "Dog Walking",
+    "Pet Daycare",
+    "Pet Taxi"
+  ];
 
   @override
   void initState() {
     super.initState();
-    // 1. Initialize text controllers with existing data
     _nameController = TextEditingController(text: widget.user.name);
-    _locationController = TextEditingController(text: widget.user.location);
     _bioController = TextEditingController(text: widget.user.bio);
-    _staysController = TextEditingController(text: widget.user.staysCompleted.toString());
-    
-    // 2. Initialize simple state variables
-    _experienceYears = widget.user.experienceYears;
+    _locationController = TextEditingController(text: widget.user.location);
 
-    // 3. Create a DEEP COPY of services list so we don't mutate original data instantly
-    _services = widget.user.services.map((s) => s.copy()).toList();
+    for (var type in _serviceTypes) {
+      var existingService = widget.user.services.firstWhere(
+        (s) => s.name == type,
+        orElse: () => ServiceModel(
+            name: type,
+            isActive: false,
+            price: '0',
+            unit: _getDefaultUnit(type)),
+      );
+      _priceControllers[type] =
+          TextEditingController(text: existingService.price);
+      _activeStatus[type] = existingService.isActive;
+    }
+  }
+
+  String _getDefaultUnit(String type) {
+    if (type.contains("Walking")) return "/hour";
+    if (type.contains("Taxi")) return "/trip";   // For Pet Taxi
+    if (type.contains("Daycare")) return "/day"; // For Daycare
+    return "/night";// Default others (Boarding, House Sitting) to /night
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _locationController.dispose();
     _bioController.dispose();
-    _staysController.dispose();
+    _locationController.dispose();
+    for (var controller in _priceControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
-  void _saveProfile() {
-    if (_formKey.currentState!.validate()) {
-      // Create a NEW object with the updated values
-      UserProfile updatedProfile = UserProfile(
-        name: _nameController.text.trim(),
-        location: _locationController.text.trim(),
-        bio: _bioController.text.trim(),
-        staysCompleted: int.tryParse(_staysController.text) ?? 0,
-        experienceYears: _experienceYears,
-        services: _services,
+  Future<void> _saveProfile() async {
+    // 1. Check validation first
+    if (!_formKey.currentState!.validate()) {
+      Get.snackbar(
+        "Missing Info",
+        "Please fill in all the required fields marked in red.",
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red[800],
+        icon: const Icon(Icons.error_outline, color: Colors.red),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (c) => const Center(
+          child: CircularProgressIndicator(color: Color(0xFF2ECA6A))),
+    );
+
+    try {
+      List<Map<String, dynamic>> servicesJson = [];
+      List<ServiceModel> updatedServices = [];
+
+      for (var type in _serviceTypes) {
+        final priceText = _priceControllers[type]?.text ?? "0";
+        final priceNum = num.tryParse(priceText) ?? 0;
+
+        final serviceObj = ServiceModel(
+          name: type,
+          isActive: _activeStatus[type] ?? false,
+          price: priceText,
+          unit: _getDefaultUnit(type),
+        );
+
+        updatedServices.add(serviceObj);
+
+        servicesJson.add({
+          "name": serviceObj.name,
+          "isActive": serviceObj.isActive,
+          "price": priceNum,
+          "unit": serviceObj.unit,
+        });
+      }
+
+      final Map<String, dynamic> payload = {
+        "name": _nameController.text,
+        "bio": _bioController.text,
+        "address": _locationController.text,
+        "services": servicesJson,
+      };
+
+      final apiService = Get.find<ApiService>();
+      final updatedProfile =
+          await apiService.updateSitterProfile(widget.user.id, payload);
+
+      // Create optimistic profile for UI (prevents flicker)
+      final newProfile = UserProfile(
+        id: widget.user.id,
+        name: _nameController.text,
+        location: _locationController.text,
+        bio: _bioController.text,
+        services: updatedServices,
+        experienceYears: widget.user.experienceYears,
+        staysCompleted: widget.user.staysCompleted,
       );
 
-      // Return the updated object to the previous screen
-      Navigator.pop(context, updatedProfile);
+      Navigator.of(context).pop(); // Close loader
+      Navigator.pop(context, newProfile); // Return data
+
+      Get.snackbar("Success", "Profile updated successfully",
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green[800]);
+    } catch (e) {
+      Navigator.of(context).pop();
+      debugPrint("Save Error: $e");
+      Get.snackbar("Error", "Failed to save: $e",
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red[800]);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    const brandColor = Color(0xFF2ECA6A);
+    const backgroundColor = Color(0xFFF9FAFB);
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: backgroundColor,
       appBar: AppBar(
+        title: const Text("Edit Profile",
+            style: TextStyle(color: Colors.black, fontSize: 16)),
         backgroundColor: Colors.white,
-        elevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.grey),
-          onPressed: () => Navigator.pop(context),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
         ),
-        title: const Text("Edit Profile", style: TextStyle(color: Colors.black, fontSize: 18)),
-        centerTitle: true,
-        actions: [
-          TextButton(
+        child: SizedBox(
+          height: 55,
+          child: ElevatedButton(
             onPressed: _saveProfile,
-            child: Text("Save", style: TextStyle(color: brandColor, fontWeight: FontWeight.bold, fontSize: 16)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: brandColor,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            child: const Text(
+              "Save Changes",
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
+            ),
           ),
-        ],
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- SECTION 1: PHOTO ---
-              Center(
-                child: Stack(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundColor: const Color(0xFFE8F5E9),
-                        child: Icon(Icons.person, size: 50, color: brandColor),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: brandColor, shape: BoxShape.circle),
-                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                      ),
-                    )
+              // --- SECTION 1: BASIC INFO ---
+              const Text("Basic Information",
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87)),
+              const SizedBox(height: 15),
+
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4))
                   ],
                 ),
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: TextButton(
-                  onPressed: () {}, 
-                  child: Text("Change Photo", style: TextStyle(color: brandColor))
-                )
-              ),
-
-              const SizedBox(height: 20),
-
-              // --- SECTION 2: BASIC INFO ---
-              const Text("Basic Info", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              
-              _buildTextField(
-                label: "Display Name", 
-                controller: _nameController, 
-                icon: Icons.person_outline
-              ),
-              const SizedBox(height: 15),
-              
-              _buildTextField(
-                label: "Location", 
-                controller: _locationController, 
-                icon: Icons.location_on_outlined
-              ),
-
-              const SizedBox(height: 25),
-
-              // --- SECTION 3: STATS ---
-              const Text("Experience & Stats", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-
-              Row(
-                children: [
-                  // Years Experience Stepper
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Years Exp.", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              GestureDetector(
-                                onTap: () => setState(() { if (_experienceYears > 0) _experienceYears--; }),
-                                child: Icon(Icons.remove_circle, color: Colors.grey[400]),
-                              ),
-                              Text("$_experienceYears", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                              GestureDetector(
-                                onTap: () => setState(() => _experienceYears++),
-                                child: Icon(Icons.add_circle, color: brandColor),
-                              ),
-                            ],
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  
-                  // Stays Completed Input
-                  Expanded(
-                    child: TextFormField(
-                      controller: _staysController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: "Stays Completed",
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 25),
-
-              // --- SECTION 4: BIO ---
-              const Text("About Me", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _bioController,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: "Tell owners about your experience with pets...",
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
+                child: Column(
+                  children: [
+                    _buildTextField("Display Name", _nameController,
+                        Icons.person_outline, true), // Required
+                    const SizedBox(height: 20),
+                    _buildTextField("Location", _locationController,
+                        Icons.location_on_outlined, true), // Required
+                    const SizedBox(height: 20),
+                    _buildTextField("About Me", _bioController,
+                        Icons.info_outline, true,
+                        maxLines: 4), // Required
+                  ],
                 ),
               ),
 
               const SizedBox(height: 30),
 
-              // --- SECTION 5: SERVICES ---
-              const Text("Services & Rates", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
+              // --- SECTION 2: SERVICES & RATES ---
+              const Text("Services & Rates",
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87)),
+              const SizedBox(height: 15),
 
-              ..._services.map((service) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: service.isActive ? brandColor.withOpacity(0.5) : Colors.grey.shade200),
-                    boxShadow: [
-                      BoxShadow(color: Colors.grey.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 2))
-                    ]
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(service.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                          Switch(
-                            value: service.isActive,
-                            activeColor: brandColor,
-                            onChanged: (val) => setState(() => service.isActive = val),
-                          )
-                        ],
-                      ),
-                      if (service.isActive) ...[
-                        const Divider(height: 20),
-                        Row(
-                          children: [
-                            const Text("Rate:  ", style: TextStyle(color: Colors.grey)),
-                            Expanded(
-                              child: TextFormField(
-                                initialValue: service.price,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                decoration: const InputDecoration(
-                                  prefixText: "RM ",
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                                  border: OutlineInputBorder(),
-                                ),
-                                onChanged: (val) => service.price = val,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(service.unit, style: const TextStyle(color: Colors.grey)),
-                          ],
-                        )
-                      ]
-                    ],
-                  ),
-                );
+              ..._serviceTypes.map((type) {
+                return _buildServiceRow(type);
               }).toList(),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -303,29 +262,173 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  // Helper for basic text fields
-  Widget _buildTextField({
-    required String label, 
-    required TextEditingController controller, 
-    required IconData icon
-  }) {
+  // --- UPDATED TEXT FIELD ---
+  Widget _buildTextField(
+      String label, TextEditingController controller, IconData icon, bool isRequired,
+      {int maxLines = 1}) {
     return TextFormField(
       controller: controller,
+      maxLines: maxLines,
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
       decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: Colors.grey),
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+        // 1. Label with Red Asterisk if required
+        label: RichText(
+          text: TextSpan(
+            text: label,
+            style: const TextStyle(color: Colors.grey, fontSize: 16),
+            children: isRequired
+                ? [
+                    const TextSpan(
+                        text: ' *',
+                        style: TextStyle(
+                            color: Colors.red, fontWeight: FontWeight.bold))
+                  ]
+                : [],
+          ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+        prefixIcon: Icon(icon, color: Colors.grey.shade400, size: 22),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+
+        // 2. Normal Border (Clean)
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
+
+        // 3. Error Border (Red and Thicker)
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red, width: 2.0),
+        ),
+
+        // 4. Bold Error Style
+        errorStyle: const TextStyle(
+          color: Colors.red,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
         ),
       ),
-      validator: (val) => val!.isEmpty ? "This field is required" : null,
+      validator: (value) {
+        if (isRequired && (value == null || value.trim().isEmpty)) {
+          return "This field is required";
+        }
+        return null;
+      },
     );
+  }
+
+  Widget _buildServiceRow(String serviceName) {
+    bool isActive = _activeStatus[serviceName] ?? false;
+    String unit = _getDefaultUnit(serviceName);
+    const activeColor = Color(0xFF2ECA6A);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: isActive ? activeColor : Colors.transparent, width: 2),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 4))
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? activeColor.withOpacity(0.1)
+                      : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(_getServiceIcon(serviceName),
+                    color: isActive ? activeColor : Colors.grey, size: 20),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Text(
+                  serviceName,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: isActive ? Colors.black87 : Colors.grey,
+                  ),
+                ),
+              ),
+              Transform.scale(
+                scale: 0.8,
+                child: Switch(
+                  value: isActive,
+                  activeColor: activeColor,
+                  activeTrackColor: activeColor.withOpacity(0.2),
+                  inactiveThumbColor: Colors.white,
+                  inactiveTrackColor: Colors.grey.shade200,
+                  onChanged: (val) {
+                    setState(() {
+                      _activeStatus[serviceName] = val;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+          if (isActive) ...[
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _priceControllers[serviceName],
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Color(0xFF1F2937)),
+              decoration: InputDecoration(
+                prefixText: 'RM ',
+                suffixText: unit,
+                prefixStyle: const TextStyle(
+                    color: Colors.black54, fontWeight: FontWeight.normal),
+                suffixStyle: const TextStyle(
+                    color: Colors.black54, fontWeight: FontWeight.normal),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: activeColor),
+                ),
+              ),
+            ),
+          ]
+        ],
+      ),
+    );
+  }
+
+  IconData _getServiceIcon(String type) {
+    if (type.contains("Walking")) return Icons.directions_walk;
+    if (type.contains("Taxi")) return Icons.local_taxi;   // Car icon
+    if (type.contains("Daycare")) return Icons.wb_sunny;  // Sun icon
+    if (type.contains("Sitting")) return Icons.chair;     // House Sitting
+    return Icons.home; // Default (Pet Boarding)
   }
 }

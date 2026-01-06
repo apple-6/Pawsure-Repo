@@ -31,6 +31,7 @@ class ServiceModel {
 }
 
 class UserProfile {
+  final int id;
   String name;
   String location;
   String bio;
@@ -39,6 +40,7 @@ class UserProfile {
   List<ServiceModel> services;
 
   UserProfile({
+    required this.id,
     required this.name,
     required this.location,
     required this.bio,
@@ -48,16 +50,20 @@ class UserProfile {
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
-    var list = json['services'] as List? ?? [];
-    List<ServiceModel> servicesList = list.map((i) => ServiceModel.fromJson(i)).toList();
-
     return UserProfile(
-      name: json['name'] ?? 'Unknown',
-      location: json['location'] ?? '',
+      // ✅ MAP USER ID to 'id'
+      // The backend response for a Sitter object usually has 'userId' field
+      id: json['userId'] ?? 0, 
+      
+      name: json['user']?['name'] ?? 'Unknown',
+      location: json['address'] ?? json['location'] ?? '',
       bio: json['bio'] ?? '',
       experienceYears: json['experienceYears'] ?? 0,
       staysCompleted: json['staysCompleted'] ?? 0,
-      services: servicesList,
+      services: (json['services'] as List<dynamic>?)
+              ?.map((e) => ServiceModel.fromJson(e))
+              .toList() ??
+          [],
     );
   }
 }

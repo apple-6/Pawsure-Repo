@@ -6,14 +6,21 @@ import 'package:pawsure_app/screens/auth/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pawsure_app/constants/api_config.dart';
 
+// --- IMPORTS FOR NAVIGATION ---
 import 'sitter_calendar.dart';
 import 'sitter_inbox.dart';
 import 'sitter_dashboard.dart';
 import 'sitter_preview_page.dart';
 import 'sitter_edit_profile.dart';
-import '../../models/sitter_model.dart'; 
+import '../../models/sitter_model.dart';
 
-// --- PART 1: THE WIDGET  ---
+// ⚠️ IMPORTANT: Ensure you have these imports if you use these specific controllers/services
+// If you don't have StorageService, use SharedPreferences directly (see comment inside function)
+// import 'package:pawsure_app/services/storage_service.dart';
+// import 'package:pawsure_app/controllers/health_controller.dart';
+// import 'package:pawsure_app/controllers/home_controller.dart';
+// import 'package:pawsure_app/controllers/profile_controller.dart';
+
 class SitterSettingScreen extends StatefulWidget {
   const SitterSettingScreen({super.key});
 
@@ -21,78 +28,135 @@ class SitterSettingScreen extends StatefulWidget {
   State<SitterSettingScreen> createState() => _SitterSettingScreenState();
 }
 
-// --- PART 2: THE STATE (All logic goes here!) ---
 class _SitterSettingScreenState extends State<SitterSettingScreen> {
-  
-  // A. State Variables
-  UserProfile? currentUser; // Make it nullable
-  bool isLoading = true;    // Add loading state
-  String? errorMessage;     // Add error state
+  UserProfile? currentUser;
+  bool isLoading = true;
+  String? errorMessage;
 
-  // B. Init State (Runs once when screen loads)
   @override
   void initState() {
     super.initState();
     _fetchUserData();
   }
 
-  // C. The Async Fetch Function
   Future<void> _fetchUserData() async {
-  try {
-    // A. Get access to storage
-    final prefs = await SharedPreferences.getInstance();
-    
-    // B. Read the saved ID (Returns null if not found)
-    final int? userId = prefs.getInt('userId');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final int? userId = prefs.getInt('userId');
 
-    // C. Check if user is actually logged in
-    if (userId == null) {
-      // No ID found? They shouldn't be here. Send them to Login.
-      Get.offAll(() => LoginScreen());
-      throw Exception("User not logged in");
+      if (userId == null) {
+        Get.offAll(() => LoginScreen());
+        throw Exception("User not logged in");
+      }
+
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/sitters/user/$userId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          currentUser = UserProfile.fromJson(data);
+          isLoading = false;
+        });
+      } else {
+        throw Exception('Failed to load: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        errorMessage = "Error: $e";
+      });
     }
+  }
 
-    // D. Use the REAL ID in the URL
-    final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/sitters/user/$userId'), // <--- Dynamic!
-      headers: {
-        'Content-Type': 'application/json',
-        // 'Authorization': 'Bearer $token', // Optional if you made the route public, but recommended
-      },
+  // --- 🆕 LOGOUT LOGIC ADDED HERE ---
+  Future<void> _handleLogout(BuildContext context) async {
+    // 1. Show confirmation dialog
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
     );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      setState(() {
-        currentUser = UserProfile.fromJson(data);
-        isLoading = false;
-      });
-    } else {
-      throw Exception('Failed to load: ${response.statusCode} - ${response.body}');
-    }
-  } catch (e) {
-    setState(() {
-      isLoading = false;
-      errorMessage = "Error: $e";
-    });
-  }
-}
+    // 2. Perform Logout if confirmed
+    if (shouldLogout == true) {
+      try {
+        // --- TOKEN CLEARING ---
+        // If you rely on SharedPreferences mostly, use this:
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.clear(); // Clears UserID, Token, etc.
 
-  // D. The Build Method
+        // If you strictly use StorageService, uncomment below and import it:
+        // final storageService = Get.find<StorageService>();
+        // await storageService.deleteToken();
+
+        // --- RESET GETX CONTROLLERS ---
+        // These checks are safe (they won't crash if the controller isn't found)
+        // Ensure you import these Controllers at the top if they are in different files.
+        /* if (Get.isRegistered<HealthController>()) {
+          Get.find<HealthController>().resetState();
+        }
+        if (Get.isRegistered<HomeController>()) {
+          Get.find<HomeController>().resetState();
+        }
+        if (Get.isRegistered<ProfileController>()) {
+          Get.find<ProfileController>().resetState();
+        }
+        */
+
+        // Clear all dependencies from memory
+        Get.deleteAll(force: false);
+
+        // Navigate to Login
+        Get.offAll(() => LoginScreen()); 
+
+        Get.snackbar(
+          'Success',
+          'You have been logged out',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green[800],
+          duration: const Duration(seconds: 2),
+        );
+      } catch (e) {
+        debugPrint('❌ Error during logout: $e');
+        Get.snackbar(
+          'Error',
+          'Failed to logout: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red[800],
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Define colors here
     const Color brandColor = Color(0xFF1CCA5B);
     const Color lightGreen = Color(0xFFEFFAF4);
 
-    // 1. SHOW LOADING SPINNER
     if (isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: brandColor)),
       );
     }
 
-    // 2. SHOW ERROR MESSAGE
     if (errorMessage != null && currentUser == null) {
       return Scaffold(
         body: Center(
@@ -110,18 +174,16 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      
-      // Bottom Navigation Bar
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         selectedItemColor: brandColor,
         unselectedItemColor: Colors.grey.shade600,
-        currentIndex: 4, 
+        currentIndex: 4,
         onTap: (index) {
           if (index == 0) Get.to(() => const SitterDashboard());
+          if (index == 1) ; // Discover screen not implemented yet
           if (index == 2) Get.to(() => const SitterCalendar());
           if (index == 3) Get.to(() => const SitterInbox());
-          // Index 4 is current page, do nothing
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Dashboard'),
@@ -131,14 +193,13 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Setting'),
         ],
       ),
-
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 60), 
+              const SizedBox(height: 60),
 
               // --- 1. PROFILE HEADER ---
               Container(
@@ -154,16 +215,11 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-
-              // DYNAMIC NAME (Uses the variable from Part 2)
               Text(
-                currentUser!.name, 
+                currentUser!.name,
                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
-
               const SizedBox(height: 8),
-
-              // Rating Row
               const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -175,8 +231,6 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-
-              // Verified Badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
@@ -195,23 +249,18 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
               const SizedBox(height: 24),
 
               // --- 2. ACTION BUTTONS ---
-
-              // Edit Profile Button (This caused the errors before)
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () async {
                     if (currentUser == null) return;
-
                     final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => EditProfilePage(user: currentUser!),
                       ),
                     );
-
-                    // Update UI if data came back
                     if (result != null && result is UserProfile) {
                       setState(() {
                         currentUser = result;
@@ -226,18 +275,18 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                   child: const Text("Edit Profile", style: TextStyle(fontSize: 16, color: Colors.white)),
                 ),
               ),
-
               const SizedBox(height: 12),
-
-              // Preview as Owner Button
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
                   onPressed: () {
+                    if (currentUser == null) return;
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const SitterPreviewPage()),
+                      MaterialPageRoute(
+                        builder: (context) => SitterPreviewPage(user: currentUser!),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.visibility_outlined, color: Colors.black87, size: 20),
@@ -249,7 +298,6 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 30),
 
               // --- 3. SITTER TOOLS LIST ---
@@ -261,7 +309,6 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
               _buildToolTile(
                 icon: Icons.account_balance_wallet_outlined,
                 title: "Wallet & Earnings",
@@ -283,15 +330,14 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                 lightGreen: lightGreen,
                 onTap: () {},
               ),
+              
+              // --- 🆕 LOGOUT TILE CONNECTED ---
               _buildToolTile(
                 icon: Icons.logout,
                 title: "Log Out",
                 brandColor: Colors.red,
                 lightGreen: Colors.red.withOpacity(0.1),
-                onTap: () {
-                   // Your logout logic here
-                   // Get.offAll(() => LoginScreen());
-                },
+                onTap: () => _handleLogout(context), // ✅ Calling the function
               ),
               const SizedBox(height: 20),
             ],
@@ -301,7 +347,6 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
     );
   }
 
-  // Helper Widget (Must be inside the State class or outside both classes)
   Widget _buildToolTile({
     required IconData icon,
     required String title,

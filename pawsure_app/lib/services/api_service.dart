@@ -4,7 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/models/health_record_model.dart';
-import 'package:pawsure_app/models/event_model.dart'; // 🆕 IMPORT
+import 'package:pawsure_app/models/event_model.dart';
+import 'package:pawsure_app/models/sitter_model.dart';
 import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/constants/api_config.dart';
@@ -594,4 +595,34 @@ class ApiService {
       rethrow;
     }
   }
+
+  // ========================================================================
+  // SITTER PROFILE API
+  // ========================================================================
+
+  /// PATCH /sitters/user/:userId - Update sitter profile by USER ID
+  Future<UserProfile> updateSitterProfile(int userId, Map<String, dynamic> payload) async {
+    try {
+      // ✅ Calls the new endpoint: /sitters/user/23
+      debugPrint('🔄 API: PATCH $apiBaseUrl/sitters/user/$userId');
+      
+      final headers = await _getHeaders();
+      final response = await http.patch(
+        Uri.parse('$apiBaseUrl/sitters/user/$userId'),
+        headers: headers,
+        body: jsonEncode(payload),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json = jsonDecode(response.body);
+        return UserProfile.fromJson(json); 
+      } else {
+        throw Exception('Failed to update: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error: $e');
+      rethrow;
+    }
+  }
 }
+

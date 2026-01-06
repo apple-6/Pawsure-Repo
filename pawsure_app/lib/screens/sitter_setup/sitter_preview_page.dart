@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../models/sitter_model.dart';
 
 class SitterPreviewPage extends StatelessWidget {
-  const SitterPreviewPage({super.key});
+  final UserProfile user;
+  const SitterPreviewPage({super.key, required this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -13,9 +15,12 @@ class SitterPreviewPage extends StatelessWidget {
     const Color starColor = Color(0xFFFBBF24);
 
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Light grey background
+      // ✅ CHANGE 1: Use a standard "Off-White/Grey" background.
+      // This provides the best contrast for white cards.
+      backgroundColor: const Color(0xFFF3F4F6), 
+      
       appBar: AppBar(
-        backgroundColor: Colors.grey[50],
+        backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
         title: const Text(
@@ -28,7 +33,7 @@ class SitterPreviewPage extends StatelessWidget {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16),
         child: Column(
           children: [
             // --- 1. HEADER CARD ---
@@ -49,10 +54,10 @@ class SitterPreviewPage extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: const CircleAvatar(
+                    child: CircleAvatar(
                       radius: 40,
                       backgroundColor: brandLight,
-                      child: Icon(
+                      child: const Icon(
                         Icons.person_outline,
                         size: 40,
                         color: brandColor,
@@ -62,9 +67,9 @@ class SitterPreviewPage extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   // Name
-                  const Text(
-                    "Aisha B.",
-                    style: TextStyle(
+                  Text(
+                    user.name,
+                    style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: textDark,
@@ -73,18 +78,18 @@ class SitterPreviewPage extends StatelessWidget {
                   const SizedBox(height: 4),
 
                   // Location
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.location_on_outlined,
                         size: 16,
                         color: textGrey,
                       ),
-                      SizedBox(width: 4),
+                      const SizedBox(width: 4),
                       Text(
-                        "Petaling Jaya, Selangor",
-                        style: TextStyle(color: textGrey),
+                        user.location,
+                        style: const TextStyle(color: textGrey),
                       ),
                     ],
                   ),
@@ -198,24 +203,24 @@ class SitterPreviewPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    "Hi! I'm Aisha, an experienced pet sitter with over 3 years of caring for furry friends. I grew up with dogs and cats, so I understand their needs and behaviors. I treat every pet like my own family member and ensure they receive the love and attention they deserve.",
-                    style: TextStyle(color: textGrey, height: 1.5),
+
+                  Text(
+                    user.bio,
+                    style: const TextStyle(color: textGrey, height: 1.5),
                   ),
                   const SizedBox(height: 20),
 
-                  // Stats Row
                   Row(
                     children: [
                       _buildStatItem(
                         Icons.access_time,
-                        "3 years exp.",
+                        "${user.experienceYears} years exp.",
                         textGrey,
                       ),
                       const SizedBox(width: 24),
                       _buildStatItem(
                         Icons.calendar_today_outlined,
-                        "32 stays completed",
+                        "${user.staysCompleted} stays completed",
                         textGrey,
                       ),
                     ],
@@ -240,17 +245,23 @@ class SitterPreviewPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildServiceRow("Dog Boarding", "RM 80/night", brandColor),
-                  const Divider(height: 24),
-                  _buildServiceRow("Dog Walking", "RM 25/hour", brandColor),
-                  const Divider(height: 24),
-                  _buildServiceRow("Pet Sitting", "RM 60/visit", brandColor),
-                  const Divider(height: 24),
-                  _buildServiceRow(
-                    "Overnight Care",
-                    "RM 100/night",
-                    brandColor,
-                  ),
+
+                  if (user.services.isEmpty)
+                    const Text("No services listed yet.",
+                        style: TextStyle(color: textGrey))
+                  else
+                    ...user.services.where((s) => s.isActive).map((service) {
+                      return Column(
+                        children: [
+                          _buildServiceRow(
+                            service.name,
+                            "RM ${service.price}${service.unit}", 
+                            brandColor
+                          ),
+                          const Divider(height: 24),
+                        ],
+                      );
+                    }).toList(),
                 ],
               ),
             ),
@@ -278,7 +289,6 @@ class SitterPreviewPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
 
-                  // Review 1
                   _buildReviewItem(
                     name: "Sarah M.",
                     petName: "Max",
@@ -289,48 +299,19 @@ class SitterPreviewPage extends StatelessWidget {
                     starColor: starColor,
                     textGrey: textGrey,
                   ),
-                  const Divider(height: 30),
-
-                  // Review 2
-                  _buildReviewItem(
-                    name: "John D.",
-                    petName: "Bella",
-                    date: "Sep 2024",
-                    rating: 5,
-                    comment:
-                        "Very professional and caring. Bella loved staying with her.",
-                    starColor: starColor,
-                    textGrey: textGrey,
-                  ),
-                  const Divider(height: 30),
-
-                  // Review 3
-                  _buildReviewItem(
-                    name: "Lisa K.",
-                    petName: "Charlie",
-                    date: "Aug 2024",
-                    rating: 5,
-                    comment:
-                        "Great communication throughout the stay. Would book again.",
-                    starColor: starColor,
-                    textGrey: textGrey,
-                  ),
                 ],
               ),
             ),
-
             const SizedBox(height: 24),
 
-            // --- 5. BOTTOM BUTTON ---
+            // --- CONTACT BUTTON ---
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () {}, // Disabled for preview or show snackbar
+                onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(
-                    0xFF86EFAC,
-                  ), // Lighter green as seen in image
+                  backgroundColor: const Color(0xFF86EFAC),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -355,19 +336,20 @@ class SitterPreviewPage extends StatelessWidget {
 
   // --- HELPER WIDGETS ---
 
-  // 1. Generic Card Container
+  // ✅ CHANGE 3: Improved Card shadow to make it pop against the grey background
   Widget _buildCard({required Widget child}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white, // White card
         borderRadius: BorderRadius.circular(16),
+        // Deeper, softer shadow
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.05), // Darker opacity
+            blurRadius: 15, // Spread the shadow more
+            offset: const Offset(0, 5), // Push it down slightly
           ),
         ],
       ),
@@ -375,7 +357,6 @@ class SitterPreviewPage extends StatelessWidget {
     );
   }
 
-  // 2. Stat Item (Icon + Text)
   Widget _buildStatItem(IconData icon, String text, Color color) {
     return Row(
       children: [
@@ -386,7 +367,6 @@ class SitterPreviewPage extends StatelessWidget {
     );
   }
 
-  // 3. Service Row (Name .... Price)
   Widget _buildServiceRow(String name, String price, Color color) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -407,7 +387,6 @@ class SitterPreviewPage extends StatelessWidget {
     );
   }
 
-  // 4. Review Item
   Widget _buildReviewItem({
     required String name,
     required String petName,
