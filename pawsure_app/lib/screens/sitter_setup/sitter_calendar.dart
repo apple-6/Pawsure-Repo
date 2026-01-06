@@ -8,6 +8,7 @@ import 'package:pawsure_app/services/auth_service.dart';
 // Note: Ensure these imports point to your actual file locations
 import 'sitter_dashboard.dart';
 import 'sitter_inbox.dart';
+import 'sitter_setting_screen.dart';
 
 enum DateStatus { available, booked, unavailable }
 

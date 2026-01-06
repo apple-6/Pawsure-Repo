@@ -50,16 +50,21 @@ class SitterDashboard extends StatelessWidget {
         unselectedItemColor: Colors.grey.shade600,
         currentIndex: 0,
         onTap: (index) {
+          if (index == 0) {
+            // Navigate back to Dashboard (clears stack so no back button loop)
+            Get.offAll(() => const SitterDashboard());
+          }
+          if (index == 1) {
+            // Navigate to Discover Screen
+          }
           if (index == 2) {
             Get.to(() => const SitterCalendar());
           }
-          // You can add other links here later (e.g. Settings is index 4)
           if (index == 3) {
-            // Index 3 is Inbox
             Get.to(() => const SitterInbox());
           }
           if (index == 4) {
-            Get.to(() => const SitterSettingPage());
+            Get.to(() => const SitterSettingScreen());
           }
         },
         items: const [

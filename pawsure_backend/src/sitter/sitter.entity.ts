@@ -80,6 +80,9 @@ export class Sitter {
     @Column({ unique: true, nullable: true })
     userId: number;
 
+    @Column({ type: 'jsonb', nullable: true }) 
+    services: any;
+
     @OneToOne(() => User, (user) => user.sitterProfile, { nullable: true })
     @JoinColumn({ name: 'userId' })
     user: User;

@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  NotFoundException,
+  ForbiddenException,
   Body,
   Controller,
   Delete,
@@ -77,6 +79,42 @@ export class SitterController {
     return await this.sitterService.findByUserId(req.user.id);
   }
 
+  @Get('user/:userId')
+  async findSitterByUserId(@Param('userId', ParseIntPipe) userId: number) {
+    const sitter = await this.sitterService.findByUserId(userId);
+    
+    // Safety Check: If no sitter profile exists for this user, return 404
+    if (!sitter) {
+      throw new NotFoundException(`No Sitter Profile found for User ID ${userId}`);
+    }
+
+    return sitter;
+  }
+
+  // 🆕 NEW ENDPOINT: Update Sitter Profile by User ID
+  @Patch('user/:userId')
+  @UseGuards(JwtAuthGuard)
+  async updateByUserId(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Body() updateSitterDto: UpdateSitterDto,
+    @Request() req,
+  ) {
+    // 1. Find the sitter profile belonging to this User ID
+    const sitter = await this.sitterService.findByUserId(userId);
+    
+    if (!sitter) {
+      throw new NotFoundException(`No sitter profile found for User ID ${userId}`);
+    }
+
+    // 2. Security Check: Ensure the logged-in user matches the target User ID
+    // (Optional but recommended)
+    if (req.user.id !== userId) {
+      throw new ForbiddenException('You can only update your own profile');
+    }
+
+    // 3. Call the existing service method using the SITTER'S ID we just found
+    return await this.sitterService.update(sitter.id, updateSitterDto, req.user.id);
+  }
 
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {

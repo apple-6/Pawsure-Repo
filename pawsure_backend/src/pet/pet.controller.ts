@@ -10,9 +10,10 @@ import {
   UseGuards,
   Get,
   Param,
+  // 🔑 ADDED: Import the Delete decorator
   Delete, 
-  HttpCode,
-  HttpStatus,
+  HttpCode, // Added for explicit status code control
+  HttpStatus, // Added for status code constants
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PetService } from './pet.service';
@@ -139,6 +140,7 @@ export class PetController {
 
   @Delete(':id') 
   @UseGuards(JwtAuthGuard)
+  // Use 204 No Content for successful deletion (standard REST practice)
   @HttpCode(HttpStatus.NO_CONTENT) 
   async removePet(@Param('id') id: string, @Request() req) {
     const petId = Number(id);
@@ -146,6 +148,7 @@ export class PetController {
     
     console.log(`🗑️ Deleting Pet ID: ${petId} by User ID: ${userId}`);
     
+    // Calls the PetService.remove method which includes owner check and database deletion
     await this.petService.remove(petId, userId);
   }
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'sitter_dashboard.dart'; // Adjust path if needed
+import 'sitter_dashboard.dart'; 
 import 'chat_screen.dart'; 
-import 'sitter_calendar.dart'; // Import SitterCalendar screen
+import 'sitter_calendar.dart'; 
 import 'package:pawsure_app/services/api_service.dart';
 import 'package:pawsure_app/services/auth_service.dart';
 
@@ -302,11 +302,22 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
         selectedItemColor: _accentColor,
         unselectedItemColor: Colors.grey.shade600,
         onTap: (index) {
-          if (index == 0) Get.offAll(() => const SitterDashboard());
-          // Add other navigation logic here if needed
-        
-          if (index == 2) { // Index 2 is Calendar
-          Get.to(() => const SitterCalendar());
+          if (index == 0) {
+            // Navigate back to Dashboard (clears stack so no back button loop)
+            Get.offAll(() => const SitterDashboard());
+          }
+          if (index == 1) {
+            // Navigate to Discover Screen
+          }
+          if (index == 2) {
+            Get.to(() => const SitterCalendar());
+          }
+          if (index == 3) {
+            // Index 3 is Inbox
+            Get.to(() => const SitterInbox());
+          }
+          if (index == 4) {
+            Get.to(() => const SitterSettingScreen());
           }
         },
         items: const [
