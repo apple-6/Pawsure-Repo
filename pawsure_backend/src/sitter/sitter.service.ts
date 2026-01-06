@@ -12,7 +12,9 @@ import { CreateSitterDto } from './dto/create-sitter.dto';
 import { UpdateSitterDto } from './dto/update-sitter.dto';
 import { User } from '../user/user.entity';
 import { UserService } from '../user/user.service';
-import { FileService } from '../file/file.service';
+import { FileService } from '../file/file.service';    
+import { UpdateAvailabilityDto } from './dto/update-availability.dto';
+import { validate } from 'class-validator';
 import { Express } from 'express';
 
 // --- HELPER FUNCTION (From Version M) ---
@@ -270,5 +272,29 @@ export class SitterService {
         .andWhere('sitter.deleted_at IS NULL')
         .orderBy('sitter.rating', 'DESC')
         .getMany();
+  }
+
+  async updateAvailability(
+    userId: number,
+    dto: UpdateAvailabilityDto,
+  ): Promise<Sitter> {
+    // 1. Find the sitter profile associated with this user
+    const sitter = await this.findByUserId(userId);
+
+    if (!sitter) {
+      throw new NotFoundException('Sitter profile not found for this user.');
+    }
+
+    // 2. Update only the relevant fields
+    if (dto.unavailable_dates !== undefined) {
+      sitter.unavailable_dates = dto.unavailable_dates;
+    }
+
+    if (dto.unavailable_days !== undefined) {
+      sitter.unavailable_days = dto.unavailable_days;
+    }
+
+    // 3. Save and return the updated profile
+    return await this.sitterRepository.save(sitter);
   }
 }

@@ -5,9 +5,9 @@ import '../../controllers/home_controller.dart';
 import '../../widgets/home/status_card.dart';
 import '../../widgets/home/sos_button.dart';
 import '../../widgets/home/upcoming_events_card.dart';
-import '../../models/pet_model.dart';
+import 'package:pawsure_app/widgets/home/quick_actions.dart';
 import 'booking_card.dart';
-import '../../controllers/booking_controller.dart'; // 🆕 Import
+import '../../controllers/booking_controller.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -34,34 +34,140 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
         actions: [
-          // Pet Selector Dropdown
+          // Pet Selector Dropdown with emoji and Add Pet option
           Obx(() {
-            if (!controller.isLoadingPets.value && controller.pets.isNotEmpty) {
-              return PopupMenuButton<Pet>(
-                icon: const Icon(Icons.pets, color: Colors.black),
+            if (!controller.isLoadingPets.value) {
+              final selectedPet = controller.selectedPet.value;
+              final emoji = selectedPet?.species?.toLowerCase() == 'dog' ? '🐕' : '🐈';
+              
+              return PopupMenuButton<String>(
                 tooltip: 'Switch Pet',
-                onSelected: (Pet pet) {
-                  controller.selectPet(pet);
+                onSelected: (String value) {
+                  if (value == 'add_pet') {
+                    Get.toNamed('/profile');
+                  } else {
+                    final pet = controller.pets.firstWhere(
+                      (p) => p.id.toString() == value,
+                    );
+                    controller.selectPet(pet);
+                  }
                 },
-                itemBuilder: (context) => controller.pets
-                    .map(
-                      (pet) => PopupMenuItem<Pet>(
-                        value: pet,
-                        child: Row(
-                          children: [
-                            if (controller.selectedPet.value?.id == pet.id)
-                              const Icon(
-                                Icons.check,
-                                size: 20,
-                                color: Colors.green,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                offset: const Offset(0, 45),
+                itemBuilder: (context) => [
+                  // Pet list items
+                  ...controller.pets.map(
+                    (pet) => PopupMenuItem<String>(
+                      value: pet.id.toString(),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: controller.selectedPet.value?.id == pet.id
+                                  ? const Color(0xFF22C55E).withOpacity(0.1)
+                                  : const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Text(
+                                pet.species?.toLowerCase() == 'dog' ? '🐕' : '🐈',
+                                style: const TextStyle(fontSize: 16),
                               ),
-                            const SizedBox(width: 8),
-                            Text(pet.name),
-                          ],
-                        ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              pet.name,
+                              style: TextStyle(
+                                fontWeight: controller.selectedPet.value?.id == pet.id
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                          if (controller.selectedPet.value?.id == pet.id)
+                            const Icon(
+                              Icons.check,
+                              size: 18,
+                              color: Color(0xFF22C55E),
+                            ),
+                        ],
                       ),
-                    )
-                    .toList(),
+                    ),
+                  ),
+                  // Divider
+                  const PopupMenuDivider(),
+                  // Add Pet option
+                  const PopupMenuItem<String>(
+                    value: 'add_pet',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.add_circle_outline,
+                          size: 20,
+                          color: Color(0xFF22C55E),
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'Add New Pet',
+                          style: TextStyle(
+                            color: Color(0xFF22C55E),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (selectedPet != null) ...[
+                        Text(
+                          emoji,
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          selectedPet.name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF374151),
+                          ),
+                        ),
+                      ] else ...[
+                        const Icon(Icons.pets, size: 18, color: Color(0xFF6B7280)),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Select Pet',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: Color(0xFF6B7280),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
               );
             }
             return const SizedBox.shrink();
@@ -151,7 +257,12 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // 🆕 Upcoming Events Card
+                // Quick Actions
+                const QuickActions(),
+
+                const SizedBox(height: 24),
+
+                // Upcoming Events Card
                 UpcomingEventsCard(petId: pet.id),
                 const SizedBox(height: 24),
 

@@ -15,6 +15,7 @@ import { HealthRecordModule } from './health-record/health-record.module';
 import { ReviewModule } from './review/review.module';
 import { NotificationModule } from './notification/notification.module';
 import { PostsModule } from './posts/posts.module';
+import { CommunityModule } from './community/community.module';
 import { CommentsModule } from './comments/comments.module';
 import { LikesModule } from './likes/likes.module';
 import { RoleModule } from './role/role.module';
@@ -22,6 +23,7 @@ import { AuthModule } from './auth/auth.module';
 import { FileService } from './file/file.service';
 import { FileModule } from './file/file.module';
 import { EventsModule } from './events/events.module'; // 👈 Correct Import
+
 
 @Module({
   imports: [
@@ -53,12 +55,14 @@ import { EventsModule } from './events/events.module'; // 👈 Correct Import
     ReviewModule,
     NotificationModule,
     PostsModule,
+    CommunityModule,
     CommentsModule,
     LikesModule,
     FileModule,
     RoleModule,
     AuthModule,
     EventsModule, // 👈 Added here
+    
   ],
   controllers: [AppController],
   providers: [AppService, FileService],

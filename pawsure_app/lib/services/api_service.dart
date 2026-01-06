@@ -9,8 +9,17 @@ import 'package:pawsure_app/models/sitter_model.dart';
 import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/constants/api_config.dart';
+import 'package:path/path.dart' show extension;
+import 'package:http/src/utils.dart';
 
 String get apiBaseUrl => ApiConfig.baseUrl;
+
+// Helper function to get file extension (equivalent to Node.js extname)
+String extname(String filename) {
+  final lastDot = filename.lastIndexOf('.');
+  if (lastDot == -1) return '';
+  return filename.substring(lastDot);
+}
 // Detect platform and use appropriate localhost address
 // 10.0.2.2 is for Android emulator, localhost for Windows/Web/iOS
 
@@ -116,12 +125,17 @@ class ApiService {
       // Add photo file if provided
       if (photoPath != null && photoPath.isNotEmpty) {
         try {
+          // 🔧 FIX: Generate a clean, unique filename to prevent 'undefined' URLs
+          final String fileName =
+              'pet_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
           final photoFile = await http.MultipartFile.fromPath(
             'photo',
             photoPath,
+            filename: fileName, // Add this line
           );
           request.files.add(photoFile);
-          debugPrint('📸 Added photo file: $photoPath');
+          debugPrint('📸 Added photo file: $photoPath as $fileName');
         } catch (e) {
           debugPrint('⚠️ Error adding photo file: $e');
           // Continue without photo
@@ -156,6 +170,128 @@ class ApiService {
     }
   }
 
+  /// 🆕 PUT /pets/:id - Update an existing pet
+  Future<Pet> updatePet({
+    required int petId,
+    String? name,
+    String? breed,
+    String? species,
+    String? dob,
+    String? photoPath,
+    double? weight,
+    double? height,
+    int? bodyConditionScore,
+    List<Map<String, dynamic>>? weightHistory,
+    String? sterilizationStatus,
+    String? allergies,
+    String? foodBrand,
+    String? dailyFoodAmount,
+    double? moodRating,
+    String? lastVetVisit,
+  }) async {
+    try {
+      debugPrint('✏️ API: PUT $apiBaseUrl/pets/$petId');
+      debugPrint('📤 Updating pet: $name');
+
+      final headers = await _getHeaders();
+      headers.remove('Content-Type');
+
+      final request = http.MultipartRequest(
+        'PUT',
+        Uri.parse('$apiBaseUrl/pets/$petId'),
+      );
+      request.headers.addAll(headers);
+
+      // Add fields only if they're not null
+      if (name != null && name.isNotEmpty) {
+        request.fields['name'] = name;
+      }
+      if (breed != null && breed.isNotEmpty) {
+        request.fields['breed'] = breed;
+      }
+      if (species != null && species.isNotEmpty) {
+        request.fields['species'] = species;
+      }
+      if (dob != null && dob.isNotEmpty) {
+        request.fields['dob'] = dob;
+      }
+      if (weight != null) {
+        request.fields['weight'] = weight.toString();
+      }
+      if (height != null) {
+        request.fields['height'] = height.toString();
+      }
+      if (bodyConditionScore != null) {
+        request.fields['body_condition_score'] = bodyConditionScore.toString();
+      }
+      if (weightHistory != null) {
+        request.fields['weight_history'] = jsonEncode(weightHistory);
+      }
+      if (sterilizationStatus != null && sterilizationStatus.isNotEmpty) {
+        request.fields['sterilization_status'] = sterilizationStatus;
+      }
+      if (allergies != null && allergies.isNotEmpty) {
+        request.fields['allergies'] = allergies;
+      }
+      if (foodBrand != null && foodBrand.isNotEmpty) {
+        request.fields['food_brand'] = foodBrand;
+      }
+      if (dailyFoodAmount != null && dailyFoodAmount.isNotEmpty) {
+        request.fields['daily_food_amount'] = dailyFoodAmount;
+      }
+      if (moodRating != null) {
+        request.fields['mood_rating'] = moodRating.toString();
+      }
+      if (lastVetVisit != null && lastVetVisit.isNotEmpty) {
+        request.fields['last_vet_visit'] = lastVetVisit;
+      }
+
+      // Add new photo if provided
+      // Add new photo if provided
+      if (photoPath != null && photoPath.isNotEmpty) {
+        try {
+          // 🔧 FIX: Generate a clean, unique filename
+          final String fileName =
+              'pet_update_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+          final photoFile = await http.MultipartFile.fromPath(
+            'photo',
+            photoPath,
+            filename: fileName, // Add this line
+          );
+          request.files.add(photoFile);
+          debugPrint('📸 Updating photo: $photoPath as $fileName');
+        } catch (e) {
+          debugPrint('⚠️ Error adding photo file: $e');
+        }
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        final pet = Pet.fromJson(json);
+
+        debugPrint('✅ Pet updated successfully: ${pet.name}');
+        return pet;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to update pet (${response.statusCode}): ${response.body}',
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in updatePet: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
 
   /// DELETE /pets/:petId - Delete a pet
   Future<void> deletePet(int petId) async {
@@ -225,7 +361,7 @@ class ApiService {
       throw Exception(
         'Failed to load health records (${response.statusCode}): ${response.body}',
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint('❌ Error in getHealthRecords: $e');
       debugPrint('Stack trace: $stackTrace');
       rethrow;
@@ -265,7 +401,7 @@ class ApiService {
       throw Exception(
         'Failed to add health record (${response.statusCode}): ${response.body}',
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint('❌ Error in addHealthRecord: $e');
       debugPrint('Stack trace: $stackTrace');
       rethrow;
@@ -563,7 +699,10 @@ class ApiService {
   }
 
   /// PATCH /bookings/:id/status - Update booking status (accept/decline)
-  Future<Map<String, dynamic>> updateBookingStatus(int bookingId, String status) async {
+  Future<Map<String, dynamic>> updateBookingStatus(
+    int bookingId,
+    String status,
+  ) async {
     try {
       debugPrint('✏️ API: PATCH $apiBaseUrl/bookings/$bookingId/status');
       debugPrint('📤 Updating status to: $status');
@@ -592,6 +731,144 @@ class ApiService {
       );
     } catch (e) {
       debugPrint('❌ Error in updateBookingStatus: $e');
+      rethrow;
+    }
+  }
+  // ========================================================================
+  // POSTS/COMMUNITY API
+  // ========================================================================
+
+  /// GET /posts - Fetch all posts (optionally filtered by tab)
+  Future<List<dynamic>> getPosts({String tab = 'all'}) async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/posts?tab=$tab');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse(
+          '$apiBaseUrl/posts?tab=$tab',
+        ), // ✅ FIXED: Changed from /community to /posts
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> posts = jsonDecode(response.body) as List<dynamic>;
+        debugPrint('✅ Loaded ${posts.length} posts');
+        return posts;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to load posts (${response.statusCode}): ${response.body}',
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in getPosts: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  /// POST /posts - Create a new post with media files
+  Future<void> createPost({
+    required String content,
+    bool isUrgent = false,
+    List<String>? mediaPaths,
+  }) async {
+    try {
+      debugPrint('➕ API: POST $apiBaseUrl/posts');
+      debugPrint('📤 Creating post: $content, urgent: $isUrgent');
+
+      // Get headers WITHOUT Content-Type (multipart will set it)
+      final headers = await _getHeaders();
+      headers.remove('Content-Type');
+
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$apiBaseUrl/posts'),
+      );
+
+      // Add all headers including Authorization
+      request.headers.addAll(headers);
+
+      // Add form fields - match your NestJS backend field names EXACTLY
+      request.fields['content'] = content.trim();
+      request.fields['is_urgent'] = isUrgent.toString();
+
+      // Add media files if provided
+      if (mediaPaths != null && mediaPaths.isNotEmpty) {
+        for (int i = 0; i < mediaPaths.length; i++) {
+          final path = mediaPaths[i];
+          try {
+            // Generate clean filename
+            final fileName =
+                'post_${DateTime.now().millisecondsSinceEpoch}_$i${extname(path)}';
+
+            // ✅ FIXED: Explicitly set the MIME type based on file extension
+            String mimeType = 'application/octet-stream'; // Default
+            final ext = extname(path).toLowerCase();
+
+            if (['.jpg', '.jpeg'].contains(ext)) {
+              mimeType = 'image/jpeg';
+            } else if (ext == '.png') {
+              mimeType = 'image/png';
+            } else if (ext == '.gif') {
+              mimeType = 'image/gif';
+            } else if (ext == '.webp') {
+              mimeType = 'image/webp';
+            } else if (ext == '.mp4') {
+              mimeType = 'video/mp4';
+            } else if (ext == '.mov') {
+              mimeType = 'video/quicktime';
+            } else if (ext == '.avi') {
+              mimeType = 'video/x-msvideo';
+            }
+
+            debugPrint('📸 File MIME type detected: $mimeType for $fileName');
+
+            final file = await http.MultipartFile.fromPath(
+              'media', // MUST match FilesInterceptor('media') in NestJS
+              path,
+              filename: fileName,
+              contentType: http.MediaType(
+                'image',
+                mimeType.split('/')[1],
+              ), // ✅ Explicitly set MIME type
+            );
+            request.files.add(file);
+            debugPrint('📸 Added media file: $path as $fileName');
+          } catch (e) {
+            debugPrint('⚠️ Error adding media file $i: $e');
+          }
+        }
+      }
+
+      // Log request details for debugging
+      debugPrint('📋 Request headers: ${request.headers}');
+      debugPrint('📋 Request fields: ${request.fields}');
+      debugPrint('📋 Request files count: ${request.files.length}');
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        debugPrint('✅ Post created successfully!');
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      } else {
+        throw Exception(
+          'Failed to create post (${response.statusCode}): ${response.body}',
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in createPost: $e');
+      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }
