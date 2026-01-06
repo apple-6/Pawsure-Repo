@@ -2,12 +2,17 @@ import { Injectable,NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Booking } from './booking.entity';
+import { Sitter } from '../sitter/sitter.entity'; // 👈 IMPORT THIS
 
 @Injectable()
 export class BookingService {
   constructor(
     @InjectRepository(Booking)
     private bookingRepository: Repository<Booking>,
+
+    // 👇 INJECT SITTER REPOSITORY
+    @InjectRepository(Sitter)
+    private sitterRepository: Repository<Sitter>,
   ) {}
 
   async create(bookingData: Partial<Booking>): Promise<Booking> {
@@ -15,6 +20,7 @@ export class BookingService {
       ...bookingData,
       status: 'pending', 
     });
+    
     return await this.bookingRepository.save(booking);
   }
 
@@ -60,18 +66,51 @@ async findAllBySitter(sitterId: number): Promise<Booking[]> {
   return results;
 }
 
+// async findAllBySitterUserId(userId: number): Promise<Booking[]> {
+//   console.log(`🔍 Searching bookings for Sitter with User ID: ${userId}`);
+
+//   const results = await this.bookingRepository.find({
+//     where: {
+//       // sitter: { userId: userId }
+//       sitter: { 
+//         user: { id: userId } 
+//       }
+//     },
+//     relations: ['pet', 'owner'],
+//     order: { created_at: 'DESC' }
+//   });
+
+//   console.log(`📊 Found ${results.length} bookings for sitter user ${userId}`);
+//   return results;
+// }
+
+// backend/src/booking/booking.service.ts
+
 async findAllBySitterUserId(userId: number): Promise<Booking[]> {
-  console.log(`🔍 Searching bookings for Sitter with User ID: ${userId}`);
+    console.log(`🔍 Step 1: Finding Sitter profile for User ID: ${userId}`);
 
-  const results = await this.bookingRepository.find({
-    where: {
-      sitter: { userId: userId }
-    },
-    relations: ['pet', 'owner'],
-    order: { created_at: 'DESC' }
-  });
+    // 1. Find which Sitter ID belongs to this User
+    const sitter = await this.sitterRepository.findOne({
+      where: { user: { id: userId } }, // Assumes Sitter has a 'user' relation
+    });
 
-  console.log(`📊 Found ${results.length} bookings for sitter user ${userId}`);
-  return results;
-}
+    if (!sitter) {
+      console.warn(`⚠️ No Sitter profile found for User ID ${userId}. Returning empty list.`);
+      return [];
+    }
+
+    console.log(`✅ Step 2: Found Sitter ID ${sitter.id}. Fetching bookings...`);
+
+    // 2. Find bookings for that specific Sitter ID
+    const bookings = await this.bookingRepository.find({
+      where: { 
+        sitter: { id: sitter.id } 
+      },
+      relations: ['pet', 'owner'], // Load Pet and Owner details for the UI
+      order: { created_at: 'DESC' }
+    });
+
+    console.log(`📊 Found ${bookings.length} bookings for Sitter ID ${sitter.id}`);
+    return bookings;
+  }
 }
