@@ -10,6 +10,7 @@ import { PetModule } from './pet/pet.module';
 import { SitterModule } from './sitter/sitter.module';
 import { BookingModule } from './booking/booking.module';
 import { PaymentModule } from './payment/payment.module';
+import { PaymentMethodModule } from './payment-method/payment-method.module';
 import { ActivityLogModule } from './activity-log/activity-log.module';
 import { HealthRecordModule } from './health-record/health-record.module';
 import { ReviewModule } from './review/review.module';
@@ -23,7 +24,7 @@ import { AuthModule } from './auth/auth.module';
 import { FileService } from './file/file.service';
 import { FileModule } from './file/file.module';
 import { EventsModule } from './events/events.module'; // 👈 Correct Import
-
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { EventsModule } from './events/events.module'; // 👈 Correct Import
     SitterModule,
     BookingModule,
     PaymentModule,
+    PaymentMethodModule,
     ActivityLogModule,
     HealthRecordModule,
     ReviewModule,
@@ -62,7 +64,7 @@ import { EventsModule } from './events/events.module'; // 👈 Correct Import
     RoleModule,
     AuthModule,
     EventsModule, // 👈 Added here
-    
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService, FileService],

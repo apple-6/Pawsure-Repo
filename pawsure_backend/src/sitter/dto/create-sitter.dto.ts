@@ -53,4 +53,8 @@ export class CreateSitterDto {
   @IsOptional()
   @Min(0)
   ratePerNight?: number;
+
+  @IsOptional()
+  @IsArray()
+  services?: any[];
 }

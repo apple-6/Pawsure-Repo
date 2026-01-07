@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Booking } from './booking.entity';
 import { Sitter } from '../sitter/sitter.entity'; // 👈 IMPORT THIS
+import { Sitter } from '../sitter/sitter.entity'; // 👈 IMPORT THIS
 
 @Injectable()
 export class BookingService {
@@ -10,10 +11,9 @@ export class BookingService {
     @InjectRepository(Booking)
     private bookingRepository: Repository<Booking>,
 
-    // 👇 INJECT SITTER REPOSITORY
     @InjectRepository(Sitter)
     private sitterRepository: Repository<Sitter>,
-  ) {}
+) {}
 
   async create(bookingData: Partial<Booking>): Promise<Booking> {
     const booking = this.bookingRepository.create({

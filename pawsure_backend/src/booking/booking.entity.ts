@@ -23,6 +23,9 @@ export class Booking {
 
   @Column({ type: 'float' })
   total_amount: number;
+  
+  @Column({ type: 'int', nullable: true })
+  payment_method_id: number;
 
   @Column({ type: 'text', nullable: true })
   message: string;

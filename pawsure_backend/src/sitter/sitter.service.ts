@@ -174,7 +174,7 @@ export class SitterService {
 
   async update(
     id: number,
-    updateSitterDto: UpdateSitterDto,
+    updateSitterDto: any, // Use 'any' temporarily to allow 'name' property
     userId: number,
   ): Promise<Sitter> {
     const sitter = await this.findOne(id);
@@ -183,12 +183,24 @@ export class SitterService {
       throw new ForbiddenException('You can only update your own sitter profile');
     }
 
+    // 1. 🟢 HANDLE NAME UPDATE (User Table)
+    // If the payload has a 'name', we update the User table separately
+    if (updateSitterDto.name) {
+      await this.userRepository.update(userId, { name: updateSitterDto.name });
+      
+      // Remove 'name' from the DTO so we don't try to save it to the Sitter table
+      // (This prevents "Column 'name' not found" errors)
+      delete updateSitterDto.name;
+    }
+
+    // 2. HANDLE SITTER UPDATE
     Object.assign(sitter, updateSitterDto);
     await this.sitterRepository.save(sitter);
 
+    // 3. RETURN FRESH DATA
     const freshSitter = await this.sitterRepository.findOne({
         where: { id },
-        relations: ['user', 'reviews', 'bookings'],
+        relations: ['user', 'reviews', 'bookings'], 
     });
 
     if (!freshSitter) {

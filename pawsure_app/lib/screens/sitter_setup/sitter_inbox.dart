@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'sitter_dashboard.dart'; // Adjust path if needed
-import 'chat_screen.dart'; 
-import 'sitter_calendar.dart'; // Import SitterCalendar screen
+import 'sitter_dashboard.dart';
+import 'chat_screen.dart';
+import 'sitter_calendar.dart';
+import 'sitter_setting_screen.dart';
 import 'package:pawsure_app/services/api_service.dart';
+import 'package:pawsure_app/services/auth_service.dart';
+
 
 // --- Data Models ---
+
 
 class SitterInboxItem {
   final int id;
@@ -17,6 +21,7 @@ class SitterInboxItem {
   final double estimatedEarnings;
   final String status;
   final String? message;
+
 
   SitterInboxItem({
     required this.id,
@@ -30,10 +35,11 @@ class SitterInboxItem {
     this.message,
   });
 
+
   factory SitterInboxItem.fromJson(Map<String, dynamic> json) {
     final pet = json['pet'] as Map<String, dynamic>?;
     final owner = json['owner'] as Map<String, dynamic>?;
-    
+   
     return SitterInboxItem(
       id: json['id'] as int,
       petName: pet?['name'] ?? 'Unknown Pet',
@@ -49,42 +55,102 @@ class SitterInboxItem {
 }
 
 
+
+
 // ✅ RENAMED CLASS TO MATCH DASHBOARD
 class SitterInbox extends StatefulWidget {
   const SitterInbox({super.key});
 
+
   @override
   State<SitterInbox> createState() => _SitterInboxState();
 }
+
 
 class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final Color _accentColor = const Color(0xFF1CCA5B);
   final ApiService _apiService = ApiService();
 
+
+  final AuthService _authService = AuthService(); // Add this
+  int? _currentUserId;
+
+
   List<SitterInboxItem> _allBookings = [];
   bool _isLoading = true;
   String? _error;
 
+
   // Filtered lists
-  List<SitterInboxItem> get _pendingRequests => 
+  List<SitterInboxItem> get _pendingRequests =>
       _allBookings.where((b) => b.status.toLowerCase() == 'pending').toList();
-  
-  List<SitterInboxItem> get _confirmedBookings => 
+ 
+  List<SitterInboxItem> get _confirmedBookings =>
       _allBookings.where((b) => b.status.toLowerCase() != 'pending').toList();
+
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadCurrentUser();
     _loadBookings();
   }
 
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final userId = await _authService.getUserId();
+      if (userId != null) {
+        setState(() {
+          _currentUserId = userId;
+        });
+        print("✅ Inbox loaded for User ID: $userId");
+      } else {
+        print("⚠️ No User ID found. User might not be logged in.");
+      }
+    } catch (e) {
+      print("Error loading user ID: $e");
+    }
+  }
+
+
+  // 2. UPDATE THE NAVIGATION FUNCTION
+  void _openChat(String ownerName, String petName, String dates, bool isRequest, int bookingId) async {
+    // We need the current user ID for the socket.
+    // If _currentUserId is null, fetch it quickly or grab from storage
+    int myId = _currentUserId ?? 0;
+    if (myId == 0) {
+       // Try fetching one last time
+      final fetchedId = await _authService.getUserId();
+      if (fetchedId != null) {
+        myId = fetchedId;
+        setState(() => _currentUserId = myId);
+      } else {
+        // Stop here if we still don't have an ID
+        Get.snackbar("Error", "Could not identify user. Please log in again.", backgroundColor: Colors.red, colorText: Colors.white);
+        return;
+      }
+    }
+
+
+    Get.to(() => ChatScreen(
+      ownerName: ownerName,
+      petName: petName,
+      dates: dates,
+      isRequest: isRequest,
+      room: 'booking-$bookingId', // ✅ Generates unique room ID
+      currentUserId: myId,        // ✅ Passes required ID
+      bookingId: bookingId,
+    ));
+  }
   Future<void> _loadBookings() async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
+
 
     try {
       final bookingsJson = await _apiService.getSitterBookings();
@@ -100,6 +166,7 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
       debugPrint('❌ Error loading bookings: $e');
     }
   }
+
 
   Future<void> _handleAccept(int bookingId) async {
     try {
@@ -121,6 +188,7 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
     }
   }
 
+
   Future<void> _handleDecline(int bookingId) async {
     try {
       await _apiService.updateBookingStatus(bookingId, 'declined');
@@ -141,20 +209,13 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
     }
   }
 
+
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
 
-  void _openChat(String ownerName, String petName, String dates, bool isRequest) {
-    Get.to(() => ChatScreen(
-      ownerName: ownerName,
-      petName: petName,
-      dates: dates,
-      isRequest: isRequest,
-    ));
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -221,12 +282,14 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
                                   request.petName,
                                   "${request.startDate} - ${request.endDate}",
                                   true,
+                                  request.id,
                                 ),
                                 onAccept: () => _handleAccept(request.id),
                                 onDecline: () => _handleDecline(request.id),
                               );
                             },
                           ),
+
 
                     // Tab 2: Confirmed Bookings
                     _confirmedBookings.isEmpty
@@ -248,6 +311,7 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
                                   booking.petName,
                                   "${booking.startDate} - ${booking.endDate}",
                                   false,
+                                  booking.id,
                                 ),
                               );
                             },
@@ -260,11 +324,21 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
         selectedItemColor: _accentColor,
         unselectedItemColor: Colors.grey.shade600,
         onTap: (index) {
-          if (index == 0) Get.offAll(() => const SitterDashboard());
-          // Add other navigation logic here if needed
-        
-          if (index == 2) { // Index 2 is Calendar
-          Get.to(() => const SitterCalendar());
+          if (index == 0) {
+            // Navigate back to Dashboard (clears stack so no back button loop)
+            Get.offAll(() => const SitterDashboard());
+          }
+          if (index == 1) {
+            // Navigate to Discover Screen
+          }
+          if (index == 2) {
+            Get.to(() => const SitterCalendar());
+          }
+          if (index == 3) {
+            Get.to(() => const SitterInbox());
+          }
+          if (index == 4) {
+            Get.to(() => const SitterSettingScreen());
           }
         },
         items: const [
@@ -279,13 +353,16 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
   }
 }
 
+
 // --- Component: New Request Card (with Accept/Decline) ---
+
 
 class NewInboxCard extends StatelessWidget {
   final SitterInboxItem inbox;
   final VoidCallback onTap;
   final VoidCallback? onAccept;
   final VoidCallback? onDecline;
+
 
   const NewInboxCard({
     super.key,
@@ -295,10 +372,11 @@ class NewInboxCard extends StatelessWidget {
     this.onDecline,
   });
 
+
   @override
   Widget build(BuildContext context) {
     final isDog = inbox.petType == 'dog';
-    
+   
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -405,17 +483,21 @@ class NewInboxCard extends StatelessWidget {
   }
 }
 
+
 // --- Component: Confirmed Booking Card ---
+
 
 class ConfirmedBookingCard extends StatelessWidget {
   final SitterInboxItem inbox;
   final VoidCallback onTap;
+
 
   const ConfirmedBookingCard({
     super.key,
     required this.inbox,
     required this.onTap,
   });
+
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -430,11 +512,12 @@ class ConfirmedBookingCard extends StatelessWidget {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final isDog = inbox.petType == 'dog';
     final statusColor = _getStatusColor(inbox.status);
-    
+   
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -498,3 +581,6 @@ class ConfirmedBookingCard extends StatelessWidget {
     );
   }
 }
+
+
+
