@@ -15,6 +15,7 @@ class CreateVacancyModal extends StatefulWidget {
 
 class _CreateVacancyModalState extends State<CreateVacancyModal> {
   final _captionController = TextEditingController();
+  final _rateController = TextEditingController();
 
   DateTime? _startDate;
   DateTime? _endDate;
@@ -28,21 +29,19 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
   void initState() {
     super.initState();
     _fetchMyPets();
+    // Rebuilds the UI to update the "Total Est. Payout" as the user types
+    _rateController.addListener(() => setState(() {}));
   }
 
-  /// Retrieves the JWT token from local storage
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs
-        .getString('token'); // Ensure this matches your login storage key
+    return prefs.getString('token');
   }
 
-  /// Fetches pets owned by the user from the database
   Future<void> _fetchMyPets() async {
     try {
       final token = await _getToken();
       if (token == null || token.isEmpty) {
-        debugPrint("❌ No token found.");
         if (mounted) setState(() => _isLoading = false);
         return;
       }
@@ -56,23 +55,21 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
       );
 
       if (response.statusCode == 200) {
+        final data = json.decode(response.body);
         if (mounted) {
           setState(() {
-            _myPets = json.decode(response.body);
+            _myPets = data;
             _isLoading = false;
           });
         }
       } else {
-        debugPrint("Failed to load pets. Status: ${response.statusCode}");
         if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
-      debugPrint("Error fetching pets: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  /// Opens the Flutter Date Range Picker
   Future<void> _selectDateRange() async {
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
@@ -98,12 +95,26 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
     });
   }
 
-  /// Submits the vacancy data to the Node.js/TypeORM backend
+  String _calculateTotal() {
+    if (_startDate == null ||
+        _endDate == null ||
+        _rateController.text.isEmpty) {
+      return "0.00";
+    }
+    final days = _endDate!.difference(_startDate!).inDays;
+    final dailyRate = double.tryParse(_rateController.text) ?? 0.0;
+    // Calculation: Rate * number of nights
+    return (days * dailyRate).toStringAsFixed(2);
+  }
+
   Future<void> _submitVacancy() async {
-    if (_startDate == null || _endDate == null || _selectedPetIds.isEmpty) {
+    if (_startDate == null ||
+        _endDate == null ||
+        _selectedPetIds.isEmpty ||
+        _rateController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Please select dates and at least one pet')),
+            content: Text('Please fill in all fields (dates, pets, and rate)')),
       );
       return;
     }
@@ -112,7 +123,6 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
 
     try {
       final token = await _getToken();
-
       final response = await http.post(
         Uri.parse('http://localhost:3000/posts'),
         headers: {
@@ -121,11 +131,12 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
         },
         body: json.encode({
           'content': _captionController.text.trim(),
+          'rate_per_night': double.tryParse(_rateController.text) ?? 0.0,
           'is_vacancy': true,
           'is_urgent': false,
           'start_date': _startDate!.toIso8601String(),
           'end_date': _endDate!.toIso8601String(),
-          'petIds': _selectedPetIds, // Sending array for TypeORM
+          'petIds': _selectedPetIds,
         }),
       );
 
@@ -133,14 +144,12 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
         widget.onVacancyCreated();
         if (mounted) Navigator.pop(context);
       } else {
-        throw Exception("Server returned ${response.statusCode}");
+        throw Exception("Server Error: ${response.statusCode}");
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Error creating vacancy: $e'),
-              backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -150,129 +159,171 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return Container(
+      // Ensure the modal doesn't take up the full screen height
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
         left: 20,
         right: 20,
         top: 20,
+        // Pushes the modal up when the keyboard appears
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: _isLoading
           ? const SizedBox(
               height: 200, child: Center(child: CircularProgressIndicator()))
-          : SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "Create Sitter Vacancy",
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Fixed Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text("Create Sitter Vacancy",
                         style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      IconButton(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    IconButton(
                         icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
+                        onPressed: () => Navigator.pop(context)),
+                  ],
+                ),
+                const Divider(),
 
-                  // Description
-                  const Text("Description",
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _captionController,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      hintText: "E.g. Looking for someone to walk Buddy...",
-                      border: OutlineInputBorder(),
+                // Scrollable Form Area
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 10),
+                        const Text("Description",
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _captionController,
+                          maxLines: 2,
+                          decoration: const InputDecoration(
+                            hintText:
+                                "E.g. Looking for someone to walk Buddy...",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text("Rate per Night",
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _rateController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          decoration: const InputDecoration(
+                            prefixIcon: Icon(Icons.attach_money, size: 20),
+                            hintText: "Enter amount",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text("Select Pets",
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 10),
+                        _myPets.isEmpty
+                            ? const Text("No pets found.",
+                                style: TextStyle(color: Colors.grey))
+                            : Wrap(
+                                spacing: 8.0,
+                                children: _myPets.map((pet) {
+                                  final bool isSelected = _selectedPetIds
+                                      .contains(pet['id'].toString());
+                                  return FilterChip(
+                                    label: Text(pet['name']),
+                                    selected: isSelected,
+                                    onSelected: (_) =>
+                                        _togglePet(pet['id'].toString()),
+                                  );
+                                }).toList(),
+                              ),
+                        const SizedBox(height: 20),
+                        const Text("Dates Needed",
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 10),
+                        ListTile(
+                          onTap: _selectDateRange,
+                          tileColor: Colors.grey.shade100,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                          leading: const Icon(Icons.calendar_month),
+                          title: Text(
+                            _startDate == null
+                                ? "Select Date Range"
+                                : "${DateFormat('MMM d').format(_startDate!)} - ${DateFormat('MMM d').format(_endDate!)}",
+                          ),
+                          trailing: const Icon(Icons.edit, size: 16),
+                        ),
+                        if (_startDate != null &&
+                            _rateController.text.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          _buildSummaryBox(),
+                        ],
+                        const SizedBox(height: 20),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                ),
 
-                  // Multi-Pet Selection
-                  const Text("Select Pets",
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 200),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: ListView(
-                        shrinkWrap: true,
-                        children: _myPets.map((pet) {
-                          return CheckboxListTile(
-                            title: Text(pet['name']),
-                            subtitle: Text(pet['breed'] ?? ''),
-                            value:
-                                _selectedPetIds.contains(pet['id'].toString()),
-                            onChanged: (_) => _togglePet(pet['id'].toString()),
-                            controlAffinity: ListTileControlAffinity.leading,
-                          );
-                        }).toList(),
-                      ),
+                // Fixed Post Button
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isSubmitting ? null : _submitVacancy,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2))
+                        : const Text("Post Vacancy",
+                            style: TextStyle(fontSize: 16)),
                   ),
-                  const SizedBox(height: 20),
-
-                  // Date Picker Trigger
-                  const Text("Dates Needed",
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  ListTile(
-                    onTap: _selectDateRange,
-                    tileColor: Colors.grey.shade100,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                    leading: const Icon(Icons.calendar_month),
-                    title: Text(
-                      _startDate == null
-                          ? "Select Date Range"
-                          : "${DateFormat('MMM d').format(_startDate!)} - ${DateFormat('MMM d').format(_endDate!)}",
-                    ),
-                    trailing: const Icon(Icons.edit, size: 16),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // Post Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isSubmitting ? null : _submitVacancy,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: _isSubmitting
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2))
-                          : const Text("Post Vacancy",
-                              style: TextStyle(fontSize: 16)),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              ),
+                ),
+              ],
             ),
+    );
+  }
+
+  Widget _buildSummaryBox() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+          color: Colors.blue.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.blue.withOpacity(0.2))),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text("Total Est. Payout:",
+              style: TextStyle(fontWeight: FontWeight.w600)),
+          Text("\$${_calculateTotal()}",
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue)),
+        ],
+      ),
     );
   }
 
   @override
   void dispose() {
     _captionController.dispose();
+    _rateController.dispose();
     super.dispose();
   }
 }

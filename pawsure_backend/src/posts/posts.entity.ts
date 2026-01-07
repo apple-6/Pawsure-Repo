@@ -62,4 +62,8 @@ export class Post {
     inverseJoinColumn: { name: 'pet_id', referencedColumnName: 'id' }
   })
   pets: Pet[];
+
+  // post.entity.ts
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  rate_per_night: number | null;
 }
