@@ -1,4 +1,4 @@
-// pawsure_app/lib/bindings/initial_bindings.dart
+//pawsure_app\lib\bindings\initial_bindings.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/services/api_service.dart';
@@ -17,33 +17,61 @@ import 'package:pawsure_app/controllers/profile_controller.dart';
 class InitialBindings implements Bindings {
   @override
   void dependencies() {
+    debugPrint('🔧 InitialBindings: Starting dependency injection...');
+
     // ----------------------------------------------------
-    // 1. SERVICES (The "Plumbing") - MUST LOAD FIRST
+    // 1. CORE SERVICES - MUST LOAD FIRST
     // ----------------------------------------------------
+
+    // ✅ Initialize storage FIRST (singleton)
+    final storage = FileStorageService();
+    Get.put<StorageService>(storage, permanent: true);
+    debugPrint('✅ StorageService registered');
+
+    // ✅ ApiService depends on nothing
     Get.put<ApiService>(ApiService(), permanent: true);
-    Get.put<StorageService>(FileStorageService(), permanent: true);
+    debugPrint('✅ ApiService registered');
+
+    // ✅ AuthService depends on StorageService
     Get.put<AuthService>(AuthService(), permanent: true);
+    debugPrint('✅ AuthService registered');
+
+    // ✅ ActivityService depends on AuthService
     Get.put<ActivityService>(ActivityService(), permanent: true);
+    debugPrint('✅ ActivityService registered');
+
+    // ✅ CommunityService
     Get.put<CommunityService>(CommunityService(), permanent: true);
+    debugPrint('✅ CommunityService registered');
 
-    debugPrint('✅ Services Initialized');
+    debugPrint('✅ All Services Initialized');
 
     // ----------------------------------------------------
-    // 2. CONTROLLERS (The "Brain") - Load after services
+    // 2. CONTROLLERS - Load after services are ready
     // ----------------------------------------------------
 
-    // PetController needs ApiService, so it goes here
+    // ⚠️ Don't register NavigationController here - it's done in main.dart
+    // Get.put<NavigationController>(NavigationController(), permanent: true);
+
     Get.put<PetController>(PetController(), permanent: true);
+    debugPrint('✅ PetController registered');
 
-    Get.put<NavigationController>(NavigationController(), permanent: true);
     Get.put<HomeController>(HomeController(), permanent: true);
+    debugPrint('✅ HomeController registered');
+
     Get.put<HealthController>(HealthController(), permanent: true);
+    debugPrint('✅ HealthController registered');
 
-    // Register placeholder controllers for screens
     Get.put<ActivityController>(ActivityController(), permanent: true);
-    Get.put<CommunityController>(CommunityController(), permanent: true);
-    Get.put<ProfileController>(ProfileController(), permanent: true);
+    debugPrint('✅ ActivityController registered');
 
-    debugPrint('✅ Controllers Initialized');
+    Get.put<CommunityController>(CommunityController(), permanent: true);
+    debugPrint('✅ CommunityController registered');
+
+    Get.put<ProfileController>(ProfileController(), permanent: true);
+    debugPrint('✅ ProfileController registered');
+
+    debugPrint('✅ All Controllers Initialized');
+    debugPrint('🎉 InitialBindings: Complete!');
   }
 }
