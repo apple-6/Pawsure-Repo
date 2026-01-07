@@ -125,7 +125,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
           //     user['profile_picture'] ??
           //     'https://via.placeholder.com/400';
 
-String? rawFilename;
+          String? rawFilename;
           if (data['photo_gallery'] != null &&
               data['photo_gallery'].toString().isNotEmpty) {
             rawFilename = data['photo_gallery']
@@ -137,7 +137,7 @@ String? rawFilename;
 
           // 2. Construct the Full URL
           String imageUrl;
-          
+
           if (rawFilename != null) {
             if (rawFilename.startsWith('http')) {
               // It's already a full link
@@ -145,11 +145,13 @@ String? rawFilename;
             } else {
               // It's a filename, manually build Supabase URL
               // Ensure 'sitter_gallery' matches your actual bucket name
-              imageUrl = "${ApiConfig.supabaseUrl}/storage/v1/object/public/sitter_gallery/$rawFilename";
+              imageUrl =
+                  "${ApiConfig.supabaseUrl}/storage/v1/object/public/sitter_gallery/$rawFilename";
             }
           } else {
             // Fallback
-            imageUrl = user['profile_picture'] ?? 'https://via.placeholder.com/400';
+            imageUrl =
+                user['profile_picture'] ?? 'https://via.placeholder.com/400';
           }
           // ---------------------------
           final bool isVerified = data['status'] == 'approved';
@@ -170,20 +172,17 @@ String? rawFilename;
 
           final String bio = data['bio'] ?? 'No bio available';
           // 1. Fetch the raw string from the database (e.g., "condo", "apartment")
-String rawHouseType = data['houseType']?.toString() ?? 'Apartment';
+          String rawHouseType = data['houseType']?.toString() ?? 'Apartment';
 
-// 2. Capitalize the first letter (e.g., convert "condo" -> "Condo")
-final String houseType = rawHouseType.isNotEmpty
-    ? "${rawHouseType[0].toUpperCase()}${rawHouseType.substring(1)}"
-    : rawHouseType;
+          // 2. Capitalize the first letter (e.g., convert "condo" -> "Condo")
+          final String houseType = rawHouseType.isNotEmpty
+              ? "${rawHouseType[0].toUpperCase()}${rawHouseType.substring(1)}"
+              : rawHouseType;
 
           final int bookingsLen = (data['bookings'] as List? ?? []).length;
           final String bookingsCompleted = "$bookingsLen+ bookings";
 
-          // final String servicesString =
-          //     data['services'] ?? "House Sitting,Dog Walking";
-
-// --- MODIFIED: PARSE SERVICES (Now captures Price & Unit) ---
+          // --- MODIFIED: PARSE SERVICES (Now captures Price & Unit) ---
           List<Map<String, dynamic>> servicesList = [];
           final dynamic rawServices = data['services'];
 
@@ -194,7 +193,8 @@ final String houseType = rawHouseType.isNotEmpty
                 if (item['isActive'] != false) {
                   servicesList.add({
                     'name': item['name'].toString(),
-                    'price': item['price']?.toString() ??
+                    'price':
+                        item['price']?.toString() ??
                         price.toStringAsFixed(0), // Fallback to base price
                     'unit': item['unit']?.toString() ?? '', // e.g. "/hr"
                   });
@@ -212,7 +212,8 @@ final String houseType = rawHouseType.isNotEmpty
                       item['isActive'] != false) {
                     servicesList.add({
                       'name': item['name'].toString(),
-                      'price': item['price']?.toString() ?? price.toStringAsFixed(0),
+                      'price':
+                          item['price']?.toString() ?? price.toStringAsFixed(0),
                       'unit': item['unit']?.toString() ?? '',
                     });
                   }
@@ -221,20 +222,10 @@ final String houseType = rawHouseType.isNotEmpty
             }
           }
 
-          // Default fallback if nothing found
-          if (servicesList.isEmpty) {
-            servicesList.add({
-              'name': "House Sitting",
-              'price': price.toStringAsFixed(0),
-              'unit': '/night'
-            });
-          }
-
-
           String rawExp = data['experience']?.toString() ?? "1";
 
           String yearsExp = rawExp.replaceAll(RegExp(r'[^0-9]'), '');
-          if (yearsExp.isEmpty) yearsExp = "0"; 
+          if (yearsExp.isEmpty) yearsExp = "0";
 
           final String experienceText = "$yearsExp Years Experience";
 
@@ -401,9 +392,7 @@ final String houseType = rawHouseType.isNotEmpty
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF34D399),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 16,
-                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(30),
                               ),
@@ -559,20 +548,35 @@ final String houseType = rawHouseType.isNotEmpty
                       // --- 6. Services Offered ---
                       _buildSectionCard(
                         title: "Services Offered",
-                        child: Column(
-                          children: servicesList.map((service) {
-                            return Column(
-                              children: [
-                                _buildServiceRow(
-                                  service['name'],
-                                  "RM ${service['price']}${service['unit']}",
-                                  const Color(0xFF34D399), // Brand Green
+                        // Check if list is empty
+                        child: servicesList.isEmpty
+                            ? const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  "No specific services offered at this time.",
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 14,
+                                    fontStyle: FontStyle.italic,
+                                  ),
                                 ),
-                                const Divider(height: 24),
-                              ],
-                            );
-                          }).toList(),
-                        ),
+                              )
+                            : Column(
+                                children: servicesList.map((service) {
+                                  return Column(
+                                    children: [
+                                      _buildServiceRow(
+                                        service['name'],
+                                        "RM ${service['price']}${service['unit']}",
+                                        const Color(0xFF34D399),
+                                      ),
+                                      // Only show divider if it's not the last item (optional polish)
+                                      if (service != servicesList.last)
+                                        const Divider(height: 24),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
                       ),
 
                       const SizedBox(height: 16),

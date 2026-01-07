@@ -900,7 +900,7 @@ class _BookingModalState extends State<BookingModal> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          "Add-on Services",
+          "Services Offered",
           style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 16,
