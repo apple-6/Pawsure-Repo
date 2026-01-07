@@ -70,10 +70,9 @@ class _SitterCalendarState extends State<SitterCalendar> {
 
   Future<String> _getAuthToken() async {
     try {
-      // 1. Initialize the AuthService
-      final AuthService authService = AuthService();
+      // ✅ FIX: Use GetX singleton instead of creating new instance
+      final AuthService authService = Get.find<AuthService>();
 
-      // 2. Use the existing getToken() method from your AuthService
       final String? token = await authService.getToken();
 
       if (token == null || token.isEmpty) {

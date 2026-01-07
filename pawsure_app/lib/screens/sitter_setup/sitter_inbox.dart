@@ -70,10 +70,11 @@ class SitterInbox extends StatefulWidget {
 class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final Color _accentColor = const Color(0xFF1CCA5B);
-  final ApiService _apiService = ApiService();
-
-
-  final AuthService _authService = AuthService(); // Add this
+  
+  // ✅ FIX: Use GetX singletons instead of creating new instances
+  ApiService get _apiService => Get.find<ApiService>();
+  AuthService get _authService => Get.find<AuthService>();
+  
   int? _currentUserId;
 
 
