@@ -21,7 +21,8 @@ String extname(String filename) {
 }
 
 class ApiService {
-  final AuthService _authService = AuthService();
+  // ✅ FIX: Use GetX singleton instead of creating new instance
+  AuthService get _authService => Get.find<AuthService>();
 
   Future<Map<String, String>> _getHeaders() async {
     final headers = {
@@ -30,8 +31,7 @@ class ApiService {
     };
 
     try {
-      final authService = Get.find<AuthService>();
-      final token = await authService.getToken();
+      final token = await _authService.getToken();
 
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
