@@ -939,4 +939,147 @@ class ApiService {
       rethrow;
     }
   }
+
+  // ========================================================================
+  // PAYMENT METHODS API
+  // ========================================================================
+
+  /// GET /payment-methods - Get all payment methods for authenticated user
+  Future<List<Map<String, dynamic>>> getPaymentMethods() async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/payment-methods');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/payment-methods'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+        return jsonList.cast<Map<String, dynamic>>();
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to load payment methods (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in getPaymentMethods: $e');
+      rethrow;
+    }
+  }
+
+  /// POST /payment-methods - Add a new payment method
+  Future<Map<String, dynamic>> addPaymentMethod({
+    required String cardType,
+    required String lastFourDigits,
+    required String cardholderName,
+    required String expiryMonth,
+    required String expiryYear,
+    bool isDefault = false,
+    String? nickname,
+  }) async {
+    try {
+      debugPrint('➕ API: POST $apiBaseUrl/payment-methods');
+
+      final headers = await _getHeaders();
+      final body = {
+        'cardType': cardType,
+        'lastFourDigits': lastFourDigits,
+        'cardholderName': cardholderName,
+        'expiryMonth': expiryMonth,
+        'expiryYear': expiryYear,
+        'isDefault': isDefault,
+        if (nickname != null) 'nickname': nickname,
+      };
+
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/payment-methods'),
+        headers: headers,
+        body: jsonEncode(body),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final Map<String, dynamic> json =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        debugPrint('✅ Payment method added successfully');
+        return json;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to add payment method (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in addPaymentMethod: $e');
+      rethrow;
+    }
+  }
+
+  /// PATCH /payment-methods/:id/default - Set as default payment method
+  Future<Map<String, dynamic>> setDefaultPaymentMethod(int methodId) async {
+    try {
+      debugPrint('✏️ API: PATCH $apiBaseUrl/payment-methods/$methodId/default');
+
+      final headers = await _getHeaders();
+      final response = await http.patch(
+        Uri.parse('$apiBaseUrl/payment-methods/$methodId/default'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        debugPrint('✅ Default payment method updated');
+        return json;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to set default payment method (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in setDefaultPaymentMethod: $e');
+      rethrow;
+    }
+  }
+
+  /// DELETE /payment-methods/:id - Delete a payment method
+  Future<void> deletePaymentMethod(int methodId) async {
+    try {
+      debugPrint('🗑️ API: DELETE $apiBaseUrl/payment-methods/$methodId');
+
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse('$apiBaseUrl/payment-methods/$methodId'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        debugPrint('✅ Payment method deleted successfully');
+        return;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to delete payment method (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in deletePaymentMethod: $e');
+      rethrow;
+    }
+  }
 }

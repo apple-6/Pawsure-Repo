@@ -2,10 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/home_controller.dart';
+import '../../controllers/navigation_controller.dart';
 import '../../widgets/home/status_card.dart';
 import '../../widgets/home/sos_button.dart';
 import '../../widgets/home/upcoming_events_card.dart';
-import 'package:pawsure_app/widgets/home/quick_actions.dart';
+import 'package:pawsure_app/widgets/home/quick_actions.dart'; // From sprint4-main
 import 'booking_card.dart';
 import '../../controllers/booking_controller.dart';
 
@@ -34,12 +35,14 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
         actions: [
-          // Pet Selector Dropdown with emoji and Add Pet option
+          // Pet Selector Dropdown
           Obx(() {
             if (!controller.isLoadingPets.value) {
               final selectedPet = controller.selectedPet.value;
-              final emoji = selectedPet?.species?.toLowerCase() == 'dog' ? '🐕' : '🐈';
-              
+              final emoji = selectedPet?.species?.toLowerCase() == 'dog'
+                  ? '🐕'
+                  : '🐈';
+
               return PopupMenuButton<String>(
                 tooltip: 'Switch Pet',
                 onSelected: (String value) {
@@ -74,7 +77,9 @@ class HomeScreen extends StatelessWidget {
                             ),
                             child: Center(
                               child: Text(
-                                pet.species?.toLowerCase() == 'dog' ? '🐕' : '🐈',
+                                pet.species?.toLowerCase() == 'dog'
+                                    ? '🐕'
+                                    : '🐈',
                                 style: const TextStyle(fontSize: 16),
                               ),
                             ),
@@ -84,7 +89,8 @@ class HomeScreen extends StatelessWidget {
                             child: Text(
                               pet.name,
                               style: TextStyle(
-                                fontWeight: controller.selectedPet.value?.id == pet.id
+                                fontWeight:
+                                    controller.selectedPet.value?.id == pet.id
                                     ? FontWeight.w600
                                     : FontWeight.normal,
                               ),
@@ -125,7 +131,10 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF3F4F6),
                     borderRadius: BorderRadius.circular(20),
@@ -134,10 +143,7 @@ class HomeScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (selectedPet != null) ...[
-                        Text(
-                          emoji,
-                          style: const TextStyle(fontSize: 18),
-                        ),
+                        Text(emoji, style: const TextStyle(fontSize: 18)),
                         const SizedBox(width: 8),
                         Text(
                           selectedPet.name,
@@ -148,7 +154,11 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ),
                       ] else ...[
-                        const Icon(Icons.pets, size: 18, color: Color(0xFF6B7280)),
+                        const Icon(
+                          Icons.pets,
+                          size: 18,
+                          color: Color(0xFF6B7280),
+                        ),
                         const SizedBox(width: 8),
                         const Text(
                           'Select Pet',
@@ -245,7 +255,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Status Card (Reactive)
+                // Status Card
                 StatusCard(
                   petName: pet.name,
                   petType: pet.species ?? 'Pet',
@@ -257,7 +267,12 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // Quick Actions
+                // 🆕 Daily Activity Progress Card (Your Feature)
+                _buildDailyActivityCard(controller),
+
+                const SizedBox(height: 24),
+
+                // 🆕 Quick Actions (From Sprint4-Main)
                 const QuickActions(),
 
                 const SizedBox(height: 24),
@@ -266,8 +281,9 @@ class HomeScreen extends StatelessWidget {
                 UpcomingEventsCard(petId: pet.id),
                 const SizedBox(height: 24),
 
+                // Bookings Section (Updated UI from Sprint4-Main)
                 Obx(() {
-                  // We wrap the entire logic in the Obx so the whole container can react to loading states
+                  // We wrap the entire logic in the Obx so the whole container can react
                   return Container(
                     width: double.infinity,
                     margin: const EdgeInsets.only(top: 12),
@@ -287,7 +303,6 @@ class HomeScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Now "My Bookings" is INSIDE the white container
                         const Text(
                           "My Bookings",
                           style: TextStyle(
@@ -307,7 +322,7 @@ class HomeScreen extends StatelessWidget {
                             ),
                           )
                         else ...[
-                          // Filter bookings
+                          // Filter bookings logic retained from your code
                           (() {
                             final filteredBookings = bookingController
                                 .userBookings
@@ -371,6 +386,161 @@ class HomeScreen extends StatelessWidget {
         backgroundColor: Colors.deepPurple,
         child: const Icon(Icons.auto_awesome, color: Colors.white),
       ),
+    );
+  }
+
+  // 🆕 Daily Activity Progress Card Widget
+  Widget _buildDailyActivityCard(HomeController controller) {
+    return Obx(() {
+      final progress = controller.calculateDailyProgress();
+      final stats = controller.todayActivityStats.value;
+
+      return Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Daily Activity Progress',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '$progress%',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: progress >= 100 ? Colors.green : Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Progress Bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: progress / 100,
+                  minHeight: 8,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    progress >= 100 ? Colors.green : Colors.orange,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Activity Stats Summary
+              if (controller.isLoadingActivityStats.value)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (stats != null && stats.totalActivities > 0)
+                Column(
+                  children: [
+                    _buildProgressItem(
+                      icon: Icons.directions_walk,
+                      label: 'Activities Today',
+                      value: '${stats.totalActivities}',
+                      color: Colors.blue,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildProgressItem(
+                      icon: Icons.timer,
+                      label: 'Time Active',
+                      value: '${stats.totalDuration} min',
+                      color: Colors.orange,
+                    ),
+                    if (stats.totalDistance > 0) ...[
+                      const SizedBox(height: 8),
+                      _buildProgressItem(
+                        icon: Icons.straighten,
+                        label: 'Distance',
+                        value: '${stats.totalDistance.toStringAsFixed(1)} km',
+                        color: Colors.green,
+                      ),
+                    ],
+                    if (stats.totalCalories > 0) ...[
+                      const SizedBox(height: 8),
+                      _buildProgressItem(
+                        icon: Icons.local_fire_department,
+                        label: 'Calories',
+                        value: '${stats.totalCalories} cal',
+                        color: Colors.red,
+                      ),
+                    ],
+                  ],
+                )
+              else
+                Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.directions_walk,
+                        size: 48,
+                        color: Colors.grey[300],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No activities today',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 4),
+                      TextButton(
+                        onPressed: () {
+                          // Navigate to Activity tab
+                          final navController =
+                              Get.find<NavigationController>();
+                          navController.changePage(2); // Activity tab index
+                        },
+                        child: const Text('Track Activity'),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  // Helper method for progress items
+  Widget _buildProgressItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(label, style: TextStyle(color: Colors.grey[700])),
+        ),
+        Text(
+          value,
+          style: TextStyle(fontWeight: FontWeight.bold, color: color),
+        ),
+      ],
     );
   }
 }

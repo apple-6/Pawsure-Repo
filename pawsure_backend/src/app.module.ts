@@ -10,6 +10,7 @@ import { PetModule } from './pet/pet.module';
 import { SitterModule } from './sitter/sitter.module';
 import { BookingModule } from './booking/booking.module';
 import { PaymentModule } from './payment/payment.module';
+import { PaymentMethodModule } from './payment-method/payment-method.module';
 import { ActivityLogModule } from './activity-log/activity-log.module';
 import { HealthRecordModule } from './health-record/health-record.module';
 import { ReviewModule } from './review/review.module';
@@ -50,6 +51,7 @@ import { ChatModule } from './chat/chat.module';
     SitterModule,
     BookingModule,
     PaymentModule,
+    PaymentMethodModule,
     ActivityLogModule,
     HealthRecordModule,
     ReviewModule,

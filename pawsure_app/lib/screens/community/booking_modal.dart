@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:get/get.dart';
-import 'package:pawsure_app/controllers/pet_controller.dart'; // ADDED
+import 'package:pawsure_app/controllers/pet_controller.dart';
 import 'package:pawsure_app/models/pet_model.dart';
+import 'package:pawsure_app/models/payment_method_model.dart';
 import 'package:pawsure_app/controllers/booking_controller.dart';
+import 'package:pawsure_app/services/api_service.dart';
+import 'package:pawsure_app/screens/profile/payment_methods_screen.dart';
 
 class BookingModal extends StatefulWidget {
   final String sitterId;
@@ -35,6 +38,11 @@ class _BookingModalState extends State<BookingModal> {
   TimeOfDay _dropOffTime = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _pickUpTime = const TimeOfDay(hour: 17, minute: 0);
   bool _isLoading = false;
+  
+  // Payment method state
+  List<PaymentMethodModel> _paymentMethods = [];
+  PaymentMethodModel? _selectedPaymentMethod;
+  bool _isLoadingPaymentMethods = true;
 
   @override
   void initState() {
@@ -42,6 +50,30 @@ class _BookingModalState extends State<BookingModal> {
     _selectedPet = _petController.selectedPet.value;
     if (_selectedPet == null && _petController.pets.isNotEmpty) {
       _selectedPet = _petController.pets.first;
+    }
+    _loadPaymentMethods();
+  }
+  
+  Future<void> _loadPaymentMethods() async {
+    try {
+      final apiService = Get.find<ApiService>();
+      final methods = await apiService.getPaymentMethods();
+      setState(() {
+        _paymentMethods = methods
+            .map((m) => PaymentMethodModel.fromJson(m))
+            .toList();
+        // Auto-select default payment method
+        _selectedPaymentMethod = _paymentMethods.firstWhere(
+          (m) => m.isDefault,
+          orElse: () => _paymentMethods.isNotEmpty 
+              ? _paymentMethods.first 
+              : _paymentMethods.first,
+        );
+        _isLoadingPaymentMethods = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingPaymentMethods = false);
+      debugPrint('❌ Error loading payment methods: $e');
     }
   }
 
@@ -92,6 +124,17 @@ class _BookingModalState extends State<BookingModal> {
       );
       return;
     }
+    
+    // Check payment method
+    if (_selectedPaymentMethod == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add a payment method first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     // 2. Set Loading State
     setState(() => _isLoading = true);
@@ -106,6 +149,7 @@ class _BookingModalState extends State<BookingModal> {
       dropOffTime: _dropOffTime.format(context),
       pickUpTime: _pickUpTime.format(context),
       message: _messageController.text,
+      paymentMethodId: _selectedPaymentMethod?.id,
     );
 
     // 4. Handle Result
@@ -366,6 +410,19 @@ class _BookingModalState extends State<BookingModal> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 24),
+                      
+                      // --- PAYMENT METHOD SECTION ---
+                      const Text(
+                        "Payment Method",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildPaymentMethodSelector(),
                       const SizedBox(height: 32),
                     ],
                   ),
@@ -439,12 +496,19 @@ class _BookingModalState extends State<BookingModal> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text(
-                                "Book Now",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.payment, size: 20),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    "Pay & Book Now",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
                       ),
                     ),
@@ -579,6 +643,235 @@ class _BookingModalState extends State<BookingModal> {
             ),
           ],
         ),
+      ),
+    );
+  }
+  
+  // Payment Method Selector Widget
+  Widget _buildPaymentMethodSelector() {
+    if (_isLoadingPaymentMethods) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF34D399),
+            strokeWidth: 2,
+          ),
+        ),
+      );
+    }
+    
+    if (_paymentMethods.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.orange[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.orange[200]!),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.credit_card_off, color: Colors.orange, size: 40),
+            const SizedBox(height: 12),
+            const Text(
+              'No payment methods added',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add a card to complete your booking',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const PaymentMethodsScreen(),
+                    ),
+                  );
+                  // Reload payment methods after returning
+                  _loadPaymentMethods();
+                },
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Payment Method'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF34D399).withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF34D399).withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.credit_card,
+                  color: Color(0xFF34D399),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _selectedPaymentMethod?.displayName ?? 'Select Card',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    if (_selectedPaymentMethod != null)
+                      Text(
+                        'Expires ${_selectedPaymentMethod!.expiry}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<PaymentMethodModel>(
+                icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                onSelected: (PaymentMethodModel method) {
+                  setState(() => _selectedPaymentMethod = method);
+                },
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                itemBuilder: (context) => [
+                  ..._paymentMethods.map(
+                    (method) => PopupMenuItem<PaymentMethodModel>(
+                      value: method,
+                      child: Row(
+                        children: [
+                          if (_selectedPaymentMethod?.id == method.id)
+                            const Icon(
+                              Icons.check_circle,
+                              size: 18,
+                              color: Color(0xFF34D399),
+                            ),
+                          const SizedBox(width: 8),
+                          Text(method.cardIcon, style: const TextStyle(fontSize: 18)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  method.displayName,
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                Text(
+                                  'Expires ${method.expiry}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem<PaymentMethodModel>(
+                    enabled: false,
+                    child: TextButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(context); // Close popup
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const PaymentMethodsScreen(),
+                          ),
+                        );
+                        // Reload payment methods
+                        _loadPaymentMethods();
+                      },
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add New Card'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF34D399),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.lock_outline,
+                  size: 16,
+                  color: Color(0xFF059669),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Secure payment processing',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

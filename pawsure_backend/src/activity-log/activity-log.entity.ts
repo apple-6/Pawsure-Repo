@@ -44,11 +44,11 @@ export class ActivityLog {
   @UpdateDateColumn()
   updated_at: Date;
 
-  // 🔧 FIX: Add explicit column name mapping
-  @Column({ name: 'pet_id' })  // 👈 This tells TypeORM the DB column is 'pet_id'
+  // 🔧 FIX: Added explicit column for pet_id
+  @Column({ name: 'pet_id' })
   petId: number;
 
   @ManyToOne(() => Pet, (pet) => pet.activityLogs, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'pet_id' })  // 👈 This tells TypeORM how to join
+  @JoinColumn({ name: 'pet_id' })
   pet: Pet;
 }

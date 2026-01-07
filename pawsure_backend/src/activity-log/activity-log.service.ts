@@ -39,43 +39,58 @@ export class ActivityLogService {
     return this.activityLogRepository.save(activity);
   }
 
-  async findAllByPet(
-    petId: number,
-    userId: number,
-    filters?: { type?: string; startDate?: string; endDate?: string },
-  ): Promise<ActivityLog[]> {
-    // Verify ownership
-    const pet = await this.petRepository.findOne({ 
-      where: { id: petId }, 
-      relations: ['owner'] 
-    });
-    
-    if (!pet) {
-      throw new NotFoundException('Pet not found');
-    }
-    
-    if (pet.owner.id !== userId) {
-      throw new ForbiddenException('Not your pet');
-    }
-
-    const query: any = { pet: { id: petId } };
-
-    if (filters?.type) {
-      query.activity_type = filters.type;
-    }
-
-    if (filters?.startDate && filters?.endDate) {
-      query.activity_date = Between(
-        new Date(filters.startDate), 
-        new Date(filters.endDate)
-      );
-    }
-
-    return this.activityLogRepository.find({
-      where: query,
-      order: { activity_date: 'DESC' },
-    });
+async findAllByPet(
+  petId: number,
+  userId: number,
+  filters?: { type?: string; startDate?: string; endDate?: string },
+): Promise<ActivityLog[]> {
+  // Verify ownership
+  const pet = await this.petRepository.findOne({ 
+    where: { id: petId }, 
+    relations: ['owner'] 
+  });
+  
+  if (!pet) {
+    throw new NotFoundException('Pet not found');
   }
+  
+  if (pet.owner.id !== userId) {
+    throw new ForbiddenException('Not your pet');
+  }
+
+  const query: any = { pet: { id: petId } };
+
+  if (filters?.type) {
+    query.activity_type = filters.type;
+  }
+
+  if (filters?.startDate && filters?.endDate) {
+    query.activity_date = Between(
+      new Date(filters.startDate), 
+      new Date(filters.endDate)
+    );
+  }
+
+  // 🔧 FIX: Explicitly select petId
+  return this.activityLogRepository.find({
+    where: query,
+    order: { activity_date: 'DESC' },
+    select: [
+      'id',
+      'petId',  // ← ADD THIS
+      'activity_type',
+      'title',
+      'description',
+      'duration_minutes',
+      'distance_km',
+      'calories_burned',
+      'activity_date',
+      'route_data',
+      'created_at',
+      'updated_at',
+    ],
+  });
+}
 
   async getStats(petId: number, userId: number, period: 'day' | 'week' | 'month') {
     // Verify ownership
