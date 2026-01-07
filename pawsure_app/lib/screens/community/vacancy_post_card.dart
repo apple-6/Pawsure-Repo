@@ -20,158 +20,113 @@ class VacancyPostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Extracting data from the post object
-    final String content = post.content;
     final double rate = post.ratePerNight;
     final List<String> petNames = post.petNames;
 
     final String startDate = post.startDate != null
         ? DateFormat('MMM d').format(post.startDate!)
-        : '';
+        : 'N/A';
     final String endDate = post.endDate != null
         ? DateFormat('MMM d').format(post.endDate!)
-        : '';
+        : 'N/A';
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Dates and Rate
+            // Standardized Title
+            const Text(
+              "Job Vacancy",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+
+            // Date Row
+            _buildInfoRow(
+              Icons.calendar_today_outlined,
+              "Date:",
+              "$startDate - $endDate",
+            ),
+            const SizedBox(height: 8),
+
+            // Rate Row
+            _buildInfoRow(
+              Icons.payments_outlined,
+              "Rate:",
+              "RM ${rate.toStringAsFixed(2)} /night",
+              valueColor: Colors.green.shade700,
+            ),
+            const SizedBox(height: 8),
+
+            // Pets to Sit Section
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_today,
-                        size: 16,
-                        color: Colors.blue,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          "$startDate - $endDate",
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                const Icon(Icons.pets_outlined, size: 18, color: Colors.blue),
+                const SizedBox(width: 8),
+                const Text(
+                  "Pets to sit: ",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black54,
                   ),
                 ),
-                const SizedBox(width: 12),
-                // Rate Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.green.shade200),
-                  ),
-                  child: Text(
-                    "\$$rate/night",
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
+                Expanded(
+                  child: Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: List.generate(petNames.length, (index) {
+                      return GestureDetector(
+                        onTap: () {
+                          if (post.pets != null && post.pets!.isNotEmpty) {
+                            Get.to(
+                              () => const PetProfileView(),
+                              arguments: {
+                                'pet': post.pets![index],
+                                'dateRange': "$startDate - $endDate",
+                                'estEarning': "RM ${rate.toStringAsFixed(2)}",
+                              },
+                            );
+                          }
+                        },
+                        child: Text(
+                          "${petNames[index]}${index < petNames.length - 1 ? ',' : ''}",
+                          style: const TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      );
+                    }),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
 
-            // Description
+            const SizedBox(height: 12),
+            // Short Description/Content
             Text(
-              content,
-              style: const TextStyle(fontSize: 15),
-              maxLines: 3,
+              post.content,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 12),
 
-            // Pets List
-            if (petNames.isNotEmpty) ...[
-              const Text(
-                "Pets to sit:",
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: List.generate(petNames.length, (index) {
-                  final name = petNames[index];
-
-                  return GestureDetector(
-                    onTap: () {
-                      // Check if full pet objects exist in the post model
-                      if (post.pets != null && post.pets!.isNotEmpty) {
-                        Get.to(
-                          () => const PetProfileView(),
-                          arguments: {
-                            'pet': post.pets![index], // Passes full Pet model
-                            'dateRange': "$startDate - $endDate",
-                            'estEarning':
-                                "\$${post.ratePerNight.toStringAsFixed(2)}",
-                          },
-                        );
-                      } else {
-                        debugPrint(
-                          "⚠️ No detailed pet data available for $name",
-                        );
-                      }
-                    },
-                    child: Chip(
-                      visualDensity: VisualDensity.compact,
-                      backgroundColor: Colors.blue.withOpacity(
-                        0.05,
-                      ), // Light blue tint
-                      side: BorderSide(color: Colors.blue.withOpacity(0.2)),
-                      avatar: const Icon(
-                        Icons.pets,
-                        size: 14,
-                        color: Colors.blue,
-                      ),
-                      label: Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue,
-                          fontWeight: FontWeight.w600,
-                          //decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ] else ...[
-              const Text(
-                "No pets specified",
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-
-            // Apply Button - Only visible for sitters
+            // Apply Button - Visible for sitters only
             if (isUserSitter) ...[
-              const SizedBox(height: 12),
-              const Divider(),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -179,17 +134,51 @@ class VacancyPostCard extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: const Text("Apply Now"),
+                  child: const Text(
+                    "Apply Now",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ],
           ],
         ),
       ),
+    );
+  }
+
+  // Helper widget for consistent rows
+  Widget _buildInfoRow(
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.blue),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.black54,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: valueColor ?? Colors.black87,
+          ),
+        ),
+      ],
     );
   }
 }
