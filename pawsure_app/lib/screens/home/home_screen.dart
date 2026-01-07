@@ -311,6 +311,53 @@ class HomeScreen extends StatelessWidget {
                             color: Colors.black87,
                           ),
                         ),
+                        
+                        // ⚠️ UNPAID BOOKINGS WARNING
+                        if (!bookingController.isLoadingBookings.value) ...[
+                          (() {
+                            final unpaidCount = bookingController.userBookings
+                                .where((b) {
+                                  final status = b['status']?.toString().toLowerCase() ?? '';
+                                  final isPaid = b['is_paid'] == true;
+                                  return status == 'completed' && !isPaid;
+                                })
+                                .length;
+
+                            if (unpaidCount > 0) {
+                              return Container(
+                                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.orange.shade200, width: 2),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.warning_amber_rounded,
+                                      color: Colors.orange,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'You have $unpaidCount unpaid booking${unpaidCount > 1 ? 's' : ''}.\nPlease complete payment below.',
+                                        style: const TextStyle(
+                                          color: Colors.orange,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          })(),
+                        ],
+                        
                         const SizedBox(height: 16),
 
                         // Logic for Loading, Empty, or List
@@ -364,7 +411,13 @@ class HomeScreen extends StatelessWidget {
                             return Column(
                               children: filteredBookings
                                   .map(
-                                    (booking) => BookingCard(booking: booking),
+                                    (booking) => BookingCard(
+                                      booking: booking,
+                                      onPaymentComplete: () {
+                                        // Refresh bookings after payment
+                                        bookingController.fetchMyBookings();
+                                      },
+                                    ),
                                   )
                                   .toList(),
                             );

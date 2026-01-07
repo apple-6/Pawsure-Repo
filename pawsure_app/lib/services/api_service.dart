@@ -747,6 +747,105 @@ class ApiService {
     }
   }
 
+  /// PATCH /bookings/:id/complete - Mark service as completed (Sitter)
+  Future<Map<String, dynamic>> completeService(int bookingId) async {
+    try {
+      debugPrint('✅ API: PATCH $apiBaseUrl/bookings/$bookingId/complete');
+
+      final headers = await _getHeaders();
+      final response = await http.patch(
+        Uri.parse('$apiBaseUrl/bookings/$bookingId/complete'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        debugPrint('✅ Service marked as completed');
+        return json;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to complete service (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in completeService: $e');
+      rethrow;
+    }
+  }
+
+  /// POST /bookings/:id/pay - Process payment (Owner)
+  Future<Map<String, dynamic>> processPayment(int bookingId) async {
+    try {
+      debugPrint('💳 API: POST $apiBaseUrl/bookings/$bookingId/pay');
+
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/bookings/$bookingId/pay'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final Map<String, dynamic> json =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        debugPrint('✅ Payment processed successfully');
+        return json;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to process payment (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in processPayment: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /bookings - Get user's bookings (to check for unpaid ones)
+  Future<List<Map<String, dynamic>>> getMyBookings() async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/bookings');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/bookings'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        final bookings = jsonList
+            .map((e) => e as Map<String, dynamic>)
+            .toList();
+
+        debugPrint('✅ Parsed ${bookings.length} bookings');
+        return bookings;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to load bookings (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in getMyBookings: $e');
+      rethrow;
+    }
+  }
+
   // ========================================================================
   // POSTS/COMMUNITY API
   // ========================================================================
