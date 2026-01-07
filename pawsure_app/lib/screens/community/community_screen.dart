@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/models/post_model.dart';
 import 'package:pawsure_app/screens/community/create_vacancy_modal.dart';
+import 'package:pawsure_app/services/auth_service.dart';
 import 'dart:convert';
 import 'post_card.dart';
 import 'create_post_modal.dart';
@@ -318,8 +321,10 @@ class _FeedTabViewState extends State<FeedTabView>
   }
 
   Widget _buildDynamicPostList(String tab) {
+    // 1. Get AuthService instance
+    final authService = Get.find<AuthService>();
+
     return FutureBuilder<List<PostModel>>(
-      // 1. Use updated PostModel type
       future: widget.parentState.fetchFilteredPosts(tab),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -336,38 +341,46 @@ class _FeedTabViewState extends State<FeedTabView>
         }
 
         final posts = snapshot.data!;
-        return RefreshIndicator(
-          onRefresh: () async => widget.parentState.setState(() {}),
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16.0),
-            itemCount: posts.length,
-            itemBuilder: (context, index) {
-              final post = posts[index];
 
-              // IF WE ARE IN THE VACANCY TAB
-              if (tab == 'vacancy') {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: VacancyPostCard(
-                    post: post,
-                    onApply: () =>
-                        _handleBooking(post), // Passes post to booking handler
-                  ),
-                );
-              }
+        // 2. Use a second FutureBuilder to get the user role asynchronously
+        return FutureBuilder<String?>(
+          future: authService.getUserRole(),
+          builder: (context, roleSnapshot) {
+            // Default to false while loading or if error
+            final bool isSitter = roleSnapshot.data == 'sitter';
 
-              // IF WE ARE IN 'FOR YOU' OR 'URGENT'
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: PostCard(
-                  post: post,
-                  onLike: (id) {},
-                  onComment: (id) {},
-                  onShare: (id) {},
-                ),
-              );
-            }, // Fixed closing brace for itemBuilder
-          ),
+            return RefreshIndicator(
+              onRefresh: () async => widget.parentState.setState(() {}),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16.0),
+                itemCount: posts.length,
+                itemBuilder: (context, index) {
+                  final post = posts[index];
+
+                  if (tab == 'vacancy') {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: VacancyPostCard(
+                        post: post,
+                        isUserSitter: isSitter, // Now correctly defined!
+                        onApply: () => _handleBooking(post),
+                      ),
+                    );
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: PostCard(
+                      post: post,
+                      onLike: (id) {},
+                      onComment: (id) {},
+                      onShare: (id) {},
+                    ),
+                  );
+                },
+              ),
+            );
+          },
         );
       },
     );

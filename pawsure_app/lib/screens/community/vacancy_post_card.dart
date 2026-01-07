@@ -1,69 +1,156 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pawsure_app/models/post_model.dart';
 
 class VacancyPostCard extends StatelessWidget {
-  final dynamic post; // Use your Post model, but ensure it has vacancy fields
+  final PostModel post; // Your post data object
+  final bool
+  isUserSitter; // Pass true if user role is 'sitter', false for 'owner'
   final VoidCallback onApply;
 
-  const VacancyPostCard({super.key, required this.post, required this.onApply});
+  const VacancyPostCard({
+    super.key,
+    required this.post,
+    required this.isUserSitter,
+    required this.onApply,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // Extracting data from the post object
+    final String content = post.content;
+    final double rate = post.ratePerNight;
+    final List<String> petNames = post.petNames;
+
+    final String startDate = post.startDate != null
+        ? DateFormat('MMM d').format(post.startDate!)
+        : '';
+    final String endDate = post.endDate != null
+        ? DateFormat('MMM d').format(post.endDate!)
+        : '';
+
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // User Info Header
+            // Header: Dates and Rate
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                CircleAvatar(
-                  backgroundImage: NetworkImage(post.profilePicture),
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today,
+                        size: 16,
+                        color: Colors.blue,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "$startDate - $endDate",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  post.userName,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                // Rate Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Text(
+                    "\$$rate/night",
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
-                const Spacer(),
-                const Badge(label: Text("JOB"), backgroundColor: Colors.green),
               ],
             ),
-            const Divider(height: 24),
+            const SizedBox(height: 12),
 
-            // Job Details Section
-            // Inside VacancyPostCard build method
-            Row(
-              children: [
-                const Icon(Icons.calendar_today, size: 18, color: Colors.blue),
-                const SizedBox(width: 8),
-                Text(
-                  // Use the actual dates from the post object instead of .add(Duration(days: 2))
-                  "${DateFormat('MMM d').format(post.startDate)} - ${DateFormat('MMM d').format(post.endDate)}",
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-              ],
+            // Description
+            Text(
+              content,
+              style: const TextStyle(fontSize: 15),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 8),
-            Text(post.content), // The caption
+            const SizedBox(height: 12),
 
-            const SizedBox(height: 16),
-
-            // Application Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onApply,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
+            // Pets List
+            if (petNames.isNotEmpty) ...[
+              const Text(
+                "Pets to sit:",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey,
                 ),
-                child: const Text("Apply Now"),
               ),
-            ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: petNames.map((name) {
+                  // name is a String
+                  return Chip(
+                    visualDensity: VisualDensity.compact,
+                    backgroundColor: Colors.grey.shade100,
+                    avatar: const Icon(Icons.pets, size: 14),
+                    label: Text(
+                      name, // ✅ No more ['name'] or ?? 'Pet' needed
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ] else ...[
+              const Text(
+                "No pets specified",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+
+            // Apply Button - Only visible for sitters
+            if (isUserSitter) ...[
+              const SizedBox(height: 12),
+              const Divider(),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: onApply,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text("Apply Now"),
+                ),
+              ),
+            ],
           ],
         ),
       ),
