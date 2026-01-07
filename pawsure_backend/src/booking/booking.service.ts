@@ -22,7 +22,7 @@ export class BookingService {
     return await this.bookingRepository.save(booking);
   }
 
-  async updateStatus(id: number, status: 'accepted' | 'declined'): Promise<Booking> {
+  async updateStatus(id: number, status: 'accepted' | 'declined'| 'cancelled',): Promise<Booking> {
     const booking = await this.bookingRepository.findOne({ where: { id } });
 
     if (!booking) {
