@@ -710,6 +710,42 @@ class ApiService {
     }
   }
 
+  /// GET /bookings/owner - Fetch all bookings for the authenticated owner
+  Future<List<Map<String, dynamic>>> getOwnerBookings() async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/bookings/owner');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/bookings/owner'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        final bookings = jsonList
+            .map((e) => e as Map<String, dynamic>)
+            .toList();
+
+        debugPrint('✅ Parsed ${bookings.length} owner bookings');
+        return bookings;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to load owner bookings (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in getOwnerBookings: $e');
+      rethrow;
+    }
+  }
+
   /// PATCH /bookings/:id/status - Update booking status (accept/decline)
   Future<Map<String, dynamic>> updateBookingStatus(
     int bookingId,

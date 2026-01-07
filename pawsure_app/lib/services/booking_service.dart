@@ -7,6 +7,9 @@ import 'package:pawsure_app/services/api_service.dart'; // To access apiBaseUrl
 import 'package:pawsure_app/services/auth_service.dart';
 
 class BookingService {
+
+  final ApiService _apiService = ApiService();
+
   Future<void> createBooking({
     required DateTime startDate,
     required DateTime endDate,
@@ -70,5 +73,17 @@ class BookingService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Fetch bookings specifically for the Owner 
+  Future<List<dynamic>> fetchOwnerBookings() async {
+    // Delegates to the ApiService method
+    return await _apiService.getOwnerBookings();
+  }
+
+  /// Update booking status (used for Cancelling requests)
+  /// ✅ This is the method your error said was missing!
+  Future<void> updateBookingStatus(int bookingId, String status) async {
+    await _apiService.updateBookingStatus(bookingId, status);
   }
 }
