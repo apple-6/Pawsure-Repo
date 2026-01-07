@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:intl/intl.dart';
 import 'package:pawsure_app/models/post_model.dart';
+import 'package:pawsure_app/screens/sitter_setup/view_pet_profile.dart';
 
 class VacancyPostCard extends StatelessWidget {
   final PostModel post; // Your post data object
@@ -108,18 +111,51 @@ class VacancyPostCard extends StatelessWidget {
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: petNames.map((name) {
-                  // name is a String
-                  return Chip(
-                    visualDensity: VisualDensity.compact,
-                    backgroundColor: Colors.grey.shade100,
-                    avatar: const Icon(Icons.pets, size: 14),
-                    label: Text(
-                      name, // ✅ No more ['name'] or ?? 'Pet' needed
-                      style: const TextStyle(fontSize: 12),
+                children: List.generate(petNames.length, (index) {
+                  final name = petNames[index];
+
+                  return GestureDetector(
+                    onTap: () {
+                      // Check if full pet objects exist in the post model
+                      if (post.pets != null && post.pets!.isNotEmpty) {
+                        Get.to(
+                          () => const PetProfileView(),
+                          arguments: {
+                            'pet': post.pets![index], // Passes full Pet model
+                            'dateRange': "$startDate - $endDate",
+                            'estEarning':
+                                "\$${post.ratePerNight.toStringAsFixed(2)}",
+                          },
+                        );
+                      } else {
+                        debugPrint(
+                          "⚠️ No detailed pet data available for $name",
+                        );
+                      }
+                    },
+                    child: Chip(
+                      visualDensity: VisualDensity.compact,
+                      backgroundColor: Colors.blue.withOpacity(
+                        0.05,
+                      ), // Light blue tint
+                      side: BorderSide(color: Colors.blue.withOpacity(0.2)),
+                      avatar: const Icon(
+                        Icons.pets,
+                        size: 14,
+                        color: Colors.blue,
+                      ),
+                      label: Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue,
+                          fontWeight: FontWeight.w600,
+                          //decoration: TextDecoration.underline,
+                        ),
+                      ),
                     ),
                   );
-                }).toList(),
+                }),
               ),
             ] else ...[
               const Text(

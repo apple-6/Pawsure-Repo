@@ -1,3 +1,5 @@
+import 'package:pawsure_app/models/pet_model.dart';
+
 class PostModel {
   final String id;
   final String userId;
@@ -18,6 +20,7 @@ class PostModel {
   final List<String> petIds; // Changed from String? petId
   final List<String> petNames; // Added to display tags (e.g., "Buddy", "Luna")
   final double ratePerNight;
+  final List<Pet> pets;
 
   PostModel({
     required this.id,
@@ -37,6 +40,7 @@ class PostModel {
     this.petIds = const [],
     this.petNames = const [],
     this.ratePerNight = 0.0,
+    this.pets = const [],
   });
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
@@ -87,7 +91,11 @@ class PostModel {
       // Multi-Pet Mapping
       petIds: rawPets.map((p) => p['id'].toString()).toList(),
       petNames: rawPets.map((p) => p['name'].toString()).toList(),
-      ratePerNight: (json['rate_per_night'] ?? 0).toDouble(),
+      // Inside PostModel.fromJson
+      pets: rawPets.map((p) => Pet.fromJson(p)).toList(),
+      ratePerNight: json['rate_per_night'] != null
+          ? double.tryParse(json['rate_per_night'].toString()) ?? 0.0
+          : 0.0,
     );
   }
 }

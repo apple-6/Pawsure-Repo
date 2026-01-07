@@ -65,11 +65,14 @@ export class PostsService {
 
       // 2. Handle Pet IDs (supports Array or comma-separated String)
       let petIds: number[] = [];
-      if (body.petIds) {
-        if (Array.isArray(body.petIds)) {
-          petIds = body.petIds.map(id => Number(id));
-        } else if (typeof body.petIds === 'string') {
-          petIds = body.petIds.split(',').map(id => Number(id.trim()));
+      // Check for 'pet_id' to match your Flutter code
+      const rawPetIds = body.pet_id || body.petIds; 
+
+      if (rawPetIds) {
+        if (Array.isArray(rawPetIds)) {
+          petIds = rawPetIds.map(id => Number(id));
+        } else if (typeof rawPetIds === 'string') {
+          petIds = rawPetIds.split(',').map(id => Number(id.trim()));
         }
       }
 

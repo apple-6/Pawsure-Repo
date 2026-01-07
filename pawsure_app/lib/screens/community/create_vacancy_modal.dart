@@ -166,7 +166,7 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
           'is_urgent': false,
           'start_date': _startDate!.toIso8601String(),
           'end_date': _endDate!.toIso8601String(),
-          'petIds': _selectedPetIds,
+          'pet_id': _selectedPetIds,
         }),
       );
 
@@ -286,8 +286,9 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                                       : "Select All",
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: Theme.of(context)
-                                        .primaryColor, // Matching your app theme
+                                    color: Theme.of(
+                                      context,
+                                    ).primaryColor, // Matching your app theme
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -313,11 +314,12 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                                     onSelected: (_) =>
                                         _togglePet(pet['id'].toString()),
                                     // Optional: Match the chip color to your theme when selected
-                                    selectedColor: Theme.of(context)
-                                        .primaryColor
-                                        .withOpacity(0.2),
-                                    checkmarkColor:
-                                        Theme.of(context).primaryColor,
+                                    selectedColor: Theme.of(
+                                      context,
+                                    ).primaryColor.withOpacity(0.2),
+                                    checkmarkColor: Theme.of(
+                                      context,
+                                    ).primaryColor,
                                   );
                                 }).toList(),
                               ),
