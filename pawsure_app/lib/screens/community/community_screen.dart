@@ -8,6 +8,7 @@ import 'create_post_modal.dart';
 import 'find_sitter_tab.dart';
 import 'sitter_details.dart';
 import 'vacancy_post_card.dart';
+import 'owner_inbox.dart';
 
 // --- POST MODEL ---
 class Post {
@@ -148,7 +149,14 @@ class CommunityScreenState extends State<CommunityScreen> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.chat_bubble_outline),
-                            onPressed: () => debugPrint("Navigate to Chat"),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => OwnerInbox(),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),

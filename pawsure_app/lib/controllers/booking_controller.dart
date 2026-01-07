@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/services/booking_service.dart';
+import 'package:pawsure_app/services/api_service.dart';
+
 
 class BookingController extends GetxController {
   final BookingService _bookingService = BookingService();
@@ -77,4 +79,37 @@ class BookingController extends GetxController {
       isCreatingBooking.value = false;
     }
   }
+
+  /// ✅ Fetch OWNER bookings (Delegates to Service)
+  Future<void> fetchOwnerBookings() async {
+    try {
+      isLoadingBookings.value = true;
+      // FIX: Call the service, NOT _apiService directly
+      final data = await _bookingService.fetchOwnerBookings(); 
+      userBookings.assignAll(data);
+    } catch (e) {
+      debugPrint("❌ Error fetching owner bookings: $e");
+    } finally {
+      isLoadingBookings.value = false;
+    }
+  }
+
+  /// ✅ Cancel booking (Delegates to Service)
+  Future<bool> cancelBooking(int bookingId) async {
+    try {
+      // FIX: Call the service, NOT _apiService directly
+      await _bookingService.updateBookingStatus(bookingId, 'cancelled');
+      
+      // Refresh list
+      await fetchOwnerBookings();
+      
+      Get.snackbar("Success", "Booking cancelled", backgroundColor: Colors.grey, colorText: Colors.white);
+      return true;
+    } catch (e) {
+      Get.snackbar("Error", "Failed to cancel", backgroundColor: Colors.red, colorText: Colors.white);
+      return false;
+    }
+  }
+
+
 }
