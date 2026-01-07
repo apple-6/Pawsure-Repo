@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // <--- Import GetX
+import 'package:pawsure_app/models/pet_model.dart';
+import 'package:pawsure_app/screens/sitter_setup/view_pet_profile.dart';
 import 'sitter_calendar.dart';
 import 'sitter_inbox.dart';
 import 'sitter_setting_screen.dart';
@@ -48,16 +50,21 @@ class SitterDashboard extends StatelessWidget {
         unselectedItemColor: Colors.grey.shade600,
         currentIndex: 0,
         onTap: (index) {
+          if (index == 0) {
+            // Navigate back to Dashboard (clears stack so no back button loop)
+            Get.offAll(() => const SitterDashboard());
+          }
+          if (index == 1) {
+            // Navigate to Discover Screen
+          }
           if (index == 2) {
             Get.to(() => const SitterCalendar());
           }
-          // You can add other links here later (e.g. Settings is index 4)
           if (index == 3) {
-            // Index 3 is Inbox
             Get.to(() => const SitterInbox());
           }
           if (index == 4) {
-            Get.to(() => const SitterSettingPage());
+            Get.to(() => const SitterSettingScreen());
           }
         },
         items: const [
@@ -368,7 +375,25 @@ class _RequestCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  onPressed: () {},
+                  // Inside SitterDashboard -> _RequestCard
+                  onPressed: () {
+                    Get.to(
+                      () => const PetProfileView(),
+                      arguments: {
+                        // Create a dummy Pet object so the Profile page doesn't crash
+                        'pet': Pet(
+                          id: 1,
+                          name: request.petName, // 'Lucky'
+                          breed: 'Golden Retriever',
+                          dob: '2022-05-15',
+                          weight: 25.0,
+                          allergies: 'Peanuts',
+                        ),
+                        'dateRange': request.dateRange,
+                        'estEarning': request.estEarning,
+                      },
+                    );
+                  },
                   child: const Text('View Details'),
                 ),
               ),

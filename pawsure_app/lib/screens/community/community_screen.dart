@@ -1,186 +1,124 @@
 import 'package:flutter/material.dart';
-import 'find_sitter_tab.dart';
+import 'package:http/http.dart' as http;
+import 'package:pawsure_app/models/post_model.dart';
+import 'package:pawsure_app/screens/community/create_vacancy_modal.dart';
+import 'dart:convert';
 import 'post_card.dart';
 import 'create_post_modal.dart';
+import 'find_sitter_tab.dart';
 import 'sitter_details.dart';
+import 'vacancy_post_card.dart';
 
-// --- Mock Data Structure ---
+// --- POST MODEL ---
 class Post {
   final String id;
   final String userId;
   final String userName;
-  final String userAvatar;
-  final String petName;
-  final String image;
-  final String caption;
+  final String profilePicture;
+  final String content;
+  final List<String> mediaUrls;
   final String? location;
+  final DateTime createdAt;
   int likes;
-  final int comments;
   bool isLiked;
-  final bool isLostPetAlert;
-  final bool isUrgentAlert;
-  final Map<String, String>? lostPetDetails;
+  final bool isUrgent;
 
   Post({
     required this.id,
     required this.userId,
     required this.userName,
-    required this.userAvatar,
-    required this.petName,
-    required this.image,
-    required this.caption,
+    required this.profilePicture,
+    required this.content,
+    required this.mediaUrls,
     this.location,
-    required this.likes,
-    required this.comments,
-    required this.isLiked,
-    this.isLostPetAlert = false,
-    this.isUrgentAlert = false,
-    this.lostPetDetails,
+    required this.createdAt,
+    this.likes = 0,
+    this.isLiked = false,
+    this.isUrgent = false,
   });
+
+  factory Post.fromMap(Map<String, dynamic> map) {
+    final userData = map['user'] ?? map['owner'];
+    final List<dynamic> mediaList = map['post_media'] ?? [];
+
+    return Post(
+      id: map['id'].toString(),
+      userId:
+          (map['userId'] ?? map['user_id'] ?? userData?['id'])?.toString() ??
+          '',
+      userName: userData?['name'] ?? 'Unknown User',
+      profilePicture:
+          userData?['profile_picture'] ??
+          "https://cdn-icons-png.flaticon.com/512/194/194279.png",
+      content: map['content'] ?? '',
+      mediaUrls: mediaList
+          .map(
+            (m) => (m is String)
+                ? m
+                : (m['url'] ?? m['media_url'] ?? '').toString(),
+          )
+          .where((url) => url.isNotEmpty)
+          .toList()
+          .cast<String>(),
+      location: map['location_name'] ?? map['location'],
+      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+      isUrgent: map['is_urgent'] ?? false,
+      likes: map['likes_count'] ?? 0,
+    );
+  }
 }
 
-// --- Main Screen Widget (Stateful) ---
+// --- COMMUNITY SCREEN ---
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
 
   @override
-  State<CommunityScreen> createState() => _CommunityScreenState();
+  State<CommunityScreen> createState() => CommunityScreenState(); // Removed underscore to allow access
 }
 
-class _CommunityScreenState extends State<CommunityScreen> {
-  // Retained the mock data
-  List<Post> _posts = [
-    Post(
-      id: "1",
-      userId: "user1",
-      userName: "Sarah Johnson",
-      userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
-      petName: "Luna",
-      image:
-          "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400",
-      caption:
-          "Luna enjoying her morning walk at the park! 🌞 She absolutely loves the fresh air.",
-      location: "Taman Merdeka Park, Johor Bahru",
-      likes: 24,
-      comments: 5,
-      isLiked: false,
-    ),
-    Post(
-      id: "2",
-      userId: "user2",
-      userName: "Michael Chen",
-      userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Michael",
-      petName: "Max",
-      image:
-          "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400",
-      caption:
-          "URGENT: Max needs an emergency blood donation (Type A-). Please contact me if your dog is eligible!",
-      location: "Mount Austin Vet Clinic",
-      likes: 18,
-      comments: 3,
-      isLiked: true,
-      isUrgentAlert: true,
-    ),
-    Post(
-      id: "3",
-      userId: "user3",
-      userName: "Emily Rodriguez",
-      userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emily",
-      petName: "Bella",
-      image:
-          "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=400",
-      caption:
-          "URGENT: Bella went missing this morning near Permas Jaya. Please help us find her!",
-      location: "Permas Jaya, Johor Bahru",
-      likes: 156,
-      comments: 42,
-      isLiked: false,
-      isLostPetAlert: true,
-      isUrgentAlert: true,
-      lostPetDetails: {
-        "lastSeenLocation": "Permas Jaya Mall parking area",
-        "lastSeenTime": "Today, 8:30 AM",
-        "contactInfo": "+60 12-345 6789",
-      },
-    ),
-    Post(
-      id: "4",
-      userId: "user4",
-      userName: "David Lim",
-      userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=David",
-      petName: "Charlie",
-      image: "https://images.unsplash.com/photo-1558788353-f76d92427f16?w=400",
-      caption: "Sleepy Sunday vibes 😴 Charlie has been napping all day!",
-      likes: 32,
-      comments: 8,
-      isLiked: false,
-    ),
-  ];
+class CommunityScreenState extends State<CommunityScreen> {
+  final String baseUrl = "http://localhost:3000";
+  int _currentSubTabIndex = 0; // 0: For You, 1: Urgent, 2: Vacancy
 
-  List<Post> _getFilteredPosts(String feedTab) {
-    if (feedTab == "urgent") {
-      return _posts
-          .where((post) => post.isUrgentAlert || post.isLostPetAlert)
-          .toList();
-    }
+  // Change Post to PostModel here
+  Future<List<PostModel>> fetchFilteredPosts(String tab) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/posts?tab=$tab'),
+        headers: {'Content-Type': 'application/json'},
+      );
 
-    if (feedTab == "nearby") {
-      List<Post> sortedPosts = [..._posts];
-      sortedPosts.sort((a, b) {
-        if (a.isLostPetAlert && !b.isLostPetAlert) return -1;
-        if (!a.isLostPetAlert && b.isLostPetAlert) return 1;
-        return 0;
-      });
-      return sortedPosts;
-    }
-
-    return _posts;
-  }
-
-  void _handleLike(String postId) {
-    setState(() {
-      final postIndex = _posts.indexWhere((post) => post.id == postId);
-      if (postIndex != -1) {
-        Post post = _posts[postIndex];
-        post.isLiked = !post.isLiked;
-        post.likes += post.isLiked ? 1 : -1;
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        // Ensure you are using PostModel.fromJson here
+        return data.map((map) => PostModel.fromJson(map)).toList();
+      } else {
+        throw Exception('Failed to load posts');
       }
-    });
-  }
-
-  void _handleComment(String postId) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Comment feature coming soon!'),
-        duration: Duration(seconds: 1),
-      ),
-    );
-  }
-
-  void _handleShare(String postId) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Post shared successfully!'),
-        duration: Duration(seconds: 1),
-      ),
-    );
+    } catch (e) {
+      debugPrint("Error fetching posts: $e");
+      return [];
+    }
   }
 
   void _handlePostCreated() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Success! Your post has been created'),
-        duration: Duration(seconds: 1),
-      ),
-    );
+    setState(() {});
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Post created successfully!')));
   }
 
   void _showCreatePostModal() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (BuildContext context) {
-        return CreatePostModal(onPostCreated: _handlePostCreated);
+      builder: (context) {
+        if (_currentSubTabIndex == 2) {
+          // REPLACE THE PLACEHOLDER WITH YOUR ACTUAL MODAL
+          return CreateVacancyModal(onVacancyCreated: _handlePostCreated);
+        } else {
+          return CreatePostModal(onPostCreated: _handlePostCreated);
+        }
       },
     );
   }
@@ -188,203 +126,239 @@ class _CommunityScreenState extends State<CommunityScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2, // Only two tabs: Feed and Find a Sitter
-      child: Builder(
-        builder: (BuildContext innerContext) {
-          final TabController tabController = DefaultTabController.of(
-            innerContext,
-          );
-
-          return Scaffold(
-            body: NestedScrollView(
-              headerSliverBuilder:
-                  (BuildContext context, bool innerBoxIsScrolled) {
-                    return <Widget>[
-                      SliverList(
-                        delegate: SliverChildListDelegate([
-                          const Padding(
-                            padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
-                            child: Text(
-                              'Community',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                              ),
+      length: 2,
+      child: Scaffold(
+        body: SafeArea(
+          child: NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return <Widget>[
+                SliverList(
+                  delegate: SliverChildListDelegate([
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 8.0, 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Community',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ]),
+                          IconButton(
+                            icon: const Icon(Icons.chat_bubble_outline),
+                            onPressed: () => debugPrint("Navigate to Chat"),
+                          ),
+                        ],
                       ),
-                      SliverAppBar(
-                        automaticallyImplyLeading: false,
-                        pinned: true,
-                        toolbarHeight: 0,
-                        bottom: PreferredSize(
-                          preferredSize: const Size.fromHeight(50.0),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).scaffoldBackgroundColor,
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: Colors.grey.shade300,
-                                  width: 1.0,
-                                ),
-                              ),
-                            ),
-                            child: TabBar(
-                              indicatorSize: TabBarIndicatorSize.label,
-                              indicatorWeight: 3.0,
-                              labelColor: Theme.of(context).primaryColor,
-                              unselectedLabelColor: Colors.grey.shade600,
-                              dividerColor: Colors.transparent,
-                              tabs: const [
-                                Tab(text: 'Feed'),
-                                Tab(text: 'Find a Sitter'),
-                              ],
-                              onTap: (index) {
-                                setState(() {});
-                              },
-                            ),
-                          ),
+                    ),
+                  ]),
+                ),
+                SliverAppBar(
+                  pinned: true,
+                  toolbarHeight: 0,
+                  bottom: TabBar(
+                    indicatorSize: TabBarIndicatorSize.label,
+                    labelColor: Theme.of(context).primaryColor,
+                    tabs: const [
+                      Tab(text: 'Feed'),
+                      Tab(text: 'Find a Sitter'),
+                    ],
+                  ),
+                ),
+              ];
+            },
+            body: TabBarView(
+              children: [
+                FeedTabView(
+                  parentState: this,
+                  onSubTabChanged: (index) {
+                    setState(() {
+                      _currentSubTabIndex = index;
+                    });
+                  },
+                ),
+                FindSitterTab(
+                  onSitterClick: (sitterId, startDate, endDate) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SitterDetailsScreen(
+                          sitterId: sitterId,
+                          startDate: startDate,
+                          endDate: endDate,
                         ),
                       ),
-                    ];
+                    );
                   },
-              body: TabBarView(
-                // We only need 2 children here, matching the length of the TabBar.
-                children: [
-                  // 1. Feed Tab Content
-                  FeedTabView(parentState: this),
-
-                  // 2. Find a Sitter Tab Content (Corrected and implemented)
-                  FindSitterTab(
-                    onSitterClick:
-                        (
-                          String sitterId,
-                          DateTime? startDate,
-                          DateTime? endDate,
-                        ) {
-                          print(
-                            "Navigating to Sitter Profile: $sitterId",
-                          ); // Retained for debug
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SitterDetailsScreen(
-                                sitterId: sitterId,
-                                startDate: startDate,
-                                endDate: endDate,
-                              ),
-                            ),
-                          );
-                        },
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            floatingActionButton:
-                DefaultTabController.of(innerContext).index == 0
+          ),
+        ),
+        floatingActionButton: Builder(
+          builder: (context) {
+            bool isFeedTab = DefaultTabController.of(context).index == 0;
+            return isFeedTab
                 ? FloatingActionButton(
                     onPressed: _showCreatePostModal,
-                    backgroundColor: Theme.of(innerContext).primaryColor,
+                    backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,
-                    shape: const CircleBorder(),
                     child: const Icon(Icons.add),
                   )
-                : null,
-          );
-        },
+                : const SizedBox.shrink();
+          },
+        ),
       ),
     );
   }
 }
 
-// --- Feed Tab View ---
-class FeedTabView extends StatelessWidget {
-  final _CommunityScreenState parentState;
+// --- FEED TAB VIEW ---
+class FeedTabView extends StatefulWidget {
+  final CommunityScreenState parentState; // Changed type to public version
+  final Function(int) onSubTabChanged;
 
-  const FeedTabView({super.key, required this.parentState});
+  const FeedTabView({
+    super.key,
+    required this.parentState,
+    required this.onSubTabChanged,
+  });
+
+  @override
+  State<FeedTabView> createState() => _FeedTabViewState();
+}
+
+class _FeedTabViewState extends State<FeedTabView>
+    with SingleTickerProviderStateMixin {
+  late TabController _subTabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _subTabController = TabController(length: 3, vsync: this);
+    _subTabController.addListener(() {
+      if (!_subTabController.indexIsChanging) {
+        widget.onSubTabChanged(_subTabController.index);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _subTabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 4,
-      child: Column(
-        children: [
-          TabBar(
-            isScrollable: true,
-            indicatorSize: TabBarIndicatorSize.label,
-            indicatorWeight: 3.0,
-            labelColor: Theme.of(context).primaryColor,
-            unselectedLabelColor: Colors.grey.shade600,
-            dividerColor: Colors.grey.shade300,
-            tabs: const [
-              Tab(text: 'For You'),
-              Tab(text: 'Urgent 🚨'),
-              Tab(text: 'Nearby'),
-              Tab(text: 'Topics'),
+    return Column(
+      children: [
+        TabBar(
+          controller: _subTabController,
+          isScrollable: true,
+          labelColor: Theme.of(context).primaryColor,
+          tabs: const [
+            Tab(text: 'For You'),
+            Tab(text: 'Urgent 🚨'),
+            Tab(text: 'Sitter Vacancy'),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _subTabController,
+            children: [
+              _buildDynamicPostList('for-you'),
+              _buildDynamicPostList('urgent'),
+              _buildDynamicPostList('vacancy'),
             ],
           ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _buildPostList(context, 'for-you'),
-                _buildPostList(context, 'urgent'),
-                _buildPostList(context, 'nearby'),
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Discover posts by topics like #TrainingTips, #HealthQ&A, #ParkMeetups',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Coming soon!',
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        ),
+      ],
+    );
+  }
+
+  // 1. PLACE THE METHOD HERE
+  void _handleBooking(PostModel post) async {
+    // Show a confirmation dialog before proceeding
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Apply for Job"),
+        content: Text(
+          "Are you sure you want to apply to pet sit for ${post.userName}?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Apply"),
           ),
         ],
       ),
     );
+
+    if (confirm == true) {
+      // Execute the logic to save to the 'bookings' table
+      debugPrint("Booking confirmed for Post ID: ${post.id}");
+      // Add your http.post logic here
+    }
   }
 
-  Widget _buildPostList(BuildContext context, String tabValue) {
-    final posts = parentState._getFilteredPosts(tabValue);
+  Widget _buildDynamicPostList(String tab) {
+    return FutureBuilder<List<PostModel>>(
+      // 1. Use updated PostModel type
+      future: widget.parentState.fetchFilteredPosts(tab),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    if (posts.isEmpty && tabValue == 'urgent') {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: Text(
-            'No urgent alerts right now. Stay safe!',
-            style: TextStyle(color: Colors.grey),
-          ),
-        ),
-      );
-    }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(
+            child: Text(
+              'No posts found.',
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
+        }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 16.0),
-      itemCount: posts.length,
-      itemBuilder: (context, index) {
-        final post = posts[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
-          child: PostCard(
-            post: post,
-            onLike: parentState._handleLike,
-            onComment: parentState._handleComment,
-            onShare: parentState._handleShare,
+        final posts = snapshot.data!;
+        return RefreshIndicator(
+          onRefresh: () async => widget.parentState.setState(() {}),
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            itemCount: posts.length,
+            itemBuilder: (context, index) {
+              final post = posts[index];
+
+              // IF WE ARE IN THE VACANCY TAB
+              if (tab == 'vacancy') {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: VacancyPostCard(
+                    post: post,
+                    onApply: () =>
+                        _handleBooking(post), // Passes post to booking handler
+                  ),
+                );
+              }
+
+              // IF WE ARE IN 'FOR YOU' OR 'URGENT'
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: PostCard(
+                  post: post,
+                  onLike: (id) {},
+                  onComment: (id) {},
+                  onShare: (id) {},
+                ),
+              );
+            }, // Fixed closing brace for itemBuilder
           ),
         );
       },

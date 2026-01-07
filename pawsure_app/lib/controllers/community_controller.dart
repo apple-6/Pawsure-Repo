@@ -1,39 +1,60 @@
 import 'package:get/get.dart';
+import 'package:pawsure_app/services/api_service.dart';
 
 class CommunityController extends GetxController {
-  // Placeholder posts list. Replace with CommunityService API calls.
-  var posts = <Map<String, dynamic>>[
-    {
-      'id': 'p1',
-      'userId': 'u1',
-      'title': 'Pawsome walk today',
-      'content': 'Max loved the park! Highly recommend the new trail.',
-      'likes': 5,
-      'comments': 2,
+  final ApiService _apiService = ApiService();
+
+  var posts = <dynamic>[].obs;
+  var isLoading = false.obs;
+  var activeTab = 'all'.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    fetchPosts();
+  }
+
+  /// Fetch posts from the API
+  Future<void> fetchPosts({String tab = 'all'}) async {
+    try {
+      isLoading.value = true;
+      activeTab.value = tab;
+
+      final fetchedPosts = await _apiService.getPosts(tab: tab);
+      posts.assignAll(fetchedPosts);
+    } catch (e) {
+      print('❌ Error fetching posts: $e');
+      Get.snackbar('Error', 'Failed to load posts: $e');
+    } finally {
+      isLoading.value = false;
     }
-  ].obs;
-
-  Future<void> loadPosts() async {
-    // TODO: Replace with CommunityService.getAllPosts()
-    await Future.delayed(const Duration(milliseconds: 200));
-    // posts are already populated as placeholders
   }
 
-  Future<void> addPost(Map<String, dynamic> payload) async {
-    // TODO: Replace with CommunityService.addPost(...) call
-    final newPost = Map<String, dynamic>.from(payload);
-    newPost['id'] = DateTime.now().millisecondsSinceEpoch.toString();
-    newPost['likes'] = 0;
-    newPost['comments'] = 0;
-    posts.insert(0, newPost);
-  }
+  /// Create a new post
+  Future<void> createPost({
+    required String content,
+    required bool isUrgent,
+    String? locationName,
+    List<String>? mediaPaths,
+  }) async {
+    try {
+      isLoading.value = true;
 
-  Future<void> likePost(String postId) async {
-    // TODO: Replace with CommunityService.likePost(postId)
-    final idx = posts.indexWhere((p) => p['id'] == postId);
-    if (idx >= 0) {
-      posts[idx]['likes'] = (posts[idx]['likes'] ?? 0) + 1;
-      posts.refresh();
+      await _apiService.createPost(
+        content: content,
+        isUrgent: isUrgent,
+        mediaPaths: mediaPaths,
+      );
+
+      Get.snackbar('Success', 'Post created successfully!');
+
+      // Refresh posts list
+      await fetchPosts(tab: activeTab.value);
+    } catch (e) {
+      print('❌ Error creating post: $e');
+      Get.snackbar('Error', 'Failed to create post: $e');
+    } finally {
+      isLoading.value = false;
     }
   }
 }

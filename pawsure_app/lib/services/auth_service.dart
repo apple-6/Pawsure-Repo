@@ -7,12 +7,28 @@ import './storage_service.dart';
 import 'package:pawsure_app/constants/api_config.dart';
 import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   static String get _baseUrl => ApiConfig.baseUrl;
 
   // ✅ Get StorageService from GetX dependency injection
   StorageService get _storage => Get.find<StorageService>();
+
+  // 1. ✅ ADDED: In-memory token for immediate access by GetX controllers
+  String? _token;
+
+  // 2. ✅ ADDED: Public getter to fix the "undefined_getter" error in ProfileController
+  String? get token => _token;
+
+  /// Constructor: Syncs memory with disk storage on app startup
+  AuthService() {
+    _loadTokenFromStorage();
+  }
+
+  Future<void> _loadTokenFromStorage() async {
+    _token = await _storage.read(key: 'jwt');
+  }
 
   /// Check if user is authenticated
   Future<bool> isAuthenticated() async {
@@ -60,16 +76,36 @@ class AuthService {
       final token = data['access_token'] as String?;
       if (token == null) throw Exception('access_token not found in response');
 
-      // ✅ Store token
+      // ✅ Store token in memory and storage
+      _token = token;
       await _storage.write(key: 'jwt', value: token);
       debugPrint('🔑 JWT token stored');
+
+      final prefs = await SharedPreferences.getInstance();
+
+      // Attempt to get ID from login response directly (if backend sends it)
+      if (data.containsKey('user') && data['user'] != null) {
+        final userId = data['user']['id'];
+        if (userId is int) {
+          await prefs.setInt('userId', userId);
+          print("✅ Saved User ID from Login: $userId");
+        }
+      }
 
       // Fetch and store user profile
       try {
         final profile = await this.profile();
-        if (profile != null && profile.containsKey('role')) {
-          await _storage.write(key: 'user_role', value: profile['role']);
-          debugPrint('👤 User role stored: ${profile['role']}');
+        if (profile != null) {
+          // Update User ID from profile if we didn't get it earlier
+          if (profile.containsKey('id') && profile['id'] is int) {
+            await prefs.setInt('userId', profile['id']);
+            print("✅ Saved User ID from Profile: ${profile['id']}");
+          }
+
+          if (profile.containsKey('role')) {
+            await _storage.write(key: 'user_role', value: profile['role']);
+            debugPrint('👤 User role stored: ${profile['role']}');
+          }
         }
       } catch (e) {
         debugPrint('⚠️ Failed to fetch profile after login: $e');
@@ -86,31 +122,41 @@ class AuthService {
     }
   }
 
-  /// Logout user and clear all stored credentials
   Future<void> logout() async {
     debugPrint('🚪 Logging out...');
+    _token = null;
     await _storage.delete(key: 'jwt');
     await _storage.delete(key: 'user_role');
-    debugPrint('✅ Logout complete');
+
+    // ✅ Clear User ID on logout
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('userId');
+    debugPrint('✅ Logout complete - cleared userId');
   }
 
-  /// Get stored JWT token
   Future<String?> getToken() async {
-    final token = await _storage.read(key: 'jwt');
-    if (token != null) {
-      debugPrint('🔑 Using auth token: ${token.substring(0, 20)}...');
-    } else {
-      debugPrint('! No auth token found - API calls may fail');
+    // Return memory token for better performance
+    if (_token != null) {
+      debugPrint('🔑 Using cached token');
+      return _token;
     }
-    return token;
+
+    _token = await _storage.read(key: 'jwt');
+    if (_token != null) {
+      debugPrint('🔑 Loaded token from storage');
+    } else {
+      debugPrint('⚠️ No auth token found');
+    }
+    return _token;
   }
 
-  /// Get user role from storage
+  /// Get user role
   Future<String?> getUserRole() async {
     return _storage.read(key: 'user_role');
   }
 
   /// Get current user profile
+  /// ✅ FIXED: Changed from /auth/me to /auth/profile
   Future<Map<String, dynamic>?> profile() async {
     final token = await getToken();
     if (token == null) {
@@ -146,7 +192,6 @@ class AuthService {
         debugPrint(
           '⚠️ Profile endpoint returned: ${resp.statusCode} - ${resp.body}',
         );
-        return null;
       }
     } on SocketException catch (e) {
       debugPrint('❌ Network error in profile: ${e.message}');
@@ -158,6 +203,7 @@ class AuthService {
       debugPrint('❌ AuthService.profile error: $e');
       return null;
     }
+    return null;
   }
 
   /// Register a new user
@@ -228,6 +274,7 @@ class AuthService {
 
   /// Submits the 4-step sitter setup form
   Future<void> submitSitterSetup(Map<String, dynamic> setupData) async {
+    // 1. Get the stored token
     final token = await getToken();
     if (token == null) {
       throw Exception('Not authenticated. Please log in.');
@@ -302,5 +349,12 @@ class AuthService {
   Future<bool> validateToken() async {
     final profile = await this.profile();
     return profile != null;
+  }
+
+  // Add this method to get the ID from storage
+  Future<int?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Assuming you saved 'userId' or 'id' during login
+    return prefs.getInt('userId');
   }
 }

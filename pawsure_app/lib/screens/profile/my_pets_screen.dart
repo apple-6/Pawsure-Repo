@@ -301,12 +301,13 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
     );
   }
 
-  /// Builds the Pet Card with improved image loading and fallback logic.
+  /// Builds the Pet Card with robust image loading and fallback logic.
   Widget _buildPetCard(BuildContext context, Pet pet) {
-    // Check if the URL is valid/present to decide the image source
+    // 1. Improved URL Validation
     final bool hasValidPhotoUrl =
-        pet.photoUrl?.isNotEmpty == true &&
-        !pet.photoUrl!.contains('your-supabase-url') &&
+        pet.photoUrl != null &&
+        pet.photoUrl!.isNotEmpty &&
+        pet.photoUrl!.startsWith('http') &&
         !pet.photoUrl!.contains('undefined');
 
     return Padding(
@@ -323,28 +324,41 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
             padding: const EdgeInsets.all(12.0),
             child: Row(
               children: [
-                // Pet Photo/Avatar with Fallback
-                CircleAvatar(
-                  radius: 36,
-                  backgroundColor: Colors.green.shade100,
-                  backgroundImage: hasValidPhotoUrl
-                      ? NetworkImage(pet.photoUrl!)
-                      : null,
-                  onBackgroundImageError: hasValidPhotoUrl
-                      ? (exception, stackTrace) {
-                          debugPrint('Error loading image: $exception');
-                        }
-                      : null,
-                  child: !hasValidPhotoUrl
-                      ? Text(
-                          pet.name.isNotEmpty ? pet.name[0].toUpperCase() : 'P',
-                          style: TextStyle(
-                            fontSize: 28,
-                            color: Colors.green.shade700,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      : null,
+                // --- FIXED PHOTO AREA ---
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: ClipOval(
+                    child: hasValidPhotoUrl
+                        ? Image.network(
+                            pet.photoUrl!,
+                            fit: BoxFit.cover,
+                            // Proper loading state
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  value:
+                                      loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
+                            },
+                            // Proper error state (Fallback to Initial)
+                            errorBuilder: (context, error, stackTrace) {
+                              debugPrint('❌ Image Load Error: $error');
+                              return _buildInitialFallback(pet.name);
+                            },
+                          )
+                        : _buildInitialFallback(pet.name),
+                  ),
                 ),
                 const SizedBox(width: 16),
 
@@ -363,14 +377,9 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        pet.species?.isNotEmpty == true &&
-                                pet.breed?.isNotEmpty == true
+                        (pet.species != null && pet.breed != null)
                             ? '${pet.species} • ${pet.breed}'
-                            : pet.species?.isNotEmpty == true
-                            ? pet.species!
-                            : pet.breed?.isNotEmpty == true
-                            ? pet.breed!
-                            : 'Pet',
+                            : (pet.species ?? pet.breed ?? 'Pet'),
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade600,
@@ -380,7 +389,7 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
                   ),
                 ),
 
-                // Edit Mode Icon (Remove button)
+                // Edit Mode Icon
                 if (_isEditMode)
                   IconButton(
                     icon: const Icon(
@@ -388,13 +397,25 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
                       color: Colors.red,
                       size: 30,
                     ),
-                    onPressed: () {
-                      _handleRemovePet(pet.id, pet.name);
-                    },
+                    onPressed: () => _handleRemovePet(pet.id, pet.name),
                   ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // Helper widget to show the first letter of the pet's name
+  Widget _buildInitialFallback(String name) {
+    return Center(
+      child: Text(
+        name.isNotEmpty ? name[0].toUpperCase() : 'P',
+        style: TextStyle(
+          fontSize: 28,
+          color: Colors.green.shade700,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );

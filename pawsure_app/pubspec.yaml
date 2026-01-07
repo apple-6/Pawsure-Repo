@@ -28,7 +28,7 @@ dependencies:
   intl: ^0.20.2
 
   # Storage
-  shared_preferences: ^2.5.3
+  shared_preferences: ^2.5.4
 
   # To pick files from the device
   file_picker: ^10.3.3 
@@ -38,6 +38,13 @@ dependencies:
   google_maps_flutter: ^2.10.0
   permission_handler: ^11.3.1
   fl_chart: ^0.69.2
+
+  # display media
+  carousel_slider: ^5.0.0
+
+  # message
+  socket_io_client: ^2.0.3+1
+  http_parser: ^4.1.2
 
 dev_dependencies:
   flutter_test:

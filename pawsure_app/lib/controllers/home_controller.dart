@@ -8,7 +8,7 @@ import 'package:pawsure_app/services/activity_service.dart';
 import 'package:pawsure_app/models/activity_log_model.dart';
 
 class HomeController extends GetxController {
-  // 🔧 Use centralized PetController
+  // 🔧 Use centralized PetController (Retained from your side for consistency)
   PetController get _petController => Get.find<PetController>();
 
   // 🆕 Activity Service

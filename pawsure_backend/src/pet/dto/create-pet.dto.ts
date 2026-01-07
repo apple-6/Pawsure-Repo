@@ -1,4 +1,3 @@
-//pawsure_backend\src\pet\dto\create-pet.dto.ts
 import {
   IsString,
   IsNotEmpty,
@@ -8,7 +7,6 @@ import {
   IsArray,
   Min,
   Max,
-  IsIn,
 } from 'class-validator';
 
 export class CreatePetDto {
@@ -33,9 +31,32 @@ export class CreatePetDto {
   @Min(0)
   weight?: number;
 
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  height?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(1)
+  @Max(5)
+  body_condition_score?: number;
+
+  @IsArray()
+  @IsOptional()
+  weight_history?: { date: string; weight: number }[];
+
   @IsString()
   @IsOptional()
   allergies?: string;
+
+  @IsString()
+  @IsOptional()
+  food_brand?: string;
+
+  @IsString()
+  @IsOptional()
+  daily_food_amount?: string;
 
   @IsArray()
   @IsOptional()
@@ -54,11 +75,6 @@ export class CreatePetDto {
   @IsString()
   @IsOptional()
   photoUrl?: string;
-
-  @IsString()
-@IsOptional()
-@IsIn(['sterilized', 'not_sterilized', 'unknown'])
-sterilization_status?: string;
 
   @IsNumber()
   @IsNotEmpty()

@@ -13,9 +13,10 @@ class BookingService {
     required double totalAmount,
     required String sitterId,
     required int petId,
-    required String dropOffTime, // 🆕 Required
-    required String pickUpTime, // 🆕 Required
+    required String dropOffTime,
+    required String pickUpTime,
     String? message,
+    int? paymentMethodId,
   }) async {
     try {
       final authService = Get.find<AuthService>();
@@ -33,9 +34,10 @@ class BookingService {
           'total_amount': totalAmount,
           'sitterId': int.parse(sitterId),
           'petId': petId,
-          'drop_off_time': dropOffTime, // 🆕 Added to payload
-          'pick_up_time': pickUpTime, // 🆕 Added to payload
+          'drop_off_time': dropOffTime,
+          'pick_up_time': pickUpTime,
           'message': message,
+          if (paymentMethodId != null) 'payment_method_id': paymentMethodId,
         }),
       );
 

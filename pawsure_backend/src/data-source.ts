@@ -16,7 +16,10 @@ import { Like } from './likes/likes.entity';
 import { ActivityLog } from './activity-log/activity-log.entity';
 import { HealthRecord } from './health-record/health-record.entity';
 import { Payment } from './payment/payment.entity';
+import { PaymentMethod } from './payment-method/payment-method.entity';
 import { Event } from './events/entities/event.entity';
+import { PostMedia } from './posts/post-media.entity';
+
 
 // This is the configuration for the CLI
 const AppDataSource = new DataSource({
@@ -49,7 +52,9 @@ const AppDataSource = new DataSource({
     ActivityLog,
     HealthRecord,
     Payment,
-    Event
+    PaymentMethod,
+    Event,
+    PostMedia
   ],
   
   migrations: [__dirname + '/migrations/*.ts'],

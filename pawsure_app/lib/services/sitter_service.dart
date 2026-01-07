@@ -3,7 +3,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:flutter/material.dart'; // Required for 'required' keyword in older Dart versions
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pawsure_app/constants/api_endpoints.dart';
 import 'package:pawsure_app/screens/community/sitter_model.dart';
@@ -81,21 +82,33 @@ class SitterService {
 
   /// Fetches ALL sitters, typically used when no date filter is applied.
   Future<List<Sitter>> fetchSitters() async {
-    final uri = Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.sitters}');
-    final response = await _client.get(uri);
+    try {
+      final uri = Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.sitters}');
+      debugPrint('🔍 Fetching sitters from: $uri');
+      
+      final response = await _client.get(uri);
+      debugPrint('📦 Sitter API Response: ${response.statusCode}');
 
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to load sitters (${response.statusCode}): ${response.body}',
-      );
+      if (response.statusCode != 200) {
+        debugPrint('❌ Failed to load sitters: ${response.body}');
+        throw Exception(
+          'Failed to load sitters (${response.statusCode}): ${response.body}',
+        );
+      }
+
+      debugPrint('📦 Sitter Response Body: ${response.body}');
+      final decodedBody = jsonDecode(response.body);
+      if (decodedBody is! List) {
+        throw Exception('Unexpected response for sitters list');
+      }
+
+      debugPrint('✅ Parsing ${decodedBody.length} sitters');
+      return Sitter.fromJsonList(decodedBody);
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error fetching sitters: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
     }
-
-    final decodedBody = jsonDecode(response.body);
-    if (decodedBody is! List) {
-      throw Exception('Unexpected response for sitters list');
-    }
-
-    return Sitter.fromJsonList(decodedBody);
   }
 
   /**
@@ -106,35 +119,47 @@ class SitterService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    // 1. Format dates for the backend (e.g., '2025-12-10')
-    final formattedStartDate = DateFormat('yyyy-MM-dd').format(startDate);
-    final formattedEndDate = DateFormat('yyyy-MM-dd').format(endDate);
+    try {
+      // 1. Format dates for the backend (e.g., '2025-12-10')
+      final formattedStartDate = DateFormat('yyyy-MM-dd').format(startDate);
+      final formattedEndDate = DateFormat('yyyy-MM-dd').format(endDate);
 
-    // 2. Build the URI with query parameters
-    final uri = Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.sitterSearch}')
-        .replace(
-          queryParameters: {
-            'startDate': formattedStartDate,
-            'endDate': formattedEndDate,
-          },
+      // 2. Build the URI with query parameters
+      final uri = Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.sitterSearch}')
+          .replace(
+            queryParameters: {
+              'startDate': formattedStartDate,
+              'endDate': formattedEndDate,
+            },
+          );
+
+      debugPrint('🔍 Searching sitters by range: $uri');
+
+      // 3. Send the request
+      final response = await _client.get(uri);
+      debugPrint('📦 Sitter Search Response: ${response.statusCode}');
+
+      if (response.statusCode != 200) {
+        final errorBody = json.decode(response.body);
+        debugPrint('❌ Search failed: ${errorBody['message']}');
+        throw Exception(
+          'Failed to search sitters by range: ${errorBody['message'] ?? response.statusCode}',
         );
+      }
 
-    // 3. Send the request
-    final response = await _client.get(uri);
+      debugPrint('📦 Search Response Body: ${response.body}');
+      final decodedBody = jsonDecode(response.body);
+      if (decodedBody is! List) {
+        throw Exception('Unexpected response format for filtered sitters.');
+      }
 
-    if (response.statusCode != 200) {
-      final errorBody = json.decode(response.body);
-      throw Exception(
-        'Failed to search sitters by range: ${errorBody['message'] ?? response.statusCode}',
-      );
+      debugPrint('✅ Found ${decodedBody.length} available sitters');
+      return Sitter.fromJsonList(decodedBody);
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error searching sitters: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
     }
-
-    final decodedBody = jsonDecode(response.body);
-    if (decodedBody is! List) {
-      throw Exception('Unexpected response format for filtered sitters.');
-    }
-
-    return Sitter.fromJsonList(decodedBody);
   }
 
   // --- Removed _buildUri as it's no longer necessary with the new methods ---

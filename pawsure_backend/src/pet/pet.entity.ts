@@ -36,8 +36,23 @@ export class Pet {
   @Column({ type: 'double precision', nullable: true })
   weight: number;
 
+  @Column({ type: 'double precision', nullable: true })
+  height: number;
+
+  @Column({ type: 'int', nullable: true })
+  body_condition_score: number;
+
+  @Column({ type: 'jsonb', nullable: true })
+  weight_history: { date: string; weight: number }[];
+
   @Column({ type: 'text', nullable: true })
   allergies: string;
+
+  @Column({ nullable: true })
+  food_brand: string;
+
+  @Column({ nullable: true })
+  daily_food_amount: string;
 
   @Column({ type: 'simple-array', nullable: true })
   vaccination_dates: string[];
@@ -53,9 +68,6 @@ export class Pet {
 
   @Column({ nullable: true })
   photoUrl: string;
-
-  @Column({ default: 'unknown', nullable: true })
-sterilization_status: string;
 
   @Column()
   ownerId: number;

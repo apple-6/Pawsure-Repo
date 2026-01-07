@@ -1,24 +1,15 @@
+// posts.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Post } from './posts.entity';
+import { PostsController } from './posts.controller';
 import { PostsService } from './posts.service';
-import { PetService } from '../pet/pet.service';
-import { PetController } from '../pet/pet.controller';
-import { Pet } from '../pet/pet.entity';
+import { Post } from './posts.entity';
+import { PostMedia } from './post-media.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Post])],
+  imports: [TypeOrmModule.forFeature([Post, PostMedia])],
+  controllers: [PostsController],
   providers: [PostsService],
-  exports: [PostsService]
+  exports: [PostsService],
 })
 export class PostsModule {}
-
-
-
-
-
-
-
-
-
-
