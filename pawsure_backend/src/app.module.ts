@@ -23,8 +23,9 @@ import { RoleModule } from './role/role.module';
 import { AuthModule } from './auth/auth.module';
 import { FileService } from './file/file.service';
 import { FileModule } from './file/file.module';
-import { EventsModule } from './events/events.module'; // 👈 Correct Import
+import { EventsModule } from './events/events.module';
 import { ChatModule } from './chat/chat.module';
+import { MoodLogModule } from './mood-log/mood-log.module';
 
 @Module({
   imports: [
@@ -63,8 +64,9 @@ import { ChatModule } from './chat/chat.module';
     FileModule,
     RoleModule,
     AuthModule,
-    EventsModule, // 👈 Added here
+    EventsModule,
     ChatModule,
+    MoodLogModule, // 🆕 Mood & Streak tracking
   ],
   controllers: [AppController],
   providers: [AppService, FileService],

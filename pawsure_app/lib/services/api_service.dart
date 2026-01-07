@@ -1217,4 +1217,141 @@ class ApiService {
       rethrow;
     }
   }
+
+  // ========================================================================
+  // MOOD & STREAK API
+  // ========================================================================
+
+  /// POST /pets/:petId/mood - Log a mood for the pet
+  Future<Map<String, dynamic>> logMood({
+    required int petId,
+    required int moodScore,
+    String? moodLabel,
+    String? notes,
+  }) async {
+    try {
+      debugPrint('😊 API: POST $apiBaseUrl/pets/$petId/mood');
+
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/pets/$petId/mood'),
+        headers: headers,
+        body: jsonEncode({
+          'mood_score': moodScore,
+          if (moodLabel != null) 'mood_label': moodLabel,
+          if (notes != null) 'notes': notes,
+        }),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        debugPrint('✅ Mood logged! Streak: ${data['streak']}');
+        return data;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to log mood (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in logMood: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /pets/:petId/mood/today - Get today's mood
+  Future<Map<String, dynamic>?> getTodayMood(int petId) async {
+    try {
+      debugPrint('📅 API: GET $apiBaseUrl/pets/$petId/mood/today');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/pets/$petId/mood/today'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (data['logged'] == true) {
+          return data['mood'] as Map<String, dynamic>?;
+        }
+        return null;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error in getTodayMood: $e');
+      return null;
+    }
+  }
+
+  /// GET /pets/:petId/mood/history?days=30 - Get mood history
+  Future<List<Map<String, dynamic>>> getMoodHistory(int petId, {int days = 30}) async {
+    try {
+      debugPrint('📊 API: GET $apiBaseUrl/pets/$petId/mood/history?days=$days');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/pets/$petId/mood/history?days=$days'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final history = data['history'] as List<dynamic>;
+        return history.map((e) => e as Map<String, dynamic>).toList();
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      return [];
+    } catch (e) {
+      debugPrint('❌ Error in getMoodHistory: $e');
+      return [];
+    }
+  }
+
+  /// GET /pets/:petId/mood/streak - Get streak information
+  Future<Map<String, dynamic>> getStreakInfo(int petId) async {
+    try {
+      debugPrint('🔥 API: GET $apiBaseUrl/pets/$petId/mood/streak');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/pets/$petId/mood/streak'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      return {
+        'currentStreak': 0,
+        'totalDaysLogged': 0,
+        'lastActivityDate': null,
+      };
+    } catch (e) {
+      debugPrint('❌ Error in getStreakInfo: $e');
+      return {
+        'currentStreak': 0,
+        'totalDaysLogged': 0,
+        'lastActivityDate': null,
+      };
+    }
+  }
 }

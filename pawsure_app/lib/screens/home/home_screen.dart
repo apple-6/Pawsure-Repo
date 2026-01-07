@@ -255,12 +255,12 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Status Card
+                // Status Card (uses controller.currentStreak for real-time updates)
                 StatusCard(
                   petName: pet.name,
                   petType: pet.species ?? 'Pet',
                   currentMood: controller.currentMood.value,
-                  streak: pet.streak,
+                  streak: controller.currentStreak.value, // 🔥 Real-time streak from API
                   progress: controller.dailyProgress,
                   goals: controller.dailyGoals,
                 ),
