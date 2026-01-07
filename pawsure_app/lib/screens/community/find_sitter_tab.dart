@@ -29,6 +29,9 @@ class _FindSitterTabState extends State<FindSitterTab> {
   final TextEditingController _locationController = TextEditingController();
   final SitterService _sitterService = SitterService();
 
+  // ✅ ADDED: ScrollController to fix desktop crash
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -41,6 +44,7 @@ class _FindSitterTabState extends State<FindSitterTab> {
   void dispose() {
     _locationController.dispose();
     _sitterService.dispose();
+    _scrollController.dispose(); // ✅ Dispose the controller
     super.dispose();
   }
 
@@ -182,72 +186,78 @@ class _FindSitterTabState extends State<FindSitterTab> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // --- UPDATED: Pass both dates to the helper widget ---
-          _SearchBarsRow(
-            locationController: _locationController,
-            startDate: startDate,
-            endDate: endDate,
-            onSearch: () {
-              selectedLocation = _locationController.text;
-              _fetchAndFilterSitters();
-            },
-            onDateTap: () => _selectDateRange(context),
-          ),
-          // ----------------------------------------------------
-          // REMOVED: const SizedBox(height: 16),
-          // REMOVED: const _MapViewPlaceholder(),
-          const SizedBox(
-            height: 24,
-          ), // Retained/Adjusted for spacing after search row
-          Text(
-            'Available Sitters (${availableSitters.length})',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          if (errorMessage != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: Text(
-                errorMessage!,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
-                  fontSize: 13,
+    // ✅ WRAP in Scrollbar with controller
+    return Scrollbar(
+      controller: _scrollController,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        controller: _scrollController, // ✅ Attach controller to scroll view
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- UPDATED: Pass both dates to the helper widget ---
+            _SearchBarsRow(
+              locationController: _locationController,
+              startDate: startDate,
+              endDate: endDate,
+              onSearch: () {
+                selectedLocation = _locationController.text;
+                _fetchAndFilterSitters();
+              },
+              onDateTap: () => _selectDateRange(context),
+            ),
+            // ----------------------------------------------------
+            // REMOVED: const SizedBox(height: 16),
+            // REMOVED: const _MapViewPlaceholder(),
+            const SizedBox(
+              height: 24,
+            ), // Retained/Adjusted for spacing after search row
+            Text(
+              'Available Sitters (${availableSitters.length})',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            if (errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Text(
+                  errorMessage!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 13,
+                  ),
                 ),
               ),
-            ),
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : availableSitters.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40.0),
-                  child: Center(
-                    child: Text(
-                      'No sitters found matching your criteria.',
-                      style: TextStyle(color: Colors.grey, fontSize: 16),
-                    ),
-                  ),
-                )
-              : Column(
-                  children: availableSitters.map((sitter) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: SitterCard(
-                        sitter: sitter,
-                        onClick: (id) {
-                          widget.onSitterClick(id, startDate, endDate);
-                        },
+            isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : availableSitters.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40.0),
+                    child: Center(
+                      child: Text(
+                        'No sitters found matching your criteria.',
+                        style: TextStyle(color: Colors.grey, fontSize: 16),
                       ),
-                    );
-                  }).toList(),
-                ),
-        ],
+                    ),
+                  )
+                : Column(
+                    children: availableSitters.map((sitter) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: SitterCard(
+                          sitter: sitter,
+                          onClick: (id) {
+                            widget.onSitterClick(id, startDate, endDate);
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+          ],
+        ),
       ),
     );
   }

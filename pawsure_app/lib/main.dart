@@ -1,8 +1,10 @@
+//pawsure_app\lib\main.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // Added for Supabase
 import 'constants/api_config.dart'; // Added to access your URL/Key
 import 'bindings/initial_bindings.dart';
+import 'controllers/navigation_controller.dart';
 
 // Screens
 import 'screens/auth/onboarding_screen.dart';
@@ -28,6 +30,11 @@ Future<void> main() async {
 
   debugPrint('[DEBUG] PawsureApp: Starting main()');
 
+  // ✅ Register NavigationController FIRST (before InitialBindings)
+  // Retained from HEAD to ensure navigation logic works
+  Get.put(NavigationController(), permanent: true);
+  debugPrint('✅ NavigationController registered globally');
+
   // 3. Start the application
   runApp(const PawsureApp());
 }
@@ -47,7 +54,7 @@ class PawsureApp extends StatelessWidget {
         useMaterial3: true,
       ),
 
-      // Your existing GetX logic remains untouched
+      // ✅ InitialBindings loads all services and controllers in correct order
       initialBinding: InitialBindings(),
 
       home: const OnboardingScreen(),
@@ -64,7 +71,8 @@ class PawsureApp extends StatelessWidget {
         GetPage(name: '/home', page: () => const MainNavigation()),
         GetPage(name: '/calendar', page: () => const CalendarScreen()),
         GetPage(
-          name: '/health/add-record', // 👈 CRITICAL: This was missing!
+          name:
+              '/health/add-record', // 👈 CRITICAL: Retained your specific route
           page: () => const AddHealthRecordScreen(),
         ),
       ],
