@@ -8,7 +8,7 @@ import 'package:pawsure_app/services/activity_service.dart';
 import 'package:pawsure_app/models/activity_log_model.dart';
 
 class HomeController extends GetxController {
-  // 🔧 Use centralized PetController (Retained from your side for consistency)
+  // 🔧 Use centralized PetController
   PetController get _petController => Get.find<PetController>();
 
   // 🆕 Activity Service
@@ -211,5 +211,14 @@ class HomeController extends GetxController {
     todayActivityStats.value = null;
     isLoadingActivityStats.value = false;
     debugPrint('✅ HomeController state reset');
+  }
+
+  // ✅ ADDED THIS METHOD TO FIX THE ERROR
+  // MainNavigation.dart calls this, but PetController handles loading now.
+  // We keep this empty wrapper to satisfy the compiler.
+  Future<void> loadPets() async {
+    debugPrint(
+      '⚠️ loadPets called in HomeController - delegated to PetController logic',
+    );
   }
 }
