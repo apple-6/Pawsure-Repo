@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import 'dart:io'; // Required for Platform check
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:get/get.dart';
+import 'package:pawsure_app/services/auth_service.dart';
 
 class CreateVacancyModal extends StatefulWidget {
   final VoidCallback onVacancyCreated;
@@ -25,33 +27,59 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
   bool _isLoading = true;
   bool _isSubmitting = false;
 
+  // ✅ Smart URL Getter (Works on Windows & Android)
+  String get apiBaseUrl {
+    if (Platform.isAndroid) {
+      return 'http://10.0.2.2:3000';
+    }
+    return 'http://127.0.0.1:3000';
+  }
+
   @override
   void initState() {
     super.initState();
     _fetchMyPets();
-    // Rebuilds the UI to update the "Total Est. Payout" as the user types
     _rateController.addListener(() => setState(() {}));
   }
 
-  Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token');
+  // ✅ 1. Standardized Headers Helper (Like ActivityService)
+  Future<Map<String, String>> _getHeaders() async {
+    final headers = {
+      'Content-Type': 'application/json; charset=UTF-8',
+      'Accept': 'application/json',
+    };
+    try {
+      // Uses the AuthService you injected in main.dart
+      if (Get.isRegistered<AuthService>()) {
+        final authService = Get.find<AuthService>();
+        final token = await authService.getToken();
+        if (token != null && token.isNotEmpty) {
+          headers['Authorization'] = 'Bearer $token';
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Header Error: $e');
+    }
+    return headers;
   }
 
+  // ✅ 2. Fetch Pets using the Service Pattern
   Future<void> _fetchMyPets() async {
     try {
-      final token = await _getToken();
-      if (token == null || token.isEmpty) {
+      final headers = await _getHeaders();
+
+      // Check if we have auth (headers will contain Authorization if logged in)
+      if (!headers.containsKey('Authorization')) {
+        debugPrint('⚠️ No Auth Token found');
         if (mounted) setState(() => _isLoading = false);
         return;
       }
 
+      debugPrint('🐶 Fetching pets from: $apiBaseUrl/pets');
+
       final response = await http.get(
-        Uri.parse('http://localhost:3000/pets'),
-        headers: {
-          'Authorization': 'Bearer ${token.trim()}',
-          'Content-Type': 'application/json',
-        },
+        Uri.parse('$apiBaseUrl/pets'),
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -63,9 +91,11 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
           });
         }
       } else {
+        debugPrint('❌ API Error: ${response.statusCode} - ${response.body}');
         if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
+      debugPrint('❌ Connection Failed: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -103,10 +133,10 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
     }
     final days = _endDate!.difference(_startDate!).inDays;
     final dailyRate = double.tryParse(_rateController.text) ?? 0.0;
-    // Calculation: Rate * number of nights
     return (days * dailyRate).toStringAsFixed(2);
   }
 
+  // ✅ 3. Submit using the Service Pattern
   Future<void> _submitVacancy() async {
     if (_startDate == null ||
         _endDate == null ||
@@ -114,7 +144,8 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
         _rateController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Please fill in all fields (dates, pets, and rate)')),
+          content: Text('Please fill in all fields (dates, pets, and rate)'),
+        ),
       );
       return;
     }
@@ -122,13 +153,12 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
     setState(() => _isSubmitting = true);
 
     try {
-      final token = await _getToken();
+      final headers = await _getHeaders();
+      debugPrint('🚀 Posting vacancy to: $apiBaseUrl/posts');
+
       final response = await http.post(
-        Uri.parse('http://localhost:3000/posts'),
-        headers: {
-          'Authorization': 'Bearer ${token?.trim()}',
-          'Content-Type': 'application/json',
-        },
+        Uri.parse('$apiBaseUrl/posts'),
+        headers: headers,
         body: json.encode({
           'content': _captionController.text.trim(),
           'rate_per_night': double.tryParse(_rateController.text) ?? 0.0,
@@ -160,7 +190,6 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      // Ensure the modal doesn't take up the full screen height
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.85,
       ),
@@ -168,38 +197,43 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
         left: 20,
         right: 20,
         top: 20,
-        // Pushes the modal up when the keyboard appears
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: _isLoading
           ? const SizedBox(
-              height: 200, child: Center(child: CircularProgressIndicator()))
+              height: 200,
+              child: Center(child: CircularProgressIndicator()),
+            )
           : Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Fixed Header
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text("Create Sitter Vacancy",
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    const Text(
+                      "Create Sitter Vacancy",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context)),
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
                   ],
                 ),
                 const Divider(),
-
-                // Scrollable Form Area
                 Flexible(
                   child: SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 10),
-                        const Text("Description",
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text(
+                          "Description",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         const SizedBox(height: 8),
                         TextField(
                           controller: _captionController,
@@ -211,13 +245,16 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        const Text("Rate per Night",
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text(
+                          "Rate per Night",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         const SizedBox(height: 8),
                         TextField(
                           controller: _rateController,
                           keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
+                            decimal: true,
+                          ),
                           decoration: const InputDecoration(
                             prefixIcon: Icon(Icons.attach_money, size: 20),
                             hintText: "Enter amount",
@@ -225,12 +262,16 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        const Text("Select Pets",
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text(
+                          "Select Pets",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         const SizedBox(height: 10),
                         _myPets.isEmpty
-                            ? const Text("No pets found.",
-                                style: TextStyle(color: Colors.grey))
+                            ? const Text(
+                                "No pets found.",
+                                style: TextStyle(color: Colors.grey),
+                              )
                             : Wrap(
                                 spacing: 8.0,
                                 children: _myPets.map((pet) {
@@ -245,14 +286,17 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                                 }).toList(),
                               ),
                         const SizedBox(height: 20),
-                        const Text("Dates Needed",
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text(
+                          "Dates Needed",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         const SizedBox(height: 10),
                         ListTile(
                           onTap: _selectDateRange,
                           tileColor: Colors.grey.shade100,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           leading: const Icon(Icons.calendar_month),
                           title: Text(
                             _startDate == null
@@ -271,8 +315,6 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                     ),
                   ),
                 ),
-
-                // Fixed Post Button
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
@@ -288,9 +330,14 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                             height: 20,
                             width: 20,
                             child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2))
-                        : const Text("Post Vacancy",
-                            style: TextStyle(fontSize: 16)),
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            "Post Vacancy",
+                            style: TextStyle(fontSize: 16),
+                          ),
                   ),
                 ),
               ],
@@ -302,19 +349,25 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-          color: Colors.blue.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.blue.withOpacity(0.2))),
+        color: Colors.blue.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.withOpacity(0.2)),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text("Total Est. Payout:",
-              style: TextStyle(fontWeight: FontWeight.w600)),
-          Text("\$${_calculateTotal()}",
-              style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue)),
+          const Text(
+            "Total Est. Payout:",
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          Text(
+            "\$${_calculateTotal()}",
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.blue,
+            ),
+          ),
         ],
       ),
     );
