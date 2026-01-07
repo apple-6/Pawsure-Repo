@@ -15,6 +15,8 @@ class BookingModal extends StatefulWidget {
   final DateTime? startDate;
   final DateTime? endDate;
 
+  final List<Map<String, dynamic>> services;
+
   const BookingModal({
     super.key,
     required this.sitterId,
@@ -22,6 +24,7 @@ class BookingModal extends StatefulWidget {
     required this.ratePerNight,
     this.startDate,
     this.endDate,
+    this.services = const [],
   });
 
   @override
@@ -33,6 +36,7 @@ class _BookingModalState extends State<BookingModal> {
   final TextEditingController _messageController = TextEditingController();
   final PetController _petController = Get.find<PetController>();
   final BookingController _bookingController = Get.put(BookingController());
+  final Set<int> _selectedServiceIndices = {};
 
   Pet? _selectedPet;
   TimeOfDay _dropOffTime = const TimeOfDay(hour: 9, minute: 0);
@@ -108,9 +112,28 @@ class _BookingModalState extends State<BookingModal> {
 
   double get _totalPrice {
     if (widget.startDate == null || widget.endDate == null) return 0.0;
-    final duration = widget.endDate!.difference(widget.startDate!).inDays;
-    final days = duration <= 0 ? 1 : duration;
-    return days * widget.ratePerNight;
+
+    final difference = widget.endDate!.difference(widget.startDate!).inDays;
+    final days = difference <= 0 ? 1 : difference;
+
+    double total = 0.0; 
+
+    for (int index in _selectedServiceIndices) {
+      if (index < widget.services.length) {
+        final service = widget.services[index];
+
+        final price = double.tryParse(service['price'].toString()) ?? 0.0;
+        final unit = service['unit']?.toString().toLowerCase() ?? '';
+
+        if (unit.contains('night') || unit.contains('day') || unit.contains('daily')) {
+          total += (price * days);
+        } else {
+          total += price;
+        }
+      }
+    }
+
+    return total;
   }
 
   Future<void> _submitBooking() async {
@@ -273,25 +296,7 @@ class _BookingModalState extends State<BookingModal> {
                                 ],
                               ),
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                const Text(
-                                  "Rate",
-                                  style: TextStyle(
-                                    color: Colors.black54,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                Text(
-                                  "RM${widget.ratePerNight.toStringAsFixed(0)}/night",
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF059669),
-                                  ),
-                                ),
-                              ],
-                            ),
+                           
                           ],
                         ),
                       ),
@@ -382,6 +387,9 @@ class _BookingModalState extends State<BookingModal> {
                       ),
 
                       const SizedBox(height: 24),
+
+                      _buildServiceSelector(),
+
                       const Text(
                         "Pet & Notes",
                         style: TextStyle(
@@ -474,52 +482,59 @@ class _BookingModalState extends State<BookingModal> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    SizedBox(
-                      height: 56,
-                      width: 180,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _submitBooking,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF34D399),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                    // 2. Button Section (Takes ~60% width)
+                    Expanded(
+                      flex: 3,
+                      child: SizedBox(
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _submitBooking,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF34D399),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                           ),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.payment, size: 20),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    "Pay & Book Now",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
                                   ),
-                                ],
-                              ),
+                                )
+                              : FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      Icon(Icons.payment, size: 20),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        "Pay & Book Now",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
+          ], // This closes the Column's children
+        ), // This closes the Column
+      ), // This closes the Padding
+    ); // This closes the main Container
   }
 
   // Helper Widget for Date display
@@ -873,6 +888,112 @@ class _BookingModalState extends State<BookingModal> {
           ),
         ],
       ),
+    );
+  }
+
+  // --- NEW: Widget to display fetch services ---
+  Widget _buildServiceSelector() {
+    // Hide section if no services are passed
+    if (widget.services.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Add-on Services",
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Generate list of service cards
+        ...List.generate(widget.services.length, (index) {
+          final service = widget.services[index];
+          final isSelected = _selectedServiceIndices.contains(index);
+          
+          // formatting data
+          final priceVal = double.tryParse(service['price'].toString()) ?? 0.0;
+          final unit = service['unit'] ?? '';
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  if (isSelected) {
+                    _selectedServiceIndices.remove(index);
+                  } else {
+                    _selectedServiceIndices.add(index);
+                  }
+                });
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  // Use your lighter green for selected background
+                  color: isSelected ? const Color(0xFFF0FDF4) : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    // Use your brand green for selected border
+                    color: isSelected ? const Color(0xFF34D399) : Colors.grey[200]!,
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // Icon Box
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFF34D399) : Colors.grey[100],
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.cleaning_services_outlined, // Or Icons.add_task
+                        size: 20,
+                        color: isSelected ? Colors.white : Colors.grey[500],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Text Details
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            service['name'] ?? 'Service',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isSelected ? Colors.black87 : Colors.black54,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            "RM ${priceVal.toStringAsFixed(0)} $unit", 
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              // Use your darker green for price text
+                              color: isSelected ? const Color(0xFF059669) : Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Checkmark Icon
+                    if (isSelected)
+                      const Icon(Icons.check_circle, color: Color(0xFF34D399), size: 20),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+        const SizedBox(height: 12), // Spacing before next section
+      ],
     );
   }
 }

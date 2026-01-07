@@ -169,7 +169,13 @@ String? rawFilename;
               0.0;
 
           final String bio = data['bio'] ?? 'No bio available';
-          final String houseType = data['houseType'] ?? 'Apartment';
+          // 1. Fetch the raw string from the database (e.g., "condo", "apartment")
+String rawHouseType = data['houseType']?.toString() ?? 'Apartment';
+
+// 2. Capitalize the first letter (e.g., convert "condo" -> "Condo")
+final String houseType = rawHouseType.isNotEmpty
+    ? "${rawHouseType[0].toUpperCase()}${rawHouseType.substring(1)}"
+    : rawHouseType;
 
           final int bookingsLen = (data['bookings'] as List? ?? []).length;
           final String bookingsCompleted = "$bookingsLen+ bookings";
@@ -177,41 +183,51 @@ String? rawFilename;
           // final String servicesString =
           //     data['services'] ?? "House Sitting,Dog Walking";
 
-// --- MODIFIED: PARSE SERVICES FROM DATABASE JSON ---
-          List<String> serviceNames = [];
+// --- MODIFIED: PARSE SERVICES (Now captures Price & Unit) ---
+          List<Map<String, dynamic>> servicesList = [];
           final dynamic rawServices = data['services'];
 
           if (rawServices is List) {
-            // Case 1: Database returns a JSON List (e.g., [{"name": "Pet Boarding", ...}])
+            // Case 1: Database returns a JSON List
             for (var item in rawServices) {
               if (item is Map && item['name'] != null) {
-                // Check 'isActive' field from your DB (default to true if missing)
                 if (item['isActive'] != false) {
-                  serviceNames.add(item['name'].toString());
+                  servicesList.add({
+                    'name': item['name'].toString(),
+                    'price': item['price']?.toString() ??
+                        price.toStringAsFixed(0), // Fallback to base price
+                    'unit': item['unit']?.toString() ?? '', // e.g. "/hr"
+                  });
                 }
               }
             }
           } else if (rawServices is String) {
-            // Case 2: Fallback for legacy comma-separated strings
+            // Case 2: Fallback for JSON strings
             if (rawServices.trim().startsWith('[')) {
-               // If it's a JSON string, decode it first (just in case)
-               try {
-                 final List decoded = jsonDecode(rawServices);
-                 for (var item in decoded) {
-                   if (item is Map && item['name'] != null && item['isActive'] != false) {
-                     serviceNames.add(item['name'].toString());
-                   }
-                 }
-               } catch (_) {}
-            } else {
-               // It's a simple comma string
-               serviceNames = rawServices.split(',').map((s) => s.trim()).toList();
+              try {
+                final List decoded = jsonDecode(rawServices);
+                for (var item in decoded) {
+                  if (item is Map &&
+                      item['name'] != null &&
+                      item['isActive'] != false) {
+                    servicesList.add({
+                      'name': item['name'].toString(),
+                      'price': item['price']?.toString() ?? price.toStringAsFixed(0),
+                      'unit': item['unit']?.toString() ?? '',
+                    });
+                  }
+                }
+              } catch (_) {}
             }
           }
 
           // Default fallback if nothing found
-          if (serviceNames.isEmpty) {
-            serviceNames = ["House Sitting", "Dog Walking"]; 
+          if (servicesList.isEmpty) {
+            servicesList.add({
+              'name': "House Sitting",
+              'price': price.toStringAsFixed(0),
+              'unit': '/night'
+            });
           }
 
 
@@ -363,60 +379,44 @@ String? rawFilename;
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.grey.shade200),
                         ),
-                        child: Column(
-                          children: [
-                            const Text(
-                              "Nightly Rate",
-                              style: TextStyle(color: Colors.grey),
+                        // Removed Column and price Text widgets, keeping only the button
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (context) => BookingModal(
+                                  sitterId: widget.sitterId,
+                                  sitterName: name,
+                                  ratePerNight: price,
+                                  startDate: widget.startDate,
+                                  endDate: widget.endDate,
+                                  services: servicesList,
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF34D399),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              elevation: 0,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "RM${price.toStringAsFixed(0)}",
-                              style: const TextStyle(
-                                fontSize: 28,
+                            child: const Text(
+                              "Book Now",
+                              style: TextStyle(
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF34D399),
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    backgroundColor: Colors.transparent,
-                                    builder: (context) => BookingModal(
-                                      sitterId: widget.sitterId,
-                                      sitterName: name,
-                                      ratePerNight: price,
-                                      startDate: widget.startDate,
-                                      endDate: widget.endDate,
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF34D399),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                child: const Text(
-                                  "Book Now",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
 
@@ -559,13 +559,19 @@ String? rawFilename;
                       // --- 6. Services Offered ---
                       _buildSectionCard(
                         title: "Services Offered",
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: serviceNames
-                              .where((s) => s.isNotEmpty)
-                              .map((service) => _buildChip(service))
-                              .toList(),
+                        child: Column(
+                          children: servicesList.map((service) {
+                            return Column(
+                              children: [
+                                _buildServiceRow(
+                                  service['name'],
+                                  "RM ${service['price']}${service['unit']}",
+                                  const Color(0xFF34D399), // Brand Green
+                                ),
+                                const Divider(height: 24),
+                              ],
+                            );
+                          }).toList(),
                         ),
                       ),
 
@@ -777,6 +783,26 @@ String? rawFilename;
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildServiceRow(String name, String price, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          name,
+          style: const TextStyle(fontSize: 15, color: Color(0xFF4B5563)),
+        ),
+        Text(
+          price,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: color,
+            fontSize: 15,
+          ),
+        ),
+      ],
     );
   }
 }
