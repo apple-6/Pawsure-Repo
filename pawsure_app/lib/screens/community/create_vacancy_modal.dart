@@ -262,9 +262,37 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        const Text(
-                          "Select Pets",
-                          style: TextStyle(fontWeight: FontWeight.bold),
+
+                        // ✅ UPDATED SELECT PETS SECTION WITH SELECT ALL
+                        // ✅ UPDATED SELECT PETS SECTION WITH SELECT ALL BUTTON
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              "Select Pets",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            if (_myPets.isNotEmpty)
+                              TextButton(
+                                onPressed: _toggleSelectAll,
+                                style: TextButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding:
+                                      EdgeInsets.zero, // Reduces extra spacing
+                                ),
+                                child: Text(
+                                  _selectedPetIds.length == _myPets.length
+                                      ? "Deselect All"
+                                      : "Select All",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Theme.of(context)
+                                        .primaryColor, // Matching your app theme
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                         const SizedBox(height: 10),
                         _myPets.isEmpty
@@ -274,6 +302,8 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                               )
                             : Wrap(
                                 spacing: 8.0,
+                                runSpacing:
+                                    4.0, // Added for better spacing if they wrap to multiple lines
                                 children: _myPets.map((pet) {
                                   final bool isSelected = _selectedPetIds
                                       .contains(pet['id'].toString());
@@ -282,9 +312,16 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                                     selected: isSelected,
                                     onSelected: (_) =>
                                         _togglePet(pet['id'].toString()),
+                                    // Optional: Match the chip color to your theme when selected
+                                    selectedColor: Theme.of(context)
+                                        .primaryColor
+                                        .withOpacity(0.2),
+                                    checkmarkColor:
+                                        Theme.of(context).primaryColor,
                                   );
                                 }).toList(),
                               ),
+
                         const SizedBox(height: 20),
                         const Text(
                           "Dates Needed",
@@ -378,5 +415,20 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
     _captionController.dispose();
     _rateController.dispose();
     super.dispose();
+  }
+
+  void _toggleSelectAll() {
+    setState(() {
+      if (_selectedPetIds.length == _myPets.length) {
+        // If all are already selected, clear the selection
+        _selectedPetIds.clear();
+      } else {
+        // Otherwise, add all pet IDs
+        _selectedPetIds.clear();
+        for (var pet in _myPets) {
+          _selectedPetIds.add(pet['id'].toString());
+        }
+      }
+    });
   }
 }
