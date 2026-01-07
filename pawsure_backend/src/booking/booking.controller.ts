@@ -48,4 +48,24 @@ async create(@Body() createBookingDto: CreateBookingDto, @Request() req) {
   ) {
     return this.bookingService.updateStatus(id, status);
   }
+
+// 🆕 Mark service as completed (called by sitter)
+@Patch(':id/complete')
+@UseGuards(JwtAuthGuard)
+async completeService(
+  @Param('id', ParseIntPipe) id: number,
+  @Request() req,
+) {
+  return this.bookingService.completeService(id, req.user.id);
+}
+
+// 🆕 Process payment (called by owner after service is completed)
+@Post(':id/pay')
+@UseGuards(JwtAuthGuard)
+async processPayment(
+  @Param('id', ParseIntPipe) id: number,
+  @Request() req,
+) {
+  return this.bookingService.processPayment(id, req.user.id);
+}
 }

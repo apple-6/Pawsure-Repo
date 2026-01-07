@@ -39,7 +39,7 @@ import { ChatModule } from './chat/chat.module';
         type: 'postgres',
         url: configService.get<string>('DATABASE_URL'),
         autoLoadEntities: true,
-        synchronize: false, // Set to false in production
+        synchronize: false, // ✅ Manual schema changes for safety
         ssl: {
           rejectUnauthorized: false,
         },
