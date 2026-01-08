@@ -198,7 +198,7 @@ class VacancyPostCard extends StatelessWidget {
                     ),
                   ),
                   child: const Text(
-                    "Apply Now",
+                    "Chat with Owner",
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),

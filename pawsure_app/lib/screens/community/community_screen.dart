@@ -6,6 +6,7 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/models/post_model.dart';
 import 'package:pawsure_app/screens/community/create_vacancy_modal.dart';
+import 'package:pawsure_app/screens/sitter_setup/chat_screen.dart';
 import 'package:pawsure_app/services/auth_service.dart';
 import 'dart:convert';
 import 'post_card.dart';
@@ -362,34 +363,24 @@ class _FeedTabViewState extends State<FeedTabView>
     }
   }
 
-  // 1. PLACE THE METHOD HERE
-  void _handleBooking(PostModel post) async {
-    // Show a confirmation dialog before proceeding
-    bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Apply for Job"),
-        content: Text(
-          "Are you sure you want to apply to pet sit for ${post.userName}?",
+  // Renamed from _handleBooking to _handleChat
+  void _handleChat(PostModel post) {
+    // You'll need to pass the owner's ID and Name to the chat screen
+    // replace 'ChatDetailScreen' with your actual individual chat widget name
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatScreen(
+          ownerName: post.userName,
+          petName: post.petNames,
+          dates: post.dates,
+          isRequest: false,
+          room: 'booking-${post.id}',
+          currentUserId: post.userId.toString(),
+          bookingId: post.id,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Apply"),
-          ),
-        ],
       ),
     );
-
-    if (confirm == true) {
-      // Execute the logic to save to the 'bookings' table
-      debugPrint("Booking confirmed for Post ID: ${post.id}");
-      // Add your http.post logic here
-    }
   }
 
   Widget _buildDynamicPostList(String tab) {
@@ -455,9 +446,11 @@ class _FeedTabViewState extends State<FeedTabView>
                       child: VacancyPostCard(
                         post: post,
                         isUserSitter: isSitter,
-                        showMenuOptions:
-                            canManagePost, // ✅ Now receives correct boolean
-                        onApply: () => _handleBooking(post),
+                        // Change the label here if your VacancyPostCard supports a custom label
+                        // If not, you must edit vacancy_post_card.dart file's Text widget
+                        showMenuOptions: canManagePost,
+                        onApply: () =>
+                            _handleChat(post), // Updated to the chat method
                         onDelete: (p) => _deletePost(p),
                         onEdit: (p) {
                           showModalBottomSheet(
