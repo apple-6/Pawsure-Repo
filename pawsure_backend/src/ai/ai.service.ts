@@ -108,4 +108,10 @@ export class AiService implements OnModuleInit {
       order: { scannedAt: 'DESC' }, // Show newest scans first
     });
   }
+
+  // Inside the AiService class
+  async deleteScan(id: number): Promise<void> {
+    // .delete(id) is a TypeORM command that removes the record from Supabase
+    await this.aiScanRepository.delete(id);
+  }
 }
