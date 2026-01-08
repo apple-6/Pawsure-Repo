@@ -137,6 +137,63 @@ class _BookingModalState extends State<BookingModal> {
   }
 
   Future<void> _submitBooking() async {
+    // 0. CHECK FOR UNPAID BOOKINGS FIRST
+    try {
+      final apiService = Get.find<ApiService>();
+      final myBookings = await apiService.getMyBookings();
+      
+      // Count unpaid completed bookings
+      final unpaidBookings = myBookings.where((booking) {
+        final status = booking['status']?.toString().toLowerCase() ?? '';
+        final isPaid = booking['is_paid'] == true;
+        return status == 'completed' && !isPaid;
+      }).toList();
+
+      if (unpaidBookings.isNotEmpty) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Row(
+                children: const [
+                  Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+                  SizedBox(width: 12),
+                  Text('Unpaid Booking'),
+                ],
+              ),
+              content: Text(
+                'You have ${unpaidBookings.length} unpaid booking(s).\n\n'
+                'Please complete payment for your previous booking before making a new one.\n\n'
+                'This ensures our sitters receive their payment promptly.',
+                style: const TextStyle(fontSize: 15),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('OK'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.pop(context); // Close booking modal
+                    Get.toNamed('/home'); // Navigate to home to see unpaid bookings
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
+                  child: const Text('View Bookings'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error checking unpaid bookings: $e');
+      // Continue with booking if check fails (to not block legitimate bookings)
+    }
+
     // 1. Validation
     if (!_formKey.currentState!.validate()) return;
     if (widget.startDate == null ||
@@ -483,6 +540,7 @@ class _BookingModalState extends State<BookingModal> {
                     ),
                     const SizedBox(width: 16),
                     // 2. Button Section (Takes ~60% width)
+                   // 2. Button Section (Takes ~60% width)
                     Expanded(
                       flex: 3,
                       child: SizedBox(
@@ -507,36 +565,32 @@ class _BookingModalState extends State<BookingModal> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: const [
-                                      Icon(Icons.payment, size: 20),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        "Pay & Book Now",
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(Icons.payment, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      "Pay & Book Now",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-          ], // This closes the Column's children
-        ), // This closes the Column
-      ), // This closes the Padding
-    ); // This closes the main Container
-  }
-
+                  ], // Close Footer Row Children
+                ), // Close Footer Row
+              ), // Close SafeArea
+            ), // Close Footer Container
+          ], // Close Main Column Children
+        ), // Close Main Column
+      ), // Close Padding
+    ); // Close Root Container
+  } // Close Build Method
   // Helper Widget for Date display
   Widget _buildDateColumn(String label, DateTime? date) {
     return Column(

@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:pawsure_app/services/api_service.dart';
 
 class BookingCard extends StatelessWidget {
   final dynamic booking;
+  final VoidCallback? onPaymentComplete;
 
-  const BookingCard({super.key, required this.booking});
+  const BookingCard({
+    super.key,
+    required this.booking,
+    this.onPaymentComplete,
+  });
 
   ({Color color, IconData icon, String text}) _getStatusDetails(String status) {
     switch (status.toLowerCase()) {
+      case 'completed':
+        return (color: Colors.blue, icon: Icons.check_circle_outline, text: 'COMPLETED');
+      case 'paid':
+        return (color: Colors.green, icon: Icons.check_circle, text: 'PAID');
       case 'accepted':
         return (color: Colors.teal, icon: Icons.check_circle, text: 'ACCEPTED');
       case 'declined':
@@ -18,6 +29,76 @@ class BookingCard extends StatelessWidget {
           icon: Icons.access_time_filled,
           text: 'PENDING',
         );
+    }
+  }
+
+  Future<void> _handlePayment(BuildContext context) async {
+    final bookingId = booking['id'];
+    
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm Payment'),
+        content: Text(
+          'Process payment of RM${booking['total_amount']} for this booking?\n\nThis will use your saved payment method.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: const Text('Pay Now'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      final apiService = Get.find<ApiService>();
+      await apiService.processPayment(bookingId);
+
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading
+        
+        Get.snackbar(
+          '✅ Payment Successful',
+          'Payment has been processed successfully!',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+
+        onPaymentComplete?.call();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading
+        
+        Get.snackbar(
+          '❌ Payment Failed',
+          e.toString().replaceAll('Exception: ', ''),
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
     }
   }
 
@@ -237,6 +318,70 @@ class BookingCard extends StatelessWidget {
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                
+                // 💳 PAY NOW BUTTON (Show only if service is completed and not paid)
+                if (statusRaw.toLowerCase() == 'completed' && 
+                    (booking['is_paid'] == false || booking['is_paid'] == null)) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _handlePayment(context),
+                      icon: const Icon(Icons.payment),
+                      label: const Text(
+                        'Pay Now',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                    ),
+                  ),
+                ],
+                
+                // Show payment received status
+                if (statusRaw.toLowerCase() == 'paid' || booking['is_paid'] == true) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.green.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            booking['paid_at'] != null
+                                ? 'Payment received on ${_formatDate(booking['paid_at'])}'
+                                : 'Payment received',
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],

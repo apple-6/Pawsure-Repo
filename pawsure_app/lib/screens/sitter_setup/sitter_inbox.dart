@@ -314,6 +314,7 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
                                   false,
                                   booking.id,
                                 ),
+                                onComplete: () => _loadBookings(), // Refresh after completing
                               );
                             },
                           ),
@@ -491,12 +492,14 @@ class NewInboxCard extends StatelessWidget {
 class ConfirmedBookingCard extends StatelessWidget {
   final SitterInboxItem inbox;
   final VoidCallback onTap;
+  final VoidCallback? onComplete;
 
 
   const ConfirmedBookingCard({
     super.key,
     required this.inbox,
     required this.onTap,
+    this.onComplete,
   });
 
 
@@ -508,8 +511,78 @@ class ConfirmedBookingCard extends StatelessWidget {
         return Colors.red;
       case 'completed':
         return Colors.blue;
+      case 'paid':
+        return Colors.purple;
       default:
         return Colors.grey;
+    }
+  }
+
+  Future<void> _handleComplete(BuildContext context) async {
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mark as Completed'),
+        content: const Text(
+          'Have you completed this service?\n\nThis will notify the owner and allow them to process payment.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Not Yet'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+            ),
+            child: const Text('Mark Complete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      final apiService = Get.find<ApiService>();
+      await apiService.completeService(inbox.id);
+
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading
+        
+        Get.snackbar(
+          '✅ Service Completed',
+          'Booking has been marked as completed. Owner will be notified!',
+          backgroundColor: Colors.blue,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+
+        onComplete?.call();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading
+        
+        Get.snackbar(
+          '❌ Error',
+          e.toString().replaceAll('Exception: ', ''),
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
     }
   }
 
@@ -576,6 +649,92 @@ class ConfirmedBookingCard extends StatelessWidget {
                 Text("RM${inbox.estimatedEarnings.toStringAsFixed(0)}", style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1CCA5B))),
               ],
             ),
+            
+            // ✅ MARK AS COMPLETED BUTTON (Show only if status is "accepted")
+            if (inbox.status.toLowerCase() == 'accepted') ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _handleComplete(context),
+                  icon: const Icon(Icons.check_circle_outline, size: 20),
+                  label: const Text(
+                    'Mark as Completed',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            
+            // Show status messages for completed/paid bookings
+            if (inbox.status.toLowerCase() == 'completed') ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.hourglass_empty, color: Colors.orange, size: 16),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Awaiting payment from owner',
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            
+            if (inbox.status.toLowerCase() == 'paid') ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green, size: 16),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '✅ Payment received!',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
