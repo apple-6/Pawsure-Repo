@@ -19,13 +19,22 @@ export class Booking {
   end_date: string;
 
   @Column()
-  status: string;
+  status: string; // pending, accepted, declined, in_progress, completed, paid, cancelled
 
   @Column({ type: 'float' })
   total_amount: number;
   
   @Column({ type: 'int', nullable: true })
   payment_method_id: number;
+
+  @Column({ type: 'boolean', default: false })
+  is_paid: boolean; // Track if owner has paid
+
+  @Column({ type: 'timestamp', nullable: true })
+  paid_at: Date; // When payment was made
+
+  @Column({ type: 'timestamp', nullable: true })
+  service_completed_at: Date; // When service was marked as completed
 
   @Column({ type: 'text', nullable: true })
   message: string;
