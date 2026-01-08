@@ -27,33 +27,57 @@ export class AiService implements OnModuleInit {
   }
 
   async classify(imageBuffer: Buffer) {
-    // 1. Resize image to 224x224 (required for YOLOv11)
-    const { data } = await sharp(imageBuffer)
-      .resize(224, 224)
-      .toColorspace('srgb')
-      .raw()
-      .toBuffer({ resolveWithObject: true });
+    try {
+      // 1. Resize and ensure exactly 3 channels (RGB)
+      const { data } = await sharp(imageBuffer)
+        .resize(224, 224, { fit: 'fill' })
+        .removeAlpha() // Critical: ensures data length is 224 * 224 * 3
+        .toColorspace('srgb')
+        .raw()
+        .toBuffer({ resolveWithObject: true });
 
-    // 2. Normalize pixels (0-255 -> 0-1)
-    const floatData = new Float32Array(data.length);
-    for (let i = 0; i < data.length; i++) {
-      floatData[i] = data[i] / 255.0;
+      const rows = 224;
+      const cols = 224;
+      const area = rows * cols;
+      
+      // 2. Prepare CHW (Planar) float32 array
+      // Current 'data' is [R,G,B, R,G,B...] (Interleaved)
+      // YOLO wants [R,R,R... G,G,G... B,B,B...] (Planar)
+      const float32Data = new Float32Array(3 * area);
+
+      for (let i = 0; i < area; i++) {
+        const r = data[i * 3 + 0] / 255.0;
+        const g = data[i * 3 + 1] / 255.0;
+        const b = data[i * 3 + 2] / 255.0;
+
+        float32Data[i] = r;              // Red channel
+        float32Data[i + area] = g;       // Green channel
+        float32Data[i + 2 * area] = b;   // Blue channel
+      }
+
+      // 3. Create Tensor
+      const tensor = new ort.Tensor('float32', float32Data, [1, 3, 224, 224]);
+
+      // 4. Run Model
+      const output = await this.session.run({ images: tensor });
+      
+      // Handle potential variation in output key name (usually output0)
+      const outputKey = Object.keys(output)[0];
+      const probabilities = Array.from(output[outputKey].data as Float32Array);
+
+      // 5. Get result
+      const maxIdx = probabilities.indexOf(Math.max(...probabilities));
+
+      console.log('Model Raw Probabilities:', probabilities); // Debugging line
+
+      return {
+        prediction: this.labels[maxIdx],
+        confidence: (probabilities[maxIdx] * 100).toFixed(2) + '%',
+        allScores: probabilities 
+      };
+    } catch (error) {
+      console.error('Classification error:', error);
+      throw error;
     }
-
-    // 3. Create Tensor [Batch, Channels, Height, Width]
-    const tensor = new ort.Tensor('float32', floatData, [1, 3, 224, 224]);
-
-    // 4. Run Model
-    const output = await this.session.run({ images: tensor });
-    const probabilities = output.output0.data as Float32Array;
-
-    // 5. Get result
-    const maxIdx = probabilities.indexOf(Math.max(...probabilities));
-
-    return {
-      prediction: this.labels[maxIdx],
-      confidence: (probabilities[maxIdx] * 100).toFixed(2) + '%',
-      allScores: probabilities // Optional: see scores for all 4 classes
-    };
   }
 }

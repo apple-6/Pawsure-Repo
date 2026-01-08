@@ -52,34 +52,56 @@ class _AIScanTabState extends State<AIScanTab> {
 
   // 4. Show the AI Result
   void _showResultDialog(String label, String confidence) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("PawSure AI Analysis", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            Icon(
-              label == 'Normal' ? Icons.check_circle : Icons.warning_amber_rounded,
-              color: label == 'Normal' ? Colors.green : Colors.orange,
-              size: 60,
-            ),
-            const SizedBox(height: 16),
-            Text(label, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            Text("Confidence: $confidence"),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Done"),
-            )
-          ],
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // This keeps the card compact
+            children: [
+              const Text(
+                "PawSure AI Analysis",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 32),
+              Icon(
+                label == 'Normal' ? Icons.check_circle_rounded : Icons.warning_rounded,
+                color: label == 'Normal' ? Colors.green : Colors.orange,
+                size: 80,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Confidence: $confidence",
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text("Done", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );
   }
+  
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
