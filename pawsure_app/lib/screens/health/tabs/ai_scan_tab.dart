@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:get/get.dart';
+import 'package:pawsure_app/controllers/health_controller.dart';  
 
 class AIScanTab extends StatefulWidget {
   const AIScanTab({super.key});
@@ -12,6 +14,8 @@ class AIScanTab extends StatefulWidget {
 
 class _AIScanTabState extends State<AIScanTab> {
   bool _isScanning = false;
+
+  final HealthController healthController = Get.find<HealthController>();
 
   // 1. Function to Pick and Upload Image
   Future<void> _handleScan(BuildContext context) async {
@@ -87,7 +91,13 @@ class _AIScanTabState extends State<AIScanTab> {
 
   // 4. Save AI Result to Database
   Future<void> _saveAiScan(String result, String confidence) async {
-    const int petId = 1; 
+    final int? petId = healthController.selectedPet.value?.id; 
+
+    if (petId == null) {
+      _showError("Please select a pet first.");
+      return;
+    }
+
     try {
       final response = await http.post(
         Uri.parse('http://localhost:3000/ai/save/$petId'),
@@ -156,7 +166,10 @@ class _AIScanTabState extends State<AIScanTab> {
   }
 
   Future<List<dynamic>> _fetchScanHistory() async {
-    const int petId = 1; 
+    final int? petId = healthController.selectedPet.value?.id; 
+
+    if (petId == null) return [];
+
     final response = await http.get(Uri.parse('http://localhost:3000/ai/history/$petId'));
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -186,47 +199,51 @@ class _AIScanTabState extends State<AIScanTab> {
             const SizedBox(height: 32),
             const Text('Past Scans', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
             const SizedBox(height: 16),
-            FutureBuilder<List<dynamic>>(
-              future: _fetchScanHistory(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Text("No scans found.");
-                }
+            Obx(() {
+              final currentPetId = healthController.selectedPet.value?.id;
+              return FutureBuilder<List<dynamic>>(
+                key: ValueKey(currentPetId),
+                future: _fetchScanHistory(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Text("No scans found.");
+                  }
 
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: snapshot.data!.length,
-                  itemBuilder: (context, index) {
-                    final scan = snapshot.data![index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: ListTile(
-                        leading: const Icon(Icons.analytics_outlined, color: Colors.orange),
-                        title: Text(scan['result']),
-                        subtitle: Text("${scan['scannedAt'].toString().split('T')[0]} • ${scan['confidence']}% Match"),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Chip(
-                              label: Text(scan['result'] == 'Normal' ? 'Normal' : 'Attention'),
-                              backgroundColor: scan['result'] == 'Normal' ? Colors.green[50] : Colors.orange[50],
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                              onPressed: () => _confirmDelete(scan['id']),
-                            ),
-                          ],
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: snapshot.data!.length,
+                    itemBuilder: (context, index) {
+                      final scan = snapshot.data![index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: ListTile(
+                          leading: const Icon(Icons.analytics_outlined, color: Colors.orange),
+                          title: Text(scan['result']),
+                          subtitle: Text("${scan['scannedAt'].toString().split('T')[0]} • ${scan['confidence']}% Match"),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Chip(
+                                label: Text(scan['result'] == 'Normal' ? 'Normal' : 'Attention'),
+                                backgroundColor: scan['result'] == 'Normal' ? Colors.green[50] : Colors.orange[50],
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                onPressed: () => _confirmDelete(scan['id']),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+                      );
+                    },
+                  );
+                },
+              );
+            }),
           ],
         ),
         if (_isScanning)
