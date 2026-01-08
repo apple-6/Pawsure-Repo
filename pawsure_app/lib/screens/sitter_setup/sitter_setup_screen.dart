@@ -1,6 +1,7 @@
 // lib/screens/sitter_setup/sitter_setup_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../services/auth_service.dart'; // Use your AuthService
 
 // Import your step widgets (you'll create these next)
@@ -100,8 +101,8 @@ class _SitterSetupScreenState extends State<SitterSetupScreen> {
     debugPrint('Submitting data: $_formData');
 
     try {
-      // Use the service
-      await AuthService().submitSitterSetup(_formData);
+      // ✅ FIX: Use GetX singleton instead of creating new instance
+      await Get.find<AuthService>().submitSitterSetup(_formData);
 
       // Handle success
       if (mounted) {

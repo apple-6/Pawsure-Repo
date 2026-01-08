@@ -224,11 +224,11 @@ class _MoodRatingSheet extends StatelessWidget {
     
     if (Get.isRegistered<HomeController>()) {
       final homeController = Get.find<HomeController>();
+      
+      // Call async logMood (handles API call internally)
       homeController.logMood(mood);
       
-      // Update wellbeing progress
-      homeController.dailyProgress['wellbeing'] = 1;
-      homeController.dailyProgress.refresh();
+      // Note: wellbeing progress is now updated inside logMood()
     }
   }
 }

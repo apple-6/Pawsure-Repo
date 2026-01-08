@@ -21,7 +21,8 @@ String extname(String filename) {
 }
 
 class ApiService {
-  final AuthService _authService = AuthService();
+  // ✅ FIX: Use GetX singleton instead of creating new instance
+  AuthService get _authService => Get.find<AuthService>();
 
   Future<Map<String, String>> _getHeaders() async {
     final headers = {
@@ -30,8 +31,7 @@ class ApiService {
     };
 
     try {
-      final authService = Get.find<AuthService>();
-      final token = await authService.getToken();
+      final token = await _authService.getToken();
 
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
@@ -710,6 +710,42 @@ class ApiService {
     }
   }
 
+  /// GET /bookings/owner - Fetch all bookings for the authenticated owner
+  Future<List<Map<String, dynamic>>> getOwnerBookings() async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/bookings/owner');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/bookings/owner'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        final bookings = jsonList
+            .map((e) => e as Map<String, dynamic>)
+            .toList();
+
+        debugPrint('✅ Parsed ${bookings.length} owner bookings');
+        return bookings;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to load owner bookings (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in getOwnerBookings: $e');
+      rethrow;
+    }
+  }
+
   /// PATCH /bookings/:id/status - Update booking status (accept/decline)
   Future<Map<String, dynamic>> updateBookingStatus(
     int bookingId,
@@ -743,6 +779,106 @@ class ApiService {
       );
     } catch (e) {
       debugPrint('❌ Error in updateBookingStatus: $e');
+      rethrow;
+    }
+  }
+
+  /// PATCH /bookings/:id/complete - Mark service as completed (Sitter)
+  Future<Map<String, dynamic>> completeService(int bookingId) async {
+    try {
+      debugPrint('✅ API: PATCH $apiBaseUrl/bookings/$bookingId/complete');
+
+      final headers = await _getHeaders();
+      final response = await http.patch(
+        Uri.parse('$apiBaseUrl/bookings/$bookingId/complete'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        debugPrint('✅ Service marked as completed');
+        return json;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to complete service (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in completeService: $e');
+      rethrow;
+    }
+  }
+
+  /// POST /bookings/:id/pay - Process payment (Owner)
+  Future<Map<String, dynamic>> processPayment(int bookingId) async {
+    try {
+      debugPrint('💳 API: POST $apiBaseUrl/bookings/$bookingId/pay');
+
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/bookings/$bookingId/pay'),
+        headers: headers,
+        body: jsonEncode({}),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final Map<String, dynamic> json =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        debugPrint('✅ Payment processed successfully');
+        return json;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to process payment (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in processPayment: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /bookings - Get user's bookings (to check for unpaid ones)
+  Future<List<Map<String, dynamic>>> getMyBookings() async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/bookings');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/bookings'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        final bookings = jsonList
+            .map((e) => e as Map<String, dynamic>)
+            .toList();
+
+        debugPrint('✅ Parsed ${bookings.length} bookings');
+        return bookings;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to load bookings (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in getMyBookings: $e');
       rethrow;
     }
   }
@@ -1082,4 +1218,142 @@ class ApiService {
       rethrow;
     }
   }
+
+  // ========================================================================
+  // MOOD & STREAK API
+  // ========================================================================
+
+  /// POST /pets/:petId/mood - Log a mood for the pet
+  Future<Map<String, dynamic>> logMood({
+    required int petId,
+    required int moodScore,
+    String? moodLabel,
+    String? notes,
+  }) async {
+    try {
+      debugPrint('😊 API: POST $apiBaseUrl/pets/$petId/mood');
+
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/pets/$petId/mood'),
+        headers: headers,
+        body: jsonEncode({
+          'mood_score': moodScore,
+          if (moodLabel != null) 'mood_label': moodLabel,
+          if (notes != null) 'notes': notes,
+        }),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      debugPrint('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        debugPrint('✅ Mood logged! Streak: ${data['streak']}');
+        return data;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to log mood (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in logMood: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /pets/:petId/mood/today - Get today's mood
+  Future<Map<String, dynamic>?> getTodayMood(int petId) async {
+    try {
+      debugPrint('📅 API: GET $apiBaseUrl/pets/$petId/mood/today');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/pets/$petId/mood/today'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (data['logged'] == true) {
+          return data['mood'] as Map<String, dynamic>?;
+        }
+        return null;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error in getTodayMood: $e');
+      return null;
+    }
+  }
+
+  /// GET /pets/:petId/mood/history?days=30 - Get mood history
+  Future<List<Map<String, dynamic>>> getMoodHistory(int petId, {int days = 30}) async {
+    try {
+      debugPrint('📊 API: GET $apiBaseUrl/pets/$petId/mood/history?days=$days');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/pets/$petId/mood/history?days=$days'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final history = data['history'] as List<dynamic>;
+        return history.map((e) => e as Map<String, dynamic>).toList();
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      return [];
+    } catch (e) {
+      debugPrint('❌ Error in getMoodHistory: $e');
+      return [];
+    }
+  }
+
+  /// GET /pets/:petId/mood/streak - Get streak information
+  Future<Map<String, dynamic>> getStreakInfo(int petId) async {
+    try {
+      debugPrint('🔥 API: GET $apiBaseUrl/pets/$petId/mood/streak');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/pets/$petId/mood/streak'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      return {
+        'currentStreak': 0,
+        'totalDaysLogged': 0,
+        'lastActivityDate': null,
+      };
+    } catch (e) {
+      debugPrint('❌ Error in getStreakInfo: $e');
+      return {
+        'currentStreak': 0,
+        'totalDaysLogged': 0,
+        'lastActivityDate': null,
+      };
+    }
+  }
 }
+

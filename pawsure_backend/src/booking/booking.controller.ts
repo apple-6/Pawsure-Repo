@@ -16,6 +16,13 @@ async findAll(@Request() req) {
   return this.bookingService.findAllByUser(req.user.id); 
 }
 
+@Get('owner')
+@UseGuards(JwtAuthGuard)
+async findOwnerBookings(@Request() req) {
+  // Reuses the existing logic since "User" in this context is the Owner
+  return this.bookingService.findAllByUser(req.user.id);
+}
+
 @Get('sitter')
 @UseGuards(JwtAuthGuard)
 async findAllForSitter(@Request() req) {
@@ -44,8 +51,28 @@ async create(@Body() createBookingDto: CreateBookingDto, @Request() req) {
   @UseGuards(JwtAuthGuard)
   async updateBookingStatus(
     @Param('id', ParseIntPipe) id: number,
-    @Body('status') status: 'accepted' | 'declined',
+    @Body('status') status: 'accepted' | 'declined'| 'cancelled',
   ) {
     return this.bookingService.updateStatus(id, status);
   }
+
+// 🆕 Mark service as completed (called by sitter)
+@Patch(':id/complete')
+@UseGuards(JwtAuthGuard)
+async completeService(
+  @Param('id', ParseIntPipe) id: number,
+  @Request() req,
+) {
+  return this.bookingService.completeService(id, req.user.id);
+}
+
+// 🆕 Process payment (called by owner after service is completed)
+@Post(':id/pay')
+@UseGuards(JwtAuthGuard)
+async processPayment(
+  @Param('id', ParseIntPipe) id: number,
+  @Request() req,
+) {
+  return this.bookingService.processPayment(id, req.user.id);
+}
 }
