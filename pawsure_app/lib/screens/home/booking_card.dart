@@ -32,6 +32,25 @@ class BookingCard extends StatelessWidget {
     }
   }
 
+  // ✅ NEW HELPER: Extract pet names from the list
+  String _getPetNames() {
+    // 1. Try to get the list of pets
+    if (booking['pets'] != null && booking['pets'] is List) {
+      final List pets = booking['pets'];
+      if (pets.isNotEmpty) {
+        // Join names with commas (e.g., "Coco, Max")
+        return pets.map((p) => p['name'].toString()).join(', ');
+      }
+    }
+    
+    // 2. Fallback for old data structure (single pet)
+    if (booking['pet'] != null && booking['pet']['name'] != null) {
+      return booking['pet']['name'];
+    }
+
+    return 'Unknown Pet';
+  }
+
   Future<void> _handlePayment(BuildContext context) async {
     final bookingId = booking['id'];
     
@@ -116,7 +135,8 @@ class BookingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusRaw = booking['status']?.toString() ?? 'pending';
     final statusDetails = _getStatusDetails(statusRaw);
-    final petName = booking['pet']?['name'] ?? 'Pet';
+    final petName = _getPetNames();
+    //final petName = booking['pet']?['name'] ?? 'Pet';
     final hasMessage =
         booking['message'] != null && booking['message'].toString().isNotEmpty;
 

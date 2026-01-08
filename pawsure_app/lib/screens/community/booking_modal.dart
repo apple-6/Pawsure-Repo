@@ -38,26 +38,39 @@ class _BookingModalState extends State<BookingModal> {
   final BookingController _bookingController = Get.put(BookingController());
   final Set<int> _selectedServiceIndices = {};
 
-  Pet? _selectedPet;
+  // Pet? _selectedPet;
+  final Set<String> _selectedPetIds = {};
   TimeOfDay _dropOffTime = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _pickUpTime = const TimeOfDay(hour: 17, minute: 0);
   bool _isLoading = false;
-  
+
   // Payment method state
   List<PaymentMethodModel> _paymentMethods = [];
   PaymentMethodModel? _selectedPaymentMethod;
   bool _isLoadingPaymentMethods = true;
 
-  @override
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _selectedPet = _petController.selectedPet.value;
+  //   if (_selectedPet == null && _petController.pets.isNotEmpty) {
+  //     _selectedPet = _petController.pets.first;
+  //   }
+  //   _loadPaymentMethods();
+  // }
+ @override
   void initState() {
     super.initState();
-    _selectedPet = _petController.selectedPet.value;
-    if (_selectedPet == null && _petController.pets.isNotEmpty) {
-      _selectedPet = _petController.pets.first;
+    // ✅ FIXED: Convert int ID to String when initializing
+    final initialPet = _petController.selectedPet.value;
+    if (initialPet != null) {
+      _selectedPetIds.add(initialPet.id.toString());
+    } else if (_petController.pets.isNotEmpty) {
+      _selectedPetIds.add(_petController.pets.first.id.toString());
     }
     _loadPaymentMethods();
   }
-  
+
   Future<void> _loadPaymentMethods() async {
     try {
       final apiService = Get.find<ApiService>();
@@ -116,7 +129,10 @@ class _BookingModalState extends State<BookingModal> {
     final difference = widget.endDate!.difference(widget.startDate!).inDays;
     final days = difference <= 0 ? 1 : difference;
 
-    double total = 0.0; 
+    // 1. Get number of pets (Default to 1 for display if none selected yet)
+    final int petCount = _selectedPetIds.isEmpty ? 1 : _selectedPetIds.length;
+
+    double totalServiceCost = 0.0;
 
     for (int index in _selectedServiceIndices) {
       if (index < widget.services.length) {
@@ -125,15 +141,21 @@ class _BookingModalState extends State<BookingModal> {
         final price = double.tryParse(service['price'].toString()) ?? 0.0;
         final unit = service['unit']?.toString().toLowerCase() ?? '';
 
+        double serviceCost = 0.0;
+
+        // Calculate cost based on unit (per night vs flat fee)
         if (unit.contains('night') || unit.contains('day') || unit.contains('daily')) {
-          total += (price * days);
+          serviceCost = price * days;
         } else {
-          total += price;
+          serviceCost = price;
         }
+
+        totalServiceCost += serviceCost;
       }
     }
 
-    return total;
+    // 2. Multiply total service cost by number of pets
+    return totalServiceCost * petCount;
   }
 
   Future<void> _submitBooking() async {
@@ -141,7 +163,10 @@ class _BookingModalState extends State<BookingModal> {
     try {
       final apiService = Get.find<ApiService>();
       final myBookings = await apiService.getMyBookings();
-      
+
+      // ✅ FIXED: Check mounted after await
+      if (!mounted) return;
+
       // Count unpaid completed bookings
       final unpaidBookings = myBookings.where((booking) {
         final status = booking['status']?.toString().toLowerCase() ?? '';
@@ -156,7 +181,11 @@ class _BookingModalState extends State<BookingModal> {
             builder: (ctx) => AlertDialog(
               title: Row(
                 children: const [
-                  Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.orange,
+                    size: 28,
+                  ),
                   SizedBox(width: 12),
                   Text('Unpaid Booking'),
                 ],
@@ -176,7 +205,9 @@ class _BookingModalState extends State<BookingModal> {
                   onPressed: () {
                     Navigator.pop(ctx);
                     Navigator.pop(context); // Close booking modal
-                    Get.toNamed('/home'); // Navigate to home to see unpaid bookings
+                    Get.toNamed(
+                      '/home',
+                    ); // Navigate to home to see unpaid bookings
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
@@ -194,17 +225,34 @@ class _BookingModalState extends State<BookingModal> {
       // Continue with booking if check fails (to not block legitimate bookings)
     }
 
+    if (!mounted) return; // ✅ Check mounted again before using context
+
     // 1. Validation
     if (!_formKey.currentState!.validate()) return;
-    if (widget.startDate == null ||
-        widget.endDate == null ||
-        _selectedPet == null) {
+    if (widget.startDate == null || widget.endDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please complete selection first')),
+        const SnackBar(content: Text('Please select dates')),
       );
       return;
     }
-    
+
+// ✅ Validate Pets
+    if (_selectedPetIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select at least one pet')),
+      );
+      return;
+    }
+    // if (!_formKey.currentState!.validate()) return;
+    // if (widget.startDate == null ||
+    //     widget.endDate == null ||
+    //     _selectedPet == null) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(content: Text('Please complete selection first')),
+    //   );
+    //   return;
+    // }
+
     // Check payment method
     if (_selectedPaymentMethod == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -225,7 +273,8 @@ class _BookingModalState extends State<BookingModal> {
       endDate: widget.endDate!,
       totalAmount: _totalPrice,
       sitterId: widget.sitterId,
-      petId: _selectedPet!.id,
+      // petId: _selectedPet!.id,
+      petIds: _selectedPetIds.toList(),
       dropOffTime: _dropOffTime.format(context),
       pickUpTime: _pickUpTime.format(context),
       message: _messageController.text,
@@ -353,7 +402,6 @@ class _BookingModalState extends State<BookingModal> {
                                 ],
                               ),
                             ),
-                           
                           ],
                         ),
                       ),
@@ -476,7 +524,7 @@ class _BookingModalState extends State<BookingModal> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      
+
                       // --- PAYMENT METHOD SECTION ---
                       const Text(
                         "Payment Method",
@@ -540,7 +588,7 @@ class _BookingModalState extends State<BookingModal> {
                     ),
                     const SizedBox(width: 16),
                     // 2. Button Section (Takes ~60% width)
-                   // 2. Button Section (Takes ~60% width)
+                    // 2. Button Section (Takes ~60% width)
                     Expanded(
                       flex: 3,
                       child: SizedBox(
@@ -591,6 +639,7 @@ class _BookingModalState extends State<BookingModal> {
       ), // Close Padding
     ); // Close Root Container
   } // Close Build Method
+
   // Helper Widget for Date display
   Widget _buildDateColumn(String label, DateTime? date) {
     return Column(
@@ -621,11 +670,20 @@ class _BookingModalState extends State<BookingModal> {
     );
   }
 
-  Widget _buildPetSelector() {
-    // Obx makes this rebuild if the Controller's isLoadingPets changes
+ Widget _buildPetSelector() {
     return Obx(() {
       if (_petController.isLoadingPets.value) {
-        return const LinearProgressIndicator(color: Color(0xFF34D399));
+        return const Center(child: LinearProgressIndicator(color: Color(0xFF34D399)));
+      }
+
+      // 1. Calculate display text (e.g., "Coco, Max" or "Select your pets")
+      String displayString = "Select your pets";
+      if (_selectedPetIds.isNotEmpty) {
+        final names = _petController.pets
+            .where((p) => _selectedPetIds.contains(p.id.toString()))
+            .map((p) => p.name)
+            .toList();
+        if (names.isNotEmpty) displayString = names.join(", ");
       }
 
       return Container(
@@ -637,33 +695,86 @@ class _BookingModalState extends State<BookingModal> {
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.favorite, color: Color(0xFF34D399)),
-          // Safe check if _selectedPet is null or if pets list is empty
-          title: Text(_selectedPet?.name ?? "Select your pet"),
-          trailing: PopupMenuButton<Pet>(
-            icon: const Icon(Icons.keyboard_arrow_down_rounded),
-            onSelected: (Pet pet) {
-              setState(() => _selectedPet = pet);
-            },
-            // Use the controller's list of pets
-            itemBuilder: (context) => _petController.pets
-                .map(
-                  (pet) => PopupMenuItem<Pet>(
-                    value: pet,
-                    child: Row(
-                      children: [
-                        if (_selectedPet?.id == pet.id)
-                          const Icon(
-                            Icons.check,
-                            size: 20,
-                            color: Colors.green,
+          
+          // Display the selected names
+          title: Text(
+            displayString,
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          
+          trailing: Theme(
+            // Remove the splash effect to make it feel more like a checkbox list
+            data: Theme.of(context).copyWith(
+              splashColor: Colors.transparent,
+              highlightColor: Colors.transparent,
+            ),
+            child: PopupMenuButton<String>(
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
+              tooltip: "Select Pets",
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              
+              // 2. We DO NOT use onSelected here because it closes the menu.
+              // We handle taps directly inside the items.
+              onSelected: null, 
+
+              itemBuilder: (context) {
+                return _petController.pets.map((pet) {
+                  return PopupMenuItem<String>(
+                    // Setting enabled: false prevents the menu from closing automatically!
+                    enabled: false, 
+                    value: pet.id.toString(),
+                    child: StatefulBuilder(
+                      builder: (context, setStateItem) {
+                        final isSelected = _selectedPetIds.contains(pet.id.toString());
+                        
+                        return InkWell(
+                          onTap: () {
+                            // 3. Update the Parent State (BookingModal)
+                            this.setState(() {
+                              if (isSelected) {
+                                _selectedPetIds.remove(pet.id.toString());
+                              } else {
+                                _selectedPetIds.add(pet.id.toString());
+                              }
+                            });
+                            
+                            // 4. Update the Local Item State (to show checkmark instantly)
+                            setStateItem(() {});
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              children: [
+                                // Checkbox Style Icon
+                                Icon(
+                                  isSelected ? Icons.check_box : Icons.check_box_outline_blank,
+                                  color: isSelected ? const Color(0xFF34D399) : Colors.grey,
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    pet.name,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      color: isSelected ? Colors.black87 : Colors.black54,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        const SizedBox(width: 8),
-                        Text(pet.name),
-                      ],
+                        );
+                      },
                     ),
-                  ),
-                )
-                .toList(),
+                  );
+                }).toList();
+              },
+            ),
           ),
         ),
       );
@@ -715,7 +826,7 @@ class _BookingModalState extends State<BookingModal> {
       ),
     );
   }
-  
+
   // Payment Method Selector Widget
   Widget _buildPaymentMethodSelector() {
     if (_isLoadingPaymentMethods) {
@@ -733,7 +844,7 @@ class _BookingModalState extends State<BookingModal> {
         ),
       );
     }
-    
+
     if (_paymentMethods.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(20),
@@ -748,10 +859,7 @@ class _BookingModalState extends State<BookingModal> {
             const SizedBox(height: 12),
             const Text(
               'No payment methods added',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             const SizedBox(height: 8),
             Text(
@@ -787,7 +895,7 @@ class _BookingModalState extends State<BookingModal> {
         ),
       );
     }
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -834,10 +942,7 @@ class _BookingModalState extends State<BookingModal> {
                     if (_selectedPaymentMethod != null)
                       Text(
                         'Expires ${_selectedPaymentMethod!.expiry}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                   ],
                 ),
@@ -863,7 +968,10 @@ class _BookingModalState extends State<BookingModal> {
                               color: Color(0xFF34D399),
                             ),
                           const SizedBox(width: 8),
-                          Text(method.cardIcon, style: const TextStyle(fontSize: 18)),
+                          Text(
+                            method.cardIcon,
+                            style: const TextStyle(fontSize: 18),
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(
@@ -871,7 +979,9 @@ class _BookingModalState extends State<BookingModal> {
                               children: [
                                 Text(
                                   method.displayName,
-                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                                 Text(
                                   'Expires ${method.expiry}',
@@ -966,7 +1076,7 @@ class _BookingModalState extends State<BookingModal> {
         ...List.generate(widget.services.length, (index) {
           final service = widget.services[index];
           final isSelected = _selectedServiceIndices.contains(index);
-          
+
           // formatting data
           final priceVal = double.tryParse(service['price'].toString()) ?? 0.0;
           final unit = service['unit'] ?? '';
@@ -992,7 +1102,9 @@ class _BookingModalState extends State<BookingModal> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     // Use your brand green for selected border
-                    color: isSelected ? const Color(0xFF34D399) : Colors.grey[200]!,
+                    color: isSelected
+                        ? const Color(0xFF34D399)
+                        : Colors.grey[200]!,
                     width: isSelected ? 2 : 1,
                   ),
                 ),
@@ -1002,7 +1114,9 @@ class _BookingModalState extends State<BookingModal> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF34D399) : Colors.grey[100],
+                        color: isSelected
+                            ? const Color(0xFF34D399)
+                            : Colors.grey[100],
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -1021,17 +1135,21 @@ class _BookingModalState extends State<BookingModal> {
                             service['name'] ?? 'Service',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: isSelected ? Colors.black87 : Colors.black54,
+                              color: isSelected
+                                  ? Colors.black87
+                                  : Colors.black54,
                               fontSize: 14,
                             ),
                           ),
                           Text(
-                            "RM ${priceVal.toStringAsFixed(0)} $unit", 
+                            "RM ${priceVal.toStringAsFixed(0)} $unit",
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               // Use your darker green for price text
-                              color: isSelected ? const Color(0xFF059669) : Colors.grey[500],
+                              color: isSelected
+                                  ? const Color(0xFF059669)
+                                  : Colors.grey[500],
                             ),
                           ),
                         ],
@@ -1039,7 +1157,11 @@ class _BookingModalState extends State<BookingModal> {
                     ),
                     // Checkmark Icon
                     if (isSelected)
-                      const Icon(Icons.check_circle, color: Color(0xFF34D399), size: 20),
+                      const Icon(
+                        Icons.check_circle,
+                        color: Color(0xFF34D399),
+                        size: 20,
+                      ),
                   ],
                 ),
               ),

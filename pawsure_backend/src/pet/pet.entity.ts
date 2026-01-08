@@ -83,7 +83,7 @@ export class Pet {
   @OneToMany(() => HealthRecord, (healthRecord) => healthRecord.pet)
   healthRecords: HealthRecord[];
 
-  @OneToMany(() => Booking, (booking) => booking.pet)
+  @OneToMany(() => Booking, (booking) => booking.pets)
   bookings: Booking[];
 
   // 🆕 Events relationship

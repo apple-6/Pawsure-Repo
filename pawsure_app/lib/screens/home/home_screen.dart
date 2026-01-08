@@ -374,6 +374,16 @@ class HomeScreen extends StatelessWidget {
                             final filteredBookings = bookingController
                                 .userBookings
                                 .where((booking) {
+                                  // ✅ UPDATED: Handle new 'pets' array
+                                  // Check if ANY pet in the booking matches the currently selected pet
+                                  if (booking['pets'] != null && booking['pets'] is List) {
+                                    final petsList = booking['pets'] as List;
+                                    final currentPetId = controller.selectedPet.value?.id;
+                                    // Returns true if at least one pet matches
+                                    return petsList.any((p) => p['id'] == currentPetId);
+                                  }
+                                  
+                                  // Fallback for old data
                                   final bId = booking['pet']?['id'];
                                   final sId = controller.selectedPet.value?.id;
                                   return bId.toString() == sId.toString();

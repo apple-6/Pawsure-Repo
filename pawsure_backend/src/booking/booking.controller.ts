@@ -43,7 +43,8 @@ async create(@Body() createBookingDto: CreateBookingDto, @Request() req) {
     status: 'pending',
     owner: { id: req.user.id } as User,
     sitter: { id: createBookingDto.sitterId } as Sitter,
-    pet: { id: createBookingDto.petId } as Pet,
+    //pet: { id: createBookingDto.petId } as Pet,
+    pets: createBookingDto.petIds.map(id => ({ id } as Pet)),
   });
 }
 
