@@ -10,9 +10,10 @@ class PostModel {
   final List<String> mediaUrls; // This name must match PostCard
   final String? location;
   final bool isUrgent;
-  final bool isLiked;
-  final int likes;
+  bool isLiked;
+  int likes; //remove final
   final DateTime createdAt;
+  int commentsCount;
 
   // Vacancy fields for the new Sitter Vacancy logic
   final bool isVacancy;
@@ -36,6 +37,7 @@ class PostModel {
     this.startDate,
     this.endDate,
     this.petId,
+    this.commentsCount = 0,
   });
 
   /// Fix localhost URLs for Android emulator
@@ -86,7 +88,8 @@ class PostModel {
 
       location: json['location_name'] ?? json['location'],
       isUrgent: json['is_urgent'] ?? false,
-      likes: json['likes_count'] ?? json['likes'] ?? 0,
+      //likes: json['likes_count'] ?? json['likes'] ?? 0,
+      likes: json['likesCount'] ?? json['likes_count'] ?? json['likes'] ?? 0,
       isLiked: json['isLiked'] ?? false,
       createdAt: DateTime.tryParse(json['created_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
 
@@ -99,6 +102,7 @@ class PostModel {
           ? DateTime.tryParse(json['end_date'])
           : null,
       petId: json['petId']?.toString(),
+      commentsCount: json['commentsCount'] ?? json['comments_count'] ?? 0,
     );
   }
 }
