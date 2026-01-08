@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:pawsure_app/models/comment_model.dart';
 import 'package:pawsure_app/services/api_service.dart';
-import 'package:pawsure_app/services/auth_service.dart'; // 1. Import Auth Service
-import 'package:get/get.dart'; 
+import 'package:pawsure_app/services/auth_service.dart';
+import 'package:get/get.dart';
 
 class CommentModal extends StatefulWidget {
   final String postId;
   final VoidCallback? onCommentPosted;
 
   const CommentModal({
-    super.key, 
-    required this.postId, 
+    super.key,
+    required this.postId,
     this.onCommentPosted,
   });
 
@@ -21,23 +21,20 @@ class CommentModal extends StatefulWidget {
 class _CommentModalState extends State<CommentModal> {
   final TextEditingController _commentController = TextEditingController();
   final ApiService _apiService = ApiService();
-  
-  // 2. Access Auth Service to get ID
-  final AuthService _authService = Get.find<AuthService>(); 
+  final AuthService _authService = Get.find<AuthService>();
 
   List<CommentModel> _comments = [];
   bool _isLoading = true;
   bool _isSending = false;
-  String? _currentUserId; // Store your ID
+  String? _currentUserId;
 
   @override
   void initState() {
     super.initState();
-    _fetchCurrentUser(); // 3. Fetch ID on init
+    _fetchCurrentUser();
     _fetchComments();
   }
 
-  // Helper to get your ID
   Future<void> _fetchCurrentUser() async {
     final userId = await _authService.getUserId();
     if (mounted) {
@@ -75,11 +72,10 @@ class _CommentModalState extends State<CommentModal> {
         _commentController.clear();
         _isSending = false;
       });
-      
+
       if (widget.onCommentPosted != null) {
         widget.onCommentPosted!();
       }
-
     } catch (e) {
       if (mounted) {
         setState(() => _isSending = false);
@@ -87,6 +83,24 @@ class _CommentModalState extends State<CommentModal> {
           const SnackBar(content: Text("Failed to post comment")),
         );
       }
+    }
+  }
+
+  // 🆕 Helper to format Date and Time
+  String _formatDateTime(DateTime dateTime) {
+    final localTime = dateTime.toLocal();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dateToCheck = DateTime(localTime.year, localTime.month, localTime.day);
+
+    String timeString = "${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}";
+
+    if (dateToCheck == today) {
+      return "Today, $timeString";
+    } else if (dateToCheck == today.subtract(const Duration(days: 1))) {
+      return "Yesterday, $timeString";
+    } else {
+      return "${localTime.day}/${localTime.month}/${localTime.year} $timeString";
     }
   }
 
@@ -129,43 +143,34 @@ class _CommentModalState extends State<CommentModal> {
                         itemCount: _comments.length,
                         itemBuilder: (context, index) {
                           final comment = _comments[index];
-                          
-                          // 4. Check if the comment belongs to the current user
                           final isMe = comment.userId == _currentUserId;
 
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8.0),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              // If isMe -> Align End (Right). If Not -> Align Start (Left)
-                              mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
                               children: [
-                                
-                                // --- A. OTHER PEOPLE (Avatar on Left) ---
-                                if (!isMe) ...[
-                                  CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: Colors.blueAccent.withOpacity(0.2),
-                                    child: Text(
-                                      comment.userName.isNotEmpty ? comment.userName[0].toUpperCase() : '?',
-                                      style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold),
-                                    ),
+                                // Avatar (Always Left)
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: Colors.blueAccent.withOpacity(0.2),
+                                  child: Text(
+                                    comment.userName.isNotEmpty ? comment.userName[0].toUpperCase() : '?',
+                                    style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold),
                                   ),
-                                  const SizedBox(width: 10),
-                                ],
+                                ),
+                                const SizedBox(width: 10),
 
-                                // --- B. THE BUBBLE ---
-                                Flexible( 
+                                // Comment Bubble (Always Expanded)
+                                Expanded(
                                   child: Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      // Blue for me, Grey for others
-                                      color: isMe ? Colors.blue[100] : Colors.grey[100], 
+                                      color: isMe ? Colors.blue[50] : Colors.grey[100], 
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Column(
-                                      // Align text to right if it's me
-                                      crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start, // Left aligned
                                       children: [
                                         Text(
                                           comment.userName,
@@ -173,23 +178,21 @@ class _CommentModalState extends State<CommentModal> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(comment.content),
+                                        const SizedBox(height: 4),
+                                        
+                                        // 🆕 Date & Time Text
+                                        Text(
+                                          _formatDateTime(comment.createdAt),
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.grey[600],
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
                                 ),
-
-                                // --- C. ME (Avatar on Right) ---
-                                if (isMe) ...[
-                                  const SizedBox(width: 10),
-                                  CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: Colors.blueAccent.withOpacity(0.2),
-                                    child: Text(
-                                      comment.userName.isNotEmpty ? comment.userName[0].toUpperCase() : '?',
-                                      style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
                           );
