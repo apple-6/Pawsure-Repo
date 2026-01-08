@@ -8,11 +8,7 @@ class CommentModal extends StatefulWidget {
   final String postId;
   final VoidCallback? onCommentPosted;
 
-  const CommentModal({
-    super.key,
-    required this.postId,
-    this.onCommentPosted,
-  });
+  const CommentModal({super.key, required this.postId, this.onCommentPosted});
 
   @override
   State<CommentModal> createState() => _CommentModalState();
@@ -79,28 +75,45 @@ class _CommentModalState extends State<CommentModal> {
     } catch (e) {
       if (mounted) {
         setState(() => _isSending = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to post comment")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Failed to post comment")));
       }
     }
   }
 
-  // 🆕 Helper to format Date and Time
   String _formatDateTime(DateTime dateTime) {
-    final localTime = dateTime.toLocal();
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final dateToCheck = DateTime(localTime.year, localTime.month, localTime.day);
+    // Always display timestamps in Malaysia Time (MYT, UTC+8), regardless of
+    // the device timezone.
+    //
+    // Converting to UTC first ensures we preserve the correct instant even if
+    // the DateTime was already converted to device-local time elsewhere.
+    final malaysiaTime = dateTime.toUtc().add(const Duration(hours: 8));
+    final nowMY = DateTime.now().toUtc().add(const Duration(hours: 8));
 
-    String timeString = "${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}";
+    final todayMY = DateTime(nowMY.year, nowMY.month, nowMY.day);
+    final dateToCheck = DateTime(
+      malaysiaTime.year,
+      malaysiaTime.month,
+      malaysiaTime.day,
+    );
 
-    if (dateToCheck == today) {
+    final hour = malaysiaTime.hour == 0
+        ? 12
+        : malaysiaTime.hour > 12
+        ? malaysiaTime.hour - 12
+        : malaysiaTime.hour;
+    final minute = malaysiaTime.minute.toString().padLeft(2, '0');
+    final period = malaysiaTime.hour >= 12 ? 'PM' : 'AM';
+
+    final timeString = "$hour:$minute $period";
+
+    if (dateToCheck == todayMY) {
       return "Today, $timeString";
-    } else if (dateToCheck == today.subtract(const Duration(days: 1))) {
+    } else if (dateToCheck == todayMY.subtract(const Duration(days: 1))) {
       return "Yesterday, $timeString";
     } else {
-      return "${localTime.day}/${localTime.month}/${localTime.year} $timeString";
+      return "${malaysiaTime.day}/${malaysiaTime.month}/${malaysiaTime.year}, $timeString";
     }
   }
 
@@ -129,7 +142,10 @@ class _CommentModalState extends State<CommentModal> {
               ),
             ),
           ),
-          const Text("Comments", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            "Comments",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const Divider(),
 
           // Comments List
@@ -137,70 +153,102 @@ class _CommentModalState extends State<CommentModal> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _comments.isEmpty
-                    ? const Center(child: Text("No comments yet.", style: TextStyle(color: Colors.grey)))
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: _comments.length,
-                        itemBuilder: (context, index) {
-                          final comment = _comments[index];
-                          final isMe = comment.userId == _currentUserId;
+                ? const Center(
+                    child: Text(
+                      "No comments yet.",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _comments.length,
+                    itemBuilder: (context, index) {
+                      final comment = _comments[index];
+                      final isMe = comment.userId == _currentUserId;
 
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Avatar (Always Left)
-                                CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: Colors.blueAccent.withOpacity(0.2),
-                                  child: Text(
-                                    comment.userName.isNotEmpty ? comment.userName[0].toUpperCase() : '?',
-                                    style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold),
-                                  ),
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Avatar (Always Left)
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Colors.blueAccent.withOpacity(
+                                0.2,
+                              ),
+                              child: Text(
+                                comment.userName.isNotEmpty
+                                    ? comment.userName[0].toUpperCase()
+                                    : '?',
+                                style: const TextStyle(
+                                  color: Colors.blueAccent,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                const SizedBox(width: 10),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
 
-                                // Comment Bubble (Always Expanded)
-                                Expanded(
-                                  child: Container(
+                            // Comment Content (Full Width)
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment
+                                    .start, // Align bubble and time left
+                                children: [
+                                  // The Bubble
+                                  Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: isMe ? Colors.blue[50] : Colors.grey[100], 
+                                      // Optional: Different color for "Me"
+                                      color: isMe
+                                          ? Colors.blue[50]
+                                          : Colors.grey[100],
                                       borderRadius: BorderRadius.circular(12),
                                     ),
+                                    width: double
+                                        .infinity, // Ensures bubble fills width
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start, // Left aligned
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           comment.userName,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
                                         ),
                                         const SizedBox(height: 2),
                                         Text(comment.content),
-                                        const SizedBox(height: 4),
-                                        
-                                        // 🆕 Date & Time Text
-                                        Text(
-                                          _formatDateTime(comment.createdAt),
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.grey[600],
-                                            fontStyle: FontStyle.italic,
-                                          ),
-                                        ),
                                       ],
                                     ),
                                   ),
-                                ),
-                              ],
+
+                                  // 🆕 TIMESTAMP (Below the bubble)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      top: 4.0,
+                                      left: 4.0,
+                                    ),
+                                    child: Text(
+                                      _formatDateTime(comment.createdAt),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey[600],
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          );
-                        },
-                      ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
           ),
 
-          // Input Area
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -214,7 +262,10 @@ class _CommentModalState extends State<CommentModal> {
                     decoration: InputDecoration(
                       hintText: "Add a comment...",
                       hintStyle: TextStyle(color: Colors.grey[400]),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       filled: true,
                       fillColor: Colors.grey[100],
                       border: OutlineInputBorder(
@@ -226,9 +277,13 @@ class _CommentModalState extends State<CommentModal> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: _isSending 
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) 
-                    : const Icon(Icons.send, color: Colors.blue),
+                  icon: _isSending
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.send, color: Colors.blue),
                   onPressed: _submitComment,
                 ),
               ],
