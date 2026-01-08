@@ -96,50 +96,55 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
 
     if (shouldLogout == true) {
       try {
-        // --- TOKEN CLEARING ---
-        // If you rely on SharedPreferences mostly, use this:
+        // Show loading indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+
+        // Clear SharedPreferences
         final prefs = await SharedPreferences.getInstance();
-        await prefs.clear(); // Clears UserID, Token, etc.
+        await prefs.clear();
 
-        final storageService = Get.find<StorageService>();
-        await storageService.deleteToken();
-
-        // --- RESET GETX CONTROLLERS ---
-        // These checks are safe (they won't crash if the controller isn't found)
-        // Ensure you import these Controllers at the top if they are in different files.
-        if (Get.isRegistered<HealthController>()) {
-          Get.find<HealthController>().resetState();
-        }
-        if (Get.isRegistered<HomeController>()) {
-          Get.find<HomeController>().resetState();
-        }
-        if (Get.isRegistered<ProfileController>()) {
-          Get.find<ProfileController>().resetState();
+        // Clear user data state
+        if (mounted) {
+          setState(() {
+            currentUser = null;
+          });
         }
 
-        // Clear all dependencies from memory
-        Get.deleteAll(force: true);
+        // Close loading dialog
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
 
-        // Navigate to Login
-        Get.offAll(() => LoginScreen()); 
+        // Navigate to login and remove all previous routes
+        // Use Navigator instead of Get to avoid controller issues
+        if (context.mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => LoginScreen()),
+            (route) => false,
+          );
+        }
 
-        Get.snackbar(
-          'Success',
-          'You have been logged out',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.withOpacity(0.1),
-          colorText: Colors.green[800],
-          duration: const Duration(seconds: 2),
-        );
       } catch (e) {
-        debugPrint('❌ Error during logout: $e');
-        Get.snackbar(
-          'Error',
-          'Failed to logout: ${e.toString()}',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withOpacity(0.1),
-          colorText: Colors.red[800],
-        );
+        // Close loading dialog if it's showing
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
+
+        // Show error message
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to logout: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
