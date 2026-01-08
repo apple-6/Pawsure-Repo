@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Post } from './posts.entity';
@@ -119,6 +119,101 @@ export class PostsService {
     } catch (error) {
       this.logger.error(`❌ Error creating post: ${error.message}`);
       throw new Error(`Failed to create post: ${error.message}`);
+    }
+  }
+  /**
+   * Updates an existing post.
+   * Includes ownership check to ensure only the creator can edit.
+   */
+  async update(id: number, body: any, userId: number) {
+    try {
+      this.logger.log(`Update request for post ${id} by user ${userId}`);
+
+      // 1. Find existing post with current pet relations
+      const post = await this.postRepo.findOne({
+        where: { id },
+        relations: ['pets'],
+      });
+
+      if (!post) {
+        throw new NotFoundException(`Post with ID ${id} not found`);
+      }
+
+      // 2. Ownership Check: Ensure userId matches creator
+      if (post.userId !== userId) {
+        throw new UnauthorizedException('You do not have permission to edit this post');
+      }
+
+      // 3. Handle Pet Updates (if provided)
+      if (body.pet_id || body.petIds) {
+        let petIds: number[] = [];
+        const rawPetIds = body.pet_id || body.petIds;
+
+        if (Array.isArray(rawPetIds)) {
+          petIds = rawPetIds.map(id => Number(id));
+        } else if (typeof rawPetIds === 'string') {
+          try {
+            const parsed = JSON.parse(rawPetIds);
+            petIds = Array.isArray(parsed) ? parsed.map(Number) : [Number(parsed)];
+          } catch {
+            petIds = rawPetIds.split(',').map(id => Number(id.trim()));
+          }
+        }
+
+        if (petIds.length > 0) {
+          post.pets = await this.petRepo.findBy({ id: In(petIds) });
+        }
+      }
+
+      // 4. Update other fields
+      post.content = body.content ?? post.content;
+      post.rate_per_night = body.rate_per_night ? parseFloat(body.rate_per_night) : post.rate_per_night;
+      post.start_date = body.start_date ? new Date(body.start_date) : post.start_date;
+      post.end_date = body.end_date ? new Date(body.end_date) : post.end_date;
+      post.is_urgent = body.is_urgent !== undefined ? (body.is_urgent === 'true' || body.is_urgent === true) : post.is_urgent;
+
+      // 5. Save updated entity
+      const updatedPost = await this.postRepo.save(post);
+      this.logger.log(`✅ Post ${id} updated successfully`);
+
+      return await this.postRepo.findOne({
+        where: { id: updatedPost.id },
+        relations: ['user', 'post_media', 'pets'],
+      });
+    } catch (error) {
+      this.logger.error(`❌ Update Error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Removes a post.
+   * Includes ownership check to ensure only the creator can delete.
+   */
+  async remove(id: number, userId: number) {
+    try {
+      this.logger.log(`Delete request for post ${id} by user ${userId}`);
+
+      const post = await this.postRepo.findOne({ where: { id } });
+
+      if (!post) {
+        throw new NotFoundException(`Post with ID ${id} not found`);
+      }
+
+      // Ownership Check
+      if (post.userId !== userId) {
+        throw new UnauthorizedException('You do not have permission to delete this post');
+      }
+
+      // Note: If you have Cascade Delete set in your Entity, 
+      // related media records will be deleted automatically.
+      await this.postRepo.remove(post);
+      this.logger.log(`✅ Post ${id} deleted successfully`);
+      
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`❌ Delete Error: ${error.message}`);
+      throw error;
     }
   }
 }

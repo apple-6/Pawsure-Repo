@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
@@ -245,6 +247,8 @@ class _FeedTabViewState extends State<FeedTabView>
     with SingleTickerProviderStateMixin {
   late TabController _subTabController;
 
+  get currentUserId => null;
+
   @override
   void initState() {
     super.initState();
@@ -290,6 +294,74 @@ class _FeedTabViewState extends State<FeedTabView>
     );
   }
 
+  // ✅ ADDED DELETE LOGIC HERE
+  Future<void> _deletePost(PostModel post) async {
+    bool confirm =
+        await Get.dialog(
+          AlertDialog(
+            title: const Text("Delete Post?"),
+            content: const Text(
+              "Are you sure you want to remove this vacancy? This action cannot be undone.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () => Get.back(result: true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text("Delete"),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!confirm) return;
+
+    try {
+      final authService = Get.find<AuthService>();
+      final token = await authService.getToken();
+      String baseUrl = Platform.isAndroid
+          ? 'http://10.0.2.2:3000'
+          : 'http://127.0.0.1:3000';
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/posts/${post.id}'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        Get.snackbar(
+          "Success",
+          "Post deleted successfully",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+
+        // Refresh the parent UI to hide the deleted post
+        widget.parentState.setState(() {});
+      } else {
+        Get.snackbar(
+          "Error",
+          "Failed to delete post",
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        "Connection failed",
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
   // 1. PLACE THE METHOD HERE
   void _handleBooking(PostModel post) async {
     // Show a confirmation dialog before proceeding
@@ -321,7 +393,6 @@ class _FeedTabViewState extends State<FeedTabView>
   }
 
   Widget _buildDynamicPostList(String tab) {
-    // 1. Get AuthService instance
     final authService = Get.find<AuthService>();
 
     return FutureBuilder<List<PostModel>>(
@@ -342,12 +413,20 @@ class _FeedTabViewState extends State<FeedTabView>
 
         final posts = snapshot.data!;
 
-        // 2. Use a second FutureBuilder to get the user role asynchronously
-        return FutureBuilder<String?>(
-          future: authService.getUserRole(),
-          builder: (context, roleSnapshot) {
-            // Default to false while loading or if error
-            final bool isSitter = roleSnapshot.data == 'sitter';
+        // ✅ Corrected FutureBuilder to handle the Map correctly
+        return FutureBuilder<Map<String, dynamic>>(
+          future: Future.wait([
+            authService.getUserRole(),
+            authService.getUserId(),
+          ]).then((values) => {'role': values[0], 'id': values[1]}),
+          builder: (context, authSnapshot) {
+            if (!authSnapshot.hasData) return const SizedBox();
+
+            // ✅ Access data via Map keys, not List indices
+            final String? currentUserRole = authSnapshot.data!['role'];
+            final String? currentUserId = authSnapshot.data!['id']?.toString();
+
+            final bool isSitter = currentUserRole == 'sitter';
 
             return RefreshIndicator(
               onRefresh: () async => widget.parentState.setState(() {}),
@@ -357,13 +436,40 @@ class _FeedTabViewState extends State<FeedTabView>
                 itemBuilder: (context, index) {
                   final post = posts[index];
 
+                  // ✅ Improved ID comparison logic
+                  final bool isMyPost =
+                      currentUserId != null &&
+                      currentUserId == post.userId.toString();
+
+                  // ✅ Temporary Print for Debugging (Check your console!)
+                  debugPrint(
+                    "Post by: ${post.userId} | Me: $currentUserId | Match: $isMyPost",
+                  );
+
+                  // ✅ Logic for showing the 3-dot menu
+                  final bool canManagePost = !isSitter && isMyPost;
+
                   if (tab == 'vacancy') {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: VacancyPostCard(
                         post: post,
-                        isUserSitter: isSitter, // Now correctly defined!
+                        isUserSitter: isSitter,
+                        showMenuOptions:
+                            canManagePost, // ✅ Now receives correct boolean
                         onApply: () => _handleBooking(post),
+                        onDelete: (p) => _deletePost(p),
+                        onEdit: (p) {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (context) => CreateVacancyModal(
+                              postToEdit: p,
+                              onVacancyCreated: () =>
+                                  widget.parentState.setState(() {}),
+                            ),
+                          );
+                        },
                       ),
                     );
                   }

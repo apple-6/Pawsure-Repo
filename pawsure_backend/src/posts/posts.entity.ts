@@ -45,13 +45,13 @@ export class Post {
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @OneToMany(() => PostMedia, (media) => media.post)
+  @OneToMany(() => PostMedia, (media) => media.post, {cascade: true})
   post_media: PostMedia[];
 
-  @OneToMany(() => Comment, (comment) => comment.post)
+  @OneToMany(() => Comment, (comment) => comment.post, {cascade: true})
   comments: Comment[];
 
-  @OneToMany(() => Like, (like) => like.post)
+  @OneToMany(() => Like, (like) => like.post, {cascade: true})
   likes: Like[];
 
   // UPDATED: Many-to-Many relationship for multiple pets

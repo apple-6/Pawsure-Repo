@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
-import 'dart:io'; // Required for Platform check
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
+import 'package:pawsure_app/models/post_model.dart';
 import 'package:pawsure_app/services/auth_service.dart';
 
 class CreateVacancyModal extends StatefulWidget {
   final VoidCallback onVacancyCreated;
+  final PostModel? postToEdit; // ✅ Added to handle editing
 
-  const CreateVacancyModal({super.key, required this.onVacancyCreated});
+  const CreateVacancyModal({
+    super.key,
+    required this.onVacancyCreated,
+    this.postToEdit,
+  });
 
   @override
   State<CreateVacancyModal> createState() => _CreateVacancyModalState();
@@ -27,11 +33,8 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
   bool _isLoading = true;
   bool _isSubmitting = false;
 
-  // ✅ Smart URL Getter (Works on Windows & Android)
   String get apiBaseUrl {
-    if (Platform.isAndroid) {
-      return 'http://10.0.2.2:3000';
-    }
+    if (Platform.isAndroid) return 'http://10.0.2.2:3000';
     return 'http://127.0.0.1:3000';
   }
 
@@ -39,17 +42,30 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
   void initState() {
     super.initState();
     _fetchMyPets();
+
+    // ✅ PRE-FILL DATA IF EDITING
+    if (widget.postToEdit != null) {
+      _captionController.text = widget.postToEdit!.content;
+      _rateController.text = widget.postToEdit!.ratePerNight.toString();
+      _startDate = widget.postToEdit!.startDate;
+      _endDate = widget.postToEdit!.endDate;
+
+      if (widget.postToEdit!.pets != null) {
+        for (var pet in widget.postToEdit!.pets!) {
+          _selectedPetIds.add(pet.id.toString());
+        }
+      }
+    }
+
     _rateController.addListener(() => setState(() {}));
   }
 
-  // ✅ 1. Standardized Headers Helper (Like ActivityService)
   Future<Map<String, String>> _getHeaders() async {
     final headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
     };
     try {
-      // Uses the AuthService you injected in main.dart
       if (Get.isRegistered<AuthService>()) {
         final authService = Get.find<AuthService>();
         final token = await authService.getToken();
@@ -63,19 +79,13 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
     return headers;
   }
 
-  // ✅ 2. Fetch Pets using the Service Pattern
   Future<void> _fetchMyPets() async {
     try {
       final headers = await _getHeaders();
-
-      // Check if we have auth (headers will contain Authorization if logged in)
       if (!headers.containsKey('Authorization')) {
-        debugPrint('⚠️ No Auth Token found');
         if (mounted) setState(() => _isLoading = false);
         return;
       }
-
-      debugPrint('🐶 Fetching pets from: $apiBaseUrl/pets');
 
       final response = await http.get(
         Uri.parse('$apiBaseUrl/pets'),
@@ -91,11 +101,9 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
           });
         }
       } else {
-        debugPrint('❌ API Error: ${response.statusCode} - ${response.body}');
         if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
-      debugPrint('❌ Connection Failed: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -103,7 +111,9 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
   Future<void> _selectDateRange() async {
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
-      firstDate: DateTime.now(),
+      firstDate: DateTime.now().subtract(
+        const Duration(days: 365),
+      ), // Allow past dates for editing existing posts
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
 
@@ -125,6 +135,19 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
     });
   }
 
+  void _toggleSelectAll() {
+    setState(() {
+      if (_selectedPetIds.length == _myPets.length) {
+        _selectedPetIds.clear();
+      } else {
+        _selectedPetIds.clear();
+        for (var pet in _myPets) {
+          _selectedPetIds.add(pet['id'].toString());
+        }
+      }
+    });
+  }
+
   String _calculateTotal() {
     if (_startDate == null ||
         _endDate == null ||
@@ -132,20 +155,19 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
       return "0.00";
     }
     final days = _endDate!.difference(_startDate!).inDays;
+    final nights = days <= 0 ? 1 : days; // Ensure at least 1 night is counted
     final dailyRate = double.tryParse(_rateController.text) ?? 0.0;
-    return (days * dailyRate).toStringAsFixed(2);
+    return (nights * dailyRate).toStringAsFixed(2);
   }
 
-  // ✅ 3. Submit using the Service Pattern
+  // ✅ Consolidated Create/Update Logic
   Future<void> _submitVacancy() async {
     if (_startDate == null ||
         _endDate == null ||
         _selectedPetIds.isEmpty ||
         _rateController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill in all fields (dates, pets, and rate)'),
-        ),
+        const SnackBar(content: Text('Please fill in all fields')),
       );
       return;
     }
@@ -154,21 +176,27 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
 
     try {
       final headers = await _getHeaders();
-      debugPrint('🚀 Posting vacancy to: $apiBaseUrl/posts');
+      final bool isEditing = widget.postToEdit != null;
 
-      final response = await http.post(
-        Uri.parse('$apiBaseUrl/posts'),
-        headers: headers,
-        body: json.encode({
-          'content': _captionController.text.trim(),
-          'rate_per_night': double.tryParse(_rateController.text) ?? 0.0,
-          'is_vacancy': true,
-          'is_urgent': false,
-          'start_date': _startDate!.toIso8601String(),
-          'end_date': _endDate!.toIso8601String(),
-          'pet_id': _selectedPetIds,
-        }),
-      );
+      // ✅ Switch URL and Method based on mode
+      final String url = isEditing
+          ? '$apiBaseUrl/posts/${widget.postToEdit!.id}'
+          : '$apiBaseUrl/posts';
+
+      final body = json.encode({
+        'content': _captionController.text.trim(),
+        'rate_per_night': double.tryParse(_rateController.text) ?? 0.0,
+        'is_vacancy': true,
+        'is_urgent': false,
+        'start_date': _startDate!.toIso8601String(),
+        'end_date': _endDate!.toIso8601String(),
+        'pet_id': _selectedPetIds,
+      });
+
+      // ✅ Use PUT for editing, POST for new
+      final response = await (isEditing
+          ? http.put(Uri.parse(url), headers: headers, body: body)
+          : http.post(Uri.parse(url), headers: headers, body: body));
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         widget.onVacancyCreated();
@@ -210,9 +238,11 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      "Create Sitter Vacancy",
-                      style: TextStyle(
+                    Text(
+                      widget.postToEdit != null
+                          ? "Edit Vacancy"
+                          : "Create Sitter Vacancy",
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -262,9 +292,6 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                           ),
                         ),
                         const SizedBox(height: 20),
-
-                        // ✅ UPDATED SELECT PETS SECTION WITH SELECT ALL
-                        // ✅ UPDATED SELECT PETS SECTION WITH SELECT ALL BUTTON
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -277,20 +304,11 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                                 onPressed: _toggleSelectAll,
                                 style: TextButton.styleFrom(
                                   visualDensity: VisualDensity.compact,
-                                  padding:
-                                      EdgeInsets.zero, // Reduces extra spacing
                                 ),
                                 child: Text(
                                   _selectedPetIds.length == _myPets.length
                                       ? "Deselect All"
                                       : "Select All",
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Theme.of(
-                                      context,
-                                    ).primaryColor, // Matching your app theme
-                                    fontWeight: FontWeight.w600,
-                                  ),
                                 ),
                               ),
                           ],
@@ -303,8 +321,7 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                               )
                             : Wrap(
                                 spacing: 8.0,
-                                runSpacing:
-                                    4.0, // Added for better spacing if they wrap to multiple lines
+                                runSpacing: 4.0,
                                 children: _myPets.map((pet) {
                                   final bool isSelected = _selectedPetIds
                                       .contains(pet['id'].toString());
@@ -313,17 +330,9 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                                     selected: isSelected,
                                     onSelected: (_) =>
                                         _togglePet(pet['id'].toString()),
-                                    // Optional: Match the chip color to your theme when selected
-                                    selectedColor: Theme.of(
-                                      context,
-                                    ).primaryColor.withOpacity(0.2),
-                                    checkmarkColor: Theme.of(
-                                      context,
-                                    ).primaryColor,
                                   );
                                 }).toList(),
                               ),
-
                         const SizedBox(height: 20),
                         const Text(
                           "Dates Needed",
@@ -354,7 +363,6 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -373,9 +381,10 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Text(
-                            "Post Vacancy",
-                            style: TextStyle(fontSize: 16),
+                        : Text(
+                            widget.postToEdit != null
+                                ? "Update Vacancy"
+                                : "Post Vacancy",
                           ),
                   ),
                 ),
@@ -400,7 +409,7 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
           Text(
-            "\$${_calculateTotal()}",
+            "RM ${_calculateTotal()}",
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -417,20 +426,5 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
     _captionController.dispose();
     _rateController.dispose();
     super.dispose();
-  }
-
-  void _toggleSelectAll() {
-    setState(() {
-      if (_selectedPetIds.length == _myPets.length) {
-        // If all are already selected, clear the selection
-        _selectedPetIds.clear();
-      } else {
-        // Otherwise, add all pet IDs
-        _selectedPetIds.clear();
-        for (var pet in _myPets) {
-          _selectedPetIds.add(pet['id'].toString());
-        }
-      }
-    });
   }
 }

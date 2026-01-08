@@ -3,6 +3,9 @@ import {
   Post,
   Get,
   Body,
+  Put,
+  Param,
+  Delete,
   UseGuards,
   UseInterceptors,
   UploadedFiles,
@@ -70,14 +73,9 @@ export class PostsController {
       throw new BadRequestException('Post content is required');
     }
 
-    // --- TRANSFORM DATA FROM FLUTTER ---
-    // Handle Boolean conversion (Form-data often sends strings)
     const isVacancy = body.is_vacancy === 'true' || body.is_vacancy === true;
-    
-    // Convert rate to number if it exists
     const rate = body.rate_per_night ? parseFloat(body.rate_per_night) : null;
 
-    // Ensure petIds is handled as an array (Flutter sends array, but check if it's JSON stringified)
     let petIds = body.petIds;
     if (typeof petIds === 'string') {
       try { petIds = JSON.parse(petIds); } catch (e) { petIds = [petIds]; }
@@ -86,7 +84,6 @@ export class PostsController {
     const uploadedFiles = files && files.length > 0 ? files : [];
 
     try {
-      // Pass the cleaned data to the service
       const postData = {
         ...body,
         is_vacancy: isVacancy,
@@ -102,6 +99,48 @@ export class PostsController {
       };
     } catch (error) {
       throw new BadRequestException(`Failed to create post: ${error.message}`);
+    }
+  }
+
+  // ✅ NEW: Update Post Method
+  // Handles: PUT /posts/:id
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  async update(
+    @Param('id') id: string, 
+    @Body() updatePostDto: any,
+    @GetUser() user: any,
+  ) {
+    try {
+      // We pass user.id to ensure the user owns the post they are editing
+      const updatedPost = await this.postsService.update(+id, updatePostDto, user.id);
+      return {
+        success: true,
+        message: 'Post updated successfully',
+        data: updatedPost,
+      };
+    } catch (error) {
+      throw new BadRequestException(`Update failed: ${error.message}`);
+    }
+  }
+
+  // ✅ NEW: Delete Post Method
+  // Handles: DELETE /posts/:id
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  async remove(
+    @Param('id') id: string,
+    @GetUser() user: any,
+  ) {
+    try {
+      // We pass user.id to ensure the user owns the post they are deleting
+      await this.postsService.remove(+id, user.id);
+      return {
+        success: true,
+        message: 'Post deleted successfully',
+      };
+    } catch (error) {
+      throw new BadRequestException(`Deletion failed: ${error.message}`);
     }
   }
 }

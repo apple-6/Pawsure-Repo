@@ -1,22 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:intl/intl.dart';
 import 'package:pawsure_app/models/post_model.dart';
 import 'package:pawsure_app/screens/sitter_setup/view_pet_profile.dart';
 
 class VacancyPostCard extends StatelessWidget {
-  final PostModel post; // Your post data object
-  final bool
-  isUserSitter; // Pass true if user role is 'sitter', false for 'owner'
+  final PostModel post;
+  final bool isUserSitter;
   final VoidCallback onApply;
+  final Function(PostModel)? onEdit;
+  final Function(PostModel)? onDelete;
+  final bool showMenuOptions;
 
   const VacancyPostCard({
     super.key,
     required this.post,
     required this.isUserSitter,
     required this.onApply,
+    this.onEdit,
+    this.onDelete,
+    required this.showMenuOptions,
   });
+
+  // Helper to calculate total based on post data
+  String _calculateTotalPay() {
+    if (post.startDate == null || post.endDate == null) return "0.00";
+    final int days = post.endDate!.difference(post.startDate!).inDays;
+    final int nights = days <= 0 ? 1 : days;
+    return (nights * post.ratePerNight).toStringAsFixed(2);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,28 +51,68 @@ class VacancyPostCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Standardized Title
-            const Text(
-              "Job Vacancy",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+            // --- TOP ROW: Title and Menu Buttons ---
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Job Vacancy",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                if (showMenuOptions)
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (value) {
+                      if (value == 'edit') onEdit?.call(post);
+                      if (value == 'delete') onDelete?.call(post);
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, size: 20),
+                            SizedBox(width: 8),
+                            Text("Edit"),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, color: Colors.red, size: 20),
+                            SizedBox(width: 8),
+                            Text("Delete", style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
             const Divider(height: 1),
             const SizedBox(height: 12),
 
-            // Date Row
+            // --- INFO SECTION ---
+            _buildInfoRow(
+              Icons.person_outline,
+              "Posted by:",
+              post.userName ?? "Unknown User",
+              valueColor: Colors.blue.shade700,
+            ),
+            const SizedBox(height: 8),
             _buildInfoRow(
               Icons.calendar_today_outlined,
               "Date:",
               "$startDate - $endDate",
             ),
             const SizedBox(height: 8),
-
-            // Rate Row
             _buildInfoRow(
               Icons.payments_outlined,
               "Rate:",
@@ -68,8 +120,15 @@ class VacancyPostCard extends StatelessWidget {
               valueColor: Colors.green.shade700,
             ),
             const SizedBox(height: 8),
+            _buildInfoRow(
+              Icons.account_balance_wallet_outlined,
+              "Total Pay:",
+              "RM ${_calculateTotalPay()}",
+              valueColor: Colors.orange.shade800,
+            ),
+            const SizedBox(height: 8),
 
-            // Pets to Sit Section
+            // --- PETS SECTION ---
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -95,7 +154,7 @@ class VacancyPostCard extends StatelessWidget {
                               arguments: {
                                 'pet': post.pets![index],
                                 'dateRange': "$startDate - $endDate",
-                                'estEarning': "RM ${rate.toStringAsFixed(2)}",
+                                'estEarning': "RM ${_calculateTotalPay()}",
                               },
                             );
                           }
@@ -114,9 +173,9 @@ class VacancyPostCard extends StatelessWidget {
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-            // Short Description/Content
+
+            // --- DESCRIPTION ---
             Text(
               post.content,
               style: const TextStyle(fontSize: 14, color: Colors.black87),
@@ -124,7 +183,7 @@ class VacancyPostCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
 
-            // Apply Button - Visible for sitters only
+            // --- ACTION BUTTON ---
             if (isUserSitter) ...[
               const SizedBox(height: 16),
               SizedBox(
@@ -134,7 +193,6 @@ class VacancyPostCard extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -152,7 +210,7 @@ class VacancyPostCard extends StatelessWidget {
     );
   }
 
-  // Helper widget for consistent rows
+  // --- HELPER WIDGET ---
   Widget _buildInfoRow(
     IconData icon,
     String label,
