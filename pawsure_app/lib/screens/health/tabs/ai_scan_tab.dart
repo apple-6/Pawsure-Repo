@@ -1,129 +1,146 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 
-class AIScanTab extends StatelessWidget {
+class AIScanTab extends StatefulWidget {
   const AIScanTab({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Row(
+  State<AIScanTab> createState() => _AIScanTabState();
+}
+
+class _AIScanTabState extends State<AIScanTab> {
+  bool _isScanning = false;
+
+  // 1. Function to Pick and Upload Image
+  Future<void> _handleScan(BuildContext context) async {
+    final picker = ImagePicker();
+    
+    // Choose source: Camera or Gallery
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image == null) return;
+
+    setState(() => _isScanning = true);
+
+    try {
+      // 2. Prepare the Request (Use your laptop's IP or localhost)
+      // Note: If using Android Emulator, use 10.0.2.2 instead of localhost
+      var uri = Uri.parse('http://localhost:3000/ai/scan'); 
+      var request = http.MultipartRequest('POST', uri);
+      
+      request.files.add(await http.MultipartFile.fromPath('image', image.path));
+
+      // 3. Send and Get Response
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+        _showResultDialog(result['prediction'], result['confidence']);
+      } else {
+        _showError("Server Error: ${response.statusCode}");
+      }
+    } catch (e) {
+      _showError("Could not connect to backend. Is NestJS running?");
+    } finally {
+      setState(() => _isScanning = false);
+    }
+  }
+
+  // 4. Show the AI Result
+  void _showResultDialog(String label, String confidence) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                color: Colors.orange.shade50,
-                child: InkWell(
-                  onTap: () {},
-                  borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: const [
-                        Icon(
-                          Icons.analytics_outlined,
-                          size: 38,
-                          color: Colors.orange,
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          'Analyze Poop/Fur',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+            const Text("PawSure AI Analysis", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            Icon(
+              label == 'Normal' ? Icons.check_circle : Icons.warning_amber_rounded,
+              color: label == 'Normal' ? Colors.green : Colors.orange,
+              size: 60,
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                color: Colors.teal.shade50,
-                child: InkWell(
-                  onTap: () {},
-                  borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: const [
-                        Icon(
-                          Icons.directions_walk_outlined,
-                          size: 38,
-                          color: Colors.teal,
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          'Check Posture/Gait',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            const SizedBox(height: 16),
+            Text(label, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text("Confidence: $confidence"),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Done"),
+            )
           ],
         ),
-        const SizedBox(height: 24),
-        Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          color: Colors.grey.shade100,
-          child: const Padding(
-            padding: EdgeInsets.all(24),
-            child: Text(
-              'This is an informational tool and does not replace professional veterinary advice.',
-              textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            Row(
+              children: [
+                _buildActionCard(
+                  'Analyze Poop',
+                  Icons.analytics_outlined,
+                  Colors.orange,
+                  () => _handleScan(context),
+                ),
+                const SizedBox(width: 16),
+                _buildActionCard(
+                  'Check Gait',
+                  Icons.directions_walk_outlined,
+                  Colors.teal,
+                  () {}, // Feature coming soon
+                ),
+              ],
             ),
-          ),
+            // ... (Rest of your informational cards and Past Scans list)
+          ],
         ),
-        const SizedBox(height: 32),
-        Text(
-          'Past Scans',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+        if (_isScanning)
+          Container(
+            color: Colors.black26,
+            child: const Center(child: CircularProgressIndicator()),
           ),
-          child: ListTile(
-            leading: const Icon(Icons.analytics_outlined, color: Colors.orange),
-            title: const Text('Stool Analysis'),
-            subtitle: const Text('12 Aug 2025 • Normal'),
-            trailing: Chip(
-              label: Text('Normal'),
-              backgroundColor: Colors.green[50],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ListTile(
-            leading: const Icon(Icons.analytics_outlined, color: Colors.orange),
-            title: const Text('Fur Analysis'),
-            subtitle: const Text('21 July 2025 • Attention'),
-            trailing: Chip(
-              label: Text('Attention'),
-              backgroundColor: Colors.orange[50],
-              labelStyle: TextStyle(color: Colors.orange),
-            ),
-          ),
-        ),
       ],
+    );
+  }
+
+  Widget _buildActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
+    return Expanded(
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        color: color.withOpacity(0.1),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                Icon(icon, size: 38, color: color),
+                const SizedBox(height: 12),
+                Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

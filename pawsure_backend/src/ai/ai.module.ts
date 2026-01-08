@@ -7,5 +7,6 @@ import { AiController } from './ai.controller';
   // imports: [ConfigModule], // <-- No longer needed
   controllers: [AiController],
   providers: [AiService],
+  exports: [AiService],
 })
 export class AiModule {}
