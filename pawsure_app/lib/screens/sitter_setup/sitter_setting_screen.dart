@@ -5,6 +5,10 @@ import 'package:http/http.dart' as http;
 import 'package:pawsure_app/screens/auth/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pawsure_app/constants/api_config.dart';
+import 'package:pawsure_app/services/storage_service.dart';
+import 'package:pawsure_app/controllers/health_controller.dart';
+import 'package:pawsure_app/controllers/home_controller.dart';
+import 'package:pawsure_app/controllers/profile_controller.dart';
 
 // Navigation Imports
 import 'sitter_calendar.dart';
@@ -91,12 +95,55 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
     );
 
     if (shouldLogout == true) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
-      Get.deleteAll(force: true);
-      Get.offAll(() => LoginScreen());
+      try {
+        // --- TOKEN CLEARING ---
+        // If you rely on SharedPreferences mostly, use this:
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.clear(); // Clears UserID, Token, etc.
+
+        final storageService = Get.find<StorageService>();
+        await storageService.deleteToken();
+
+        // --- RESET GETX CONTROLLERS ---
+        // These checks are safe (they won't crash if the controller isn't found)
+        // Ensure you import these Controllers at the top if they are in different files.
+        if (Get.isRegistered<HealthController>()) {
+          Get.find<HealthController>().resetState();
+        }
+        if (Get.isRegistered<HomeController>()) {
+          Get.find<HomeController>().resetState();
+        }
+        if (Get.isRegistered<ProfileController>()) {
+          Get.find<ProfileController>().resetState();
+        }
+
+        // Clear all dependencies from memory
+        Get.deleteAll(force: true);
+
+        // Navigate to Login
+        Get.offAll(() => LoginScreen()); 
+
+        Get.snackbar(
+          'Success',
+          'You have been logged out',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green[800],
+          duration: const Duration(seconds: 2),
+        );
+      } catch (e) {
+        debugPrint('❌ Error during logout: $e');
+        Get.snackbar(
+          'Error',
+          'Failed to logout: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red[800],
+        );
+      }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

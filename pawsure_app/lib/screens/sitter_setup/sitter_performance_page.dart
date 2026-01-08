@@ -52,9 +52,9 @@ class _SitterPerformancePageState extends State<SitterPerformancePage> {
     try {
       final apiService = Get.find<ApiService>();
       final bookings = await apiService.getSitterBookings();
-      
+
       if (bookings.isNotEmpty) {
-        print("API Booking Data: ${bookings.first}"); 
+        print("API Booking Data: ${bookings.first}");
       }
 
       // 👇 FORCE MOCK DATA FOR TESTING
@@ -63,7 +63,6 @@ class _SitterPerformancePageState extends State<SitterPerformancePage> {
         _applyFilters();
         isLoading = false;
       });
-      
     } catch (e) {
       print("Error fetching bookings: $e");
       setState(() {
@@ -85,51 +84,71 @@ class _SitterPerformancePageState extends State<SitterPerformancePage> {
   }
 
   void _applyFilters() {
-  setState(() {
-    filteredBookings = allBookings.where((booking) {
-      // --- 1. Service Filter ---
-      String bookingService = booking['serviceTypes'] ?? booking['serviceType'] ?? booking['service'] ?? booking['type'] ?? 'Pet Care Service';
-      
-      bool serviceMatch = selectedService == 'All Services' ||
-          bookingService == selectedService;
+    setState(() {
+      filteredBookings = allBookings.where((booking) {
+        // --- 1. Service Filter ---
+        String bookingService =
+            booking['serviceTypes'] ??
+            booking['serviceType'] ??
+            booking['service'] ??
+            booking['type'] ??
+            'Pet Care Service';
 
-      // 👇 FIXED: If showing all history, skip date filtering
-      if (showAllHistory) {
-        return serviceMatch; // Only apply service filter
-      }
+        bool serviceMatch =
+            selectedService == 'All Services' ||
+            bookingService == selectedService;
 
-      // --- 2. Date Filter (only when NOT showing all history) ---
-      if (booking['startDate'] == null) return false;
-      DateTime bookingDate;
-      try {
-        bookingDate = DateTime.parse(booking['startDate'].toString());
-      } catch (e) {
-        return false;
-      }
-
-      bool dateMatch = false;
-
-      if (filterType == 'Daily') {
-        dateMatch = isSameDay(bookingDate, selectedDate);
-      } else if (filterType == 'Weekly') {
-        if (selectedWeekRange != null) {
-          DateTime dateOnly = DateTime(bookingDate.year, bookingDate.month, bookingDate.day);
-          DateTime start = DateTime(selectedWeekRange!.start.year, selectedWeekRange!.start.month, selectedWeekRange!.start.day);
-          DateTime end = DateTime(selectedWeekRange!.end.year, selectedWeekRange!.end.month, selectedWeekRange!.end.day);
-
-          // 👇 Simplified date range check
-          dateMatch = (dateOnly.isAfter(start.subtract(const Duration(days: 1))) &&
-              dateOnly.isBefore(end.add(const Duration(days: 1))));
+        // 👇 FIXED: If showing all history, skip date filtering
+        if (showAllHistory) {
+          return serviceMatch; // Only apply service filter
         }
-      } else if (filterType == 'Monthly') {
-        dateMatch = bookingDate.year == selectedDate.year &&
-            bookingDate.month == selectedDate.month;
-      }
 
-      return serviceMatch && dateMatch;
-    }).toList();
-  });
-}
+        // --- 2. Date Filter (only when NOT showing all history) ---
+        if (booking['startDate'] == null) return false;
+        DateTime bookingDate;
+        try {
+          bookingDate = DateTime.parse(booking['startDate'].toString());
+        } catch (e) {
+          return false;
+        }
+
+        bool dateMatch = false;
+
+        if (filterType == 'Daily') {
+          dateMatch = isSameDay(bookingDate, selectedDate);
+        } else if (filterType == 'Weekly') {
+          if (selectedWeekRange != null) {
+            DateTime dateOnly = DateTime(
+              bookingDate.year,
+              bookingDate.month,
+              bookingDate.day,
+            );
+            DateTime start = DateTime(
+              selectedWeekRange!.start.year,
+              selectedWeekRange!.start.month,
+              selectedWeekRange!.start.day,
+            );
+            DateTime end = DateTime(
+              selectedWeekRange!.end.year,
+              selectedWeekRange!.end.month,
+              selectedWeekRange!.end.day,
+            );
+
+            // 👇 Simplified date range check
+            dateMatch =
+                (dateOnly.isAfter(start.subtract(const Duration(days: 1))) &&
+                dateOnly.isBefore(end.add(const Duration(days: 1))));
+          }
+        } else if (filterType == 'Monthly') {
+          dateMatch =
+              bookingDate.year == selectedDate.year &&
+              bookingDate.month == selectedDate.month;
+        }
+
+        return serviceMatch && dateMatch;
+      }).toList();
+    });
+  }
 
   bool isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
@@ -433,7 +452,9 @@ class _SitterPerformancePageState extends State<SitterPerformancePage> {
                                     filterType = val!;
                                     // Keep current showAllHistory state until they pick a date
                                   });
-                                }, icon: Icons.tune),
+                                }, icon: Icons.tune,
+                                isFiltered: !showAllHistory,
+                                ),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -498,6 +519,7 @@ class _SitterPerformancePageState extends State<SitterPerformancePage> {
                               _applyFilters();
                             },
                             icon: Icons.keyboard_arrow_down,
+                            isFiltered: selectedService != 'All Services',
                           ),
                         ],
                       ),
@@ -535,35 +557,52 @@ class _SitterPerformancePageState extends State<SitterPerformancePage> {
     List<String> items,
     Function(String?) onChanged, {
     IconData? icon,
+    bool isFiltered = false, // 👈 Add parameter to indicate if filtered
   }) {
+    const brandColor = Color(0xFF2ECA6A); // 👈 Define brandColor here
+    
     return Container(
       height: 45,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        border: Border.all(color: Colors.grey.shade300),
+        color: isFiltered
+            ? brandColor.withOpacity(0.1) // 👈 Green background when filtered
+            : Colors.grey.shade50,
+        border: Border.all(
+          color: isFiltered
+              ? brandColor // 👈 Green border when filtered
+              : Colors.grey.shade300,
+        ),
         borderRadius: BorderRadius.circular(10),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: value,
+          value: value, // 👈 Use the passed value parameter
           isExpanded: true,
-          icon: Icon(icon ?? Icons.arrow_drop_down, size: 18),
-          style: const TextStyle(
+          icon: Icon(
+            icon ?? Icons.arrow_drop_down, // 👈 Use the passed icon parameter
+            size: 18,
+            color: isFiltered
+                ? brandColor // 👈 Green icon when filtered
+                : Colors.black87,
+          ),
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: isFiltered
+                ? brandColor // 👈 Green text when filtered
+                : Colors.black87,
           ),
           items: items.map((String val) {
             return DropdownMenuItem<String>(
               value: val,
               child: Text(
                 val,
-                style: const TextStyle(fontWeight: FontWeight.normal),
+                style: const TextStyle(fontWeight: FontWeight.normal, color: Colors.black87, fontSize: 13,),
               ),
             );
           }).toList(),
-          onChanged: onChanged,
+          onChanged: onChanged, // 👈 Use the passed onChanged parameter
         ),
       ),
     );
@@ -809,8 +848,8 @@ class _CustomCalendarPicker extends StatefulWidget {
 
 class _CustomCalendarPickerState extends State<_CustomCalendarPicker> {
   late DateTime _currentMonth;
-  DateTime? _tempStartDate; 
-  DateTime? _tempEndDate; 
+  DateTime? _tempStartDate;
+  DateTime? _tempEndDate;
 
   @override
   void initState() {
@@ -827,8 +866,16 @@ class _CustomCalendarPickerState extends State<_CustomCalendarPicker> {
   Widget build(BuildContext context) {
     const brandColor = Color(0xFF2ECA6A);
 
-    final int daysInMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
-    final int firstWeekday = DateTime(_currentMonth.year, _currentMonth.month, 1).weekday;
+    final int daysInMonth = DateTime(
+      _currentMonth.year,
+      _currentMonth.month + 1,
+      0,
+    ).day;
+    final int firstWeekday = DateTime(
+      _currentMonth.year,
+      _currentMonth.month,
+      1,
+    ).weekday;
     final int emptySlots = firstWeekday - 1;
 
     return Column(
@@ -836,30 +883,71 @@ class _CustomCalendarPickerState extends State<_CustomCalendarPicker> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => setState(() => _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1))),
-            Text(DateFormat('MMMM yyyy').format(_currentMonth), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => setState(() => _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1))),
+            IconButton(
+              icon: const Icon(Icons.chevron_left),
+              onPressed: () => setState(
+                () => _currentMonth = DateTime(
+                  _currentMonth.year,
+                  _currentMonth.month - 1,
+                ),
+              ),
+            ),
+            Text(
+              DateFormat('MMMM yyyy').format(_currentMonth),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            IconButton(
+              icon: const Icon(Icons.chevron_right),
+              onPressed: () => setState(
+                () => _currentMonth = DateTime(
+                  _currentMonth.year,
+                  _currentMonth.month + 1,
+                ),
+              ),
+            ),
           ],
         ),
-        
+
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-              .map((d) => SizedBox(width: 35, child: Center(child: Text(d, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)))))
+              .map(
+                (d) => SizedBox(
+                  width: 35,
+                  child: Center(
+                    child: Text(
+                      d,
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              )
               .toList(),
         ),
         const SizedBox(height: 10),
 
         Expanded(
           child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 7, mainAxisSpacing: 5, crossAxisSpacing: 5),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 5,
+              crossAxisSpacing: 5,
+            ),
             itemCount: daysInMonth + emptySlots,
             itemBuilder: (context, index) {
               if (index < emptySlots) return const SizedBox();
 
               final day = index - emptySlots + 1;
-              final date = DateTime(_currentMonth.year, _currentMonth.month, day);
-              
+              final date = DateTime(
+                _currentMonth.year,
+                _currentMonth.month,
+                day,
+              );
+
               bool isStartDate = false;
               bool isEndDate = false;
               bool isInRange = false;
@@ -874,15 +962,26 @@ class _CustomCalendarPickerState extends State<_CustomCalendarPicker> {
                 if (_tempEndDate != null) {
                   isEndDate = _isSameDay(date, _tempEndDate!);
                 }
-                
+
                 // 👇 Highlight dates in between
                 if (_tempStartDate != null && _tempEndDate != null) {
-                  final start = DateTime(_tempStartDate!.year, _tempStartDate!.month, _tempStartDate!.day);
-                  final end = DateTime(_tempEndDate!.year, _tempEndDate!.month, _tempEndDate!.day);
+                  final start = DateTime(
+                    _tempStartDate!.year,
+                    _tempStartDate!.month,
+                    _tempStartDate!.day,
+                  );
+                  final end = DateTime(
+                    _tempEndDate!.year,
+                    _tempEndDate!.month,
+                    _tempEndDate!.day,
+                  );
                   final current = DateTime(date.year, date.month, date.day);
-                  
-                  isInRange = (current.isAfter(start.subtract(const Duration(days: 1))) &&
-                              current.isBefore(end.add(const Duration(days: 1))));
+
+                  isInRange =
+                      (current.isAfter(
+                        start.subtract(const Duration(days: 1)),
+                      ) &&
+                      current.isBefore(end.add(const Duration(days: 1))));
                 }
               }
 
@@ -893,11 +992,13 @@ class _CustomCalendarPickerState extends State<_CustomCalendarPicker> {
                   } else {
                     // 👇 MANUAL RANGE SELECTION LOGIC
                     setState(() {
-                      if (_tempStartDate == null || (_tempStartDate != null && _tempEndDate != null)) {
+                      if (_tempStartDate == null ||
+                          (_tempStartDate != null && _tempEndDate != null)) {
                         // Start new selection
                         _tempStartDate = date;
                         _tempEndDate = null;
-                      } else if (_tempStartDate != null && _tempEndDate == null) {
+                      } else if (_tempStartDate != null &&
+                          _tempEndDate == null) {
                         // Set end date
                         if (date.isBefore(_tempStartDate!)) {
                           // If end date is before start, swap them
@@ -906,10 +1007,15 @@ class _CustomCalendarPickerState extends State<_CustomCalendarPicker> {
                         } else {
                           _tempEndDate = date;
                         }
-                        
+
                         // Notify parent with the complete range
                         if (widget.onRangeSelected != null) {
-                          widget.onRangeSelected!(DateTimeRange(start: _tempStartDate!, end: _tempEndDate!));
+                          widget.onRangeSelected!(
+                            DateTimeRange(
+                              start: _tempStartDate!,
+                              end: _tempEndDate!,
+                            ),
+                          );
                         }
                       }
                     });
@@ -918,18 +1024,24 @@ class _CustomCalendarPickerState extends State<_CustomCalendarPicker> {
                 child: Container(
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: (isStartDate || isEndDate) 
-                        ? brandColor 
-                        : (isInRange ? brandColor.withOpacity(0.3) : Colors.transparent),
-                    borderRadius: BorderRadius.circular((isStartDate || isEndDate) ? 30 : 8),
+                    color: (isStartDate || isEndDate)
+                        ? brandColor
+                        : (isInRange
+                              ? brandColor.withOpacity(0.3)
+                              : Colors.transparent),
+                    borderRadius: BorderRadius.circular(
+                      (isStartDate || isEndDate) ? 30 : 8,
+                    ),
                   ),
                   child: Text(
                     "$day",
                     style: TextStyle(
-                      color: (isStartDate || isEndDate) 
-                          ? Colors.white 
+                      color: (isStartDate || isEndDate)
+                          ? Colors.white
                           : (isInRange ? brandColor : Colors.black87),
-                      fontWeight: (isStartDate || isEndDate || isInRange) ? FontWeight.bold : FontWeight.normal
+                      fontWeight: (isStartDate || isEndDate || isInRange)
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -940,8 +1052,9 @@ class _CustomCalendarPickerState extends State<_CustomCalendarPicker> {
       ],
     );
   }
-  
-  bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
 class _MonthPicker extends StatefulWidget {
