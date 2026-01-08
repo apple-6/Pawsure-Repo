@@ -13,7 +13,8 @@ import 'package:pawsure_app/services/auth_service.dart';
 
 class SitterInboxItem {
   final int id;
-  final String petName;
+  //final String petName;
+  final List<Map<String, String>> pets;
   final String ownerName;
   final String petType; // 'dog' or 'cat'
   final String startDate;
@@ -25,7 +26,7 @@ class SitterInboxItem {
 
   SitterInboxItem({
     required this.id,
-    required this.petName,
+    required this.pets,
     required this.ownerName,
     required this.petType,
     required this.startDate,
@@ -35,16 +36,67 @@ class SitterInboxItem {
     this.message,
   });
 
+ // ✅ Helper to get comma-separated names: "Coco, Max"
+  String get petNames {
+    if (pets.isEmpty) return 'Unknown Pet';
+    return pets.map((p) => p['name']).join(', ');
+  }
 
-  factory SitterInboxItem.fromJson(Map<String, dynamic> json) {
-    final pet = json['pet'] as Map<String, dynamic>?;
+  // ✅ Helper to get primary type for icon
+  String get primaryPetType {
+    if (pets.isEmpty) return 'dog';
+    // Use the stored petType or fallback to the first pet's type
+    return petType.isNotEmpty ? petType : (pets.first['type'] ?? 'dog');
+  }
+
+  // factory SitterInboxItem.fromJson(Map<String, dynamic> json) {
+  //   final pet = json['pet'] as Map<String, dynamic>?;
+  //   final owner = json['owner'] as Map<String, dynamic>?;
+
+ factory SitterInboxItem.fromJson(Map<String, dynamic> json) {
     final owner = json['owner'] as Map<String, dynamic>?;
+    
+    String primaryType = 'dog'; // Default
+    List<Map<String, String>> parsedPets = [];
+
+    // ✅ 1. Try parsing the 'pets' array (New Many-to-Many structure)
+    if (json['pets'] != null && json['pets'] is List) {
+      final petsList = json['pets'] as List;
+      if (petsList.isNotEmpty) {
+        parsedPets = petsList.map((p) {
+          // Safely access properties
+          final name = p['name']?.toString() ?? 'Unknown';
+          final species = (p['species'] ?? 'dog').toString().toLowerCase();
+          return {
+            'name': name,
+            'type': species,
+          };
+        }).toList();
+        
+        // Set primary type from the first pet
+        if (parsedPets.isNotEmpty) {
+           primaryType = parsedPets.first['type']!;
+        }
+      }
+    } 
+    // ✅ 2. Fallback for 'pet' object (Old structure or specific endpoints)
+    else if (json['pet'] != null && json['pet'] is Map) {
+      final p = json['pet'];
+      final name = p['name']?.toString() ?? 'Unknown';
+      final species = (p['species'] ?? 'dog').toString().toLowerCase();
+      
+      parsedPets.add({
+        'name': name,
+        'type': species,
+      });
+      primaryType = species;
+    }
    
     return SitterInboxItem(
       id: json['id'] as int,
-      petName: pet?['name'] ?? 'Unknown Pet',
+      pets: parsedPets,
       ownerName: owner?['name'] ?? 'Unknown Owner',
-      petType: (pet?['species'] ?? 'dog').toString().toLowerCase(),
+      petType: primaryType,
       startDate: json['start_date'] ?? '',
       endDate: json['end_date'] ?? '',
       estimatedEarnings: (json['total_amount'] ?? 0).toDouble(),
@@ -118,7 +170,7 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
 
 
   // 2. UPDATE THE NAVIGATION FUNCTION
-  void _openChat(String ownerName, String petName, String dates, bool isRequest, int bookingId) async {
+  void _openChat(String ownerName, String petNames, String dates, bool isRequest, int bookingId) async {
     // We need the current user ID for the socket.
     // If _currentUserId is null, fetch it quickly or grab from storage
     int myId = _currentUserId ?? 0;
@@ -138,7 +190,7 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
 
     Get.to(() => ChatScreen(
       ownerName: ownerName,
-      petName: petName,
+      petName: petNames,
       dates: dates,
       isRequest: isRequest,
       room: 'booking-$bookingId', // ✅ Generates unique room ID
@@ -220,6 +272,8 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+
+    
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -280,7 +334,8 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
                                 inbox: request,
                                 onTap: () => _openChat(
                                   request.ownerName,
-                                  request.petName,
+                                  request.petNames,
+                                  //request.petName,
                                   "${request.startDate} - ${request.endDate}",
                                   true,
                                   request.id,
@@ -309,7 +364,7 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
                                 inbox: booking,
                                 onTap: () => _openChat(
                                   booking.ownerName,
-                                  booking.petName,
+                                  booking.petNames,
                                   "${booking.startDate} - ${booking.endDate}",
                                   false,
                                   booking.id,
@@ -406,7 +461,7 @@ class NewInboxCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(inbox.petName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(inbox.petNames, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       Text("Owner: ${inbox.ownerName}", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                     ],
                   ),
@@ -619,7 +674,7 @@ class ConfirmedBookingCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(inbox.petName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(inbox.petNames, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       Text("Owner: ${inbox.ownerName}", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                     ],
                   ),

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsDateString, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsDateString, IsOptional, IsString,IsArray } from 'class-validator';
 
 export class CreateBookingDto {
   @IsNotEmpty()
@@ -17,9 +17,13 @@ export class CreateBookingDto {
   @IsNumber()
   sitterId: number;
 
-  @IsNotEmpty()
-  @IsNumber()
-  petId: number;
+  // @IsNotEmpty()
+  // @IsNumber()
+  // petId: number;
+
+  @IsArray()
+  @IsNumber({}, { each: true }) 
+  petIds: number[];
 
   @IsNotEmpty() 
   @IsString()

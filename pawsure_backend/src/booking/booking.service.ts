@@ -60,7 +60,7 @@ async findAllByUser(userId: any): Promise<Booking[]> {
     where: { 
       owner: { id: uid } 
     },
-    relations: ['pet', 'sitter', 'sitter.user'], 
+    relations: ['pets', 'sitter', 'sitter.user'], 
     order: { created_at: 'DESC' }
   });
 
@@ -75,7 +75,7 @@ async findAllBySitter(sitterId: number): Promise<Booking[]> {
     where: {
       sitter: { id: sitterId }
     },
-    relations: ['pet', 'owner'],
+    relations: ['pets', 'owner'],
     order: { created_at: 'DESC' }
   });
 
@@ -103,7 +103,7 @@ async findAllBySitterUserId(userId: number): Promise<Booking[]> {
       where: { 
         sitter: { id: sitter.id } 
       },
-      relations: ['pet', 'owner'], // Load Pet and Owner details for the UI
+      relations: ['pets', 'owner'], // Load Pet and Owner details for the UI
       order: { created_at: 'DESC' }
     });
 

@@ -4,7 +4,7 @@ import { Review } from 'src/review/review.entity';
 import { Sitter } from 'src/sitter/sitter.entity';
 import { User } from 'src/user/user.entity';
 import {
-  Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToOne, OneToMany
+  Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToOne, OneToMany,ManyToMany, JoinTable
 } from 'typeorm';
 
 @Entity('bookings')
@@ -58,8 +58,12 @@ export class Booking {
   @ManyToOne(() => Sitter, (sitter) => sitter.bookings) // 'INT sitter_id FK'
   sitter: Sitter;
 
-  @ManyToOne(() => Pet, (pet) => pet.bookings) // 'INT pet_id FK'
-  pet: Pet;
+  // @ManyToOne(() => Pet, (pet) => pet.bookings) // 'INT pet_id FK'
+  // pet: Pet;
+
+  @ManyToMany(() => Pet, (pet) => pet.bookings)
+  @JoinTable({ name: 'booking_pets' }) 
+  pets: Pet[];
 
   @OneToOne(() => Payment, (payment) => payment.booking)
   payment: Payment;
