@@ -15,6 +15,25 @@ export class BookingService {
 ) {}
 
   async create(bookingData: Partial<Booking>): Promise<Booking> {
+    // ✅ CHECK FOR UNPAID BOOKINGS BEFORE ALLOWING NEW BOOKING
+    const ownerId = bookingData.owner?.id;
+    if (ownerId) {
+      const unpaidBookings = await this.bookingRepository.find({
+        where: {
+          owner: { id: ownerId },
+          status: 'completed', // Service completed but not paid
+          is_paid: false,
+        },
+      });
+
+      if (unpaidBookings.length > 0) {
+        console.log(`❌ Owner ${ownerId} has ${unpaidBookings.length} unpaid booking(s)`);
+        throw new Error(
+          `You have ${unpaidBookings.length} unpaid booking(s). Please complete payment before booking a new sitter.`
+        );
+      }
+    }
+
     const booking = this.bookingRepository.create({
       ...bookingData,
       status: 'pending', 
@@ -90,5 +109,70 @@ async findAllBySitterUserId(userId: number): Promise<Booking[]> {
 
     console.log(`📊 Found ${bookings.length} bookings for Sitter ID ${sitter.id}`);
     return bookings;
+  }
+
+  // 🆕 Mark service as completed (sitter marks the job as done)
+  async completeService(bookingId: number, userId: number): Promise<Booking> {
+    console.log(`✅ Completing service for booking ${bookingId} by user ${userId}`);
+
+    // Find booking with sitter relation
+    const booking = await this.bookingRepository.findOne({
+      where: { id: bookingId },
+      relations: ['sitter', 'sitter.user'],
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Booking ${bookingId} not found`);
+    }
+
+    // Verify that the logged-in user is the sitter for this booking
+    if (booking.sitter.user.id !== userId) {
+      throw new NotFoundException('You are not authorized to complete this booking');
+    }
+
+    // Update booking status
+    booking.status = 'completed';
+    booking.service_completed_at = new Date();
+
+    return await this.bookingRepository.save(booking);
+  }
+
+  // 🆕 Process payment (owner pays after service is completed)
+  async processPayment(bookingId: number, userId: number): Promise<Booking> {
+    console.log(`💳 Processing payment for booking ${bookingId} by user ${userId}`);
+
+    // Find booking with owner relation
+    const booking = await this.bookingRepository.findOne({
+      where: { id: bookingId },
+      relations: ['owner', 'sitter'],
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Booking ${bookingId} not found`);
+    }
+
+    // Verify that the logged-in user is the owner of this booking
+    if (booking.owner.id !== userId) {
+      throw new NotFoundException('You are not authorized to pay for this booking');
+    }
+
+    // Check if service is completed
+    if (booking.status !== 'completed') {
+      throw new NotFoundException('Service must be completed before payment can be processed');
+    }
+
+    // Check if already paid
+    if (booking.is_paid) {
+      throw new NotFoundException('This booking has already been paid');
+    }
+
+    // Process payment (in real app, integrate with payment gateway here)
+    // For now, we just mark it as paid
+    booking.is_paid = true;
+    booking.paid_at = new Date();
+    booking.status = 'paid';
+
+    console.log(`✅ Payment processed successfully for booking ${bookingId}`);
+    return await this.bookingRepository.save(booking);
   }
 }

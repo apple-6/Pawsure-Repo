@@ -1,13 +1,22 @@
-//pawsure_app\lib\services\auth_service.dart
+// pawsure_app/lib/services/auth_service.dart
 import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
-import './storage_service.dart';
-import 'package:pawsure_app/constants/api_config.dart';
-import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:pawsure_app/constants/api_config.dart';
+import './storage_service.dart';
+
+// 🟢 IMPORTS: Controllers needed for the Refresh/Reset Protocol
+import 'package:pawsure_app/controllers/pet_controller.dart';
+import 'package:pawsure_app/controllers/profile_controller.dart';
+import 'package:pawsure_app/controllers/home_controller.dart';
+import 'package:pawsure_app/controllers/health_controller.dart';
+import 'package:pawsure_app/controllers/booking_controller.dart';
+import 'package:pawsure_app/controllers/calendar_controller.dart';
 
 class AuthService {
   static String get _baseUrl => ApiConfig.baseUrl;
@@ -15,10 +24,10 @@ class AuthService {
   // ✅ Get StorageService from GetX dependency injection
   StorageService get _storage => Get.find<StorageService>();
 
-  // 1. ✅ ADDED: In-memory token for immediate access by GetX controllers
+  // ✅ In-memory token for immediate access
   String? _token;
 
-  // 2. ✅ ADDED: Public getter to fix the "undefined_getter" error in ProfileController
+  // ✅ Public getter
   String? get token => _token;
 
   /// Constructor: Syncs memory with disk storage on app startup
@@ -83,7 +92,7 @@ class AuthService {
 
       final prefs = await SharedPreferences.getInstance();
 
-      // Attempt to get ID from login response directly (if backend sends it)
+      // Attempt to get ID from login response directly
       if (data.containsKey('user') && data['user'] != null) {
         final userId = data['user']['id'];
         if (userId is int) {
@@ -96,7 +105,6 @@ class AuthService {
       try {
         final profile = await this.profile();
         if (profile != null) {
-          // Update User ID from profile if we didn't get it earlier
           if (profile.containsKey('id') && profile['id'] is int) {
             await prefs.setInt('userId', profile['id']);
             print("✅ Saved User ID from Profile: ${profile['id']}");
@@ -111,6 +119,10 @@ class AuthService {
         debugPrint('⚠️ Failed to fetch profile after login: $e');
       }
 
+      // 🟢 THE FIX: Force Global Refresh of All Controllers
+      // This ensures "John's" stale data is replaced by "Test's" new data immediately.
+      await _refreshAllControllers();
+
       return token;
     } else {
       String message = 'Login failed: ${resp.statusCode}';
@@ -120,6 +132,47 @@ class AuthService {
       } catch (_) {}
       throw Exception(message);
     }
+  }
+
+  /// 🟢 NEW HELPER: Refreshes data for the new user
+  Future<void> _refreshAllControllers() async {
+    debugPrint(
+      '🔄 REFRESH PROTOCOL: Reloading all controllers for new user...',
+    );
+
+    // 1. Refresh Profile
+    if (Get.isRegistered<ProfileController>()) {
+      Get.find<ProfileController>().loadProfile();
+    }
+
+    // 2. Refresh Pets (Critical for Home/Activity screens)
+    if (Get.isRegistered<PetController>()) {
+      await Get.find<PetController>().loadPets();
+    }
+
+    // 3. Refresh Bookings
+    if (Get.isRegistered<BookingController>()) {
+      Get.find<BookingController>().fetchMyBookings();
+    }
+
+    // 4. Reset/Reload Calendar
+    if (Get.isRegistered<CalendarController>()) {
+      Get.find<CalendarController>().resetState();
+      // If a pet is selected after loadPets above, we might want to trigger loadEvents
+      final petController = Get.find<PetController>();
+      if (petController.selectedPet.value != null) {
+        Get.find<CalendarController>().loadEvents(
+          petController.selectedPet.value!.id,
+        );
+      }
+    }
+
+    // 5. Refresh Home Data
+    if (Get.isRegistered<HomeController>()) {
+      Get.find<HomeController>().refreshHomeData();
+    }
+
+    debugPrint('✅ REFRESH PROTOCOL: Complete.');
   }
 
   Future<void> logout() async {
@@ -132,6 +185,38 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('userId');
     debugPrint('✅ Logout complete - cleared userId');
+
+    // 🟢 THE FIX: Reset All Controllers
+    // This wipes "John's" data from memory so it doesn't persist.
+    _resetAllControllers();
+  }
+
+  /// 🟢 NEW HELPER: Resets all controllers to empty state
+  void _resetAllControllers() {
+    debugPrint('🧹 RESET PROTOCOL: Clearing all controller state...');
+
+    if (Get.isRegistered<ProfileController>()) {
+      Get.find<ProfileController>().resetState();
+    }
+    if (Get.isRegistered<PetController>()) {
+      Get.find<PetController>().resetState();
+    }
+    if (Get.isRegistered<BookingController>()) {
+      // BookingController didn't have a resetState method in your snippet,
+      // so we manually clear the list.
+      Get.find<BookingController>().userBookings.clear();
+    }
+    if (Get.isRegistered<HomeController>()) {
+      Get.find<HomeController>().resetState();
+    }
+    if (Get.isRegistered<HealthController>()) {
+      Get.find<HealthController>().resetState();
+    }
+    if (Get.isRegistered<CalendarController>()) {
+      Get.find<CalendarController>().resetState();
+    }
+
+    debugPrint('✨ RESET PROTOCOL: Memory cleared.');
   }
 
   Future<String?> getToken() async {
@@ -156,7 +241,6 @@ class AuthService {
   }
 
   /// Get current user profile
-  /// ✅ FIXED: Changed from /auth/me to /auth/profile
   Future<Map<String, dynamic>?> profile() async {
     final token = await getToken();
     if (token == null) {
@@ -258,6 +342,10 @@ class AuthService {
           await _storage.write(key: 'jwt', value: token);
           await _storage.write(key: 'user_role', value: role);
           debugPrint('✅ Registration successful, token stored');
+
+          // 🟢 Refresh controllers after registration (auto-login scenario)
+          await _refreshAllControllers();
+
           return token;
         }
       } catch (_) {}
@@ -354,7 +442,6 @@ class AuthService {
   // Add this method to get the ID from storage
   Future<int?> getUserId() async {
     final prefs = await SharedPreferences.getInstance();
-    // Assuming you saved 'userId' or 'id' during login
     return prefs.getInt('userId');
   }
 }

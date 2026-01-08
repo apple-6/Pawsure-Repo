@@ -13,7 +13,8 @@ import { User } from '../user/user.entity';
 import { ActivityLog } from '../activity-log/activity-log.entity';
 import { HealthRecord } from '../health-record/health-record.entity';
 import { Booking } from '../booking/booking.entity';
-import { Event } from '../events/entities/event.entity'; // 🆕 IMPORT
+import { Event } from '../events/entities/event.entity';
+import { MoodLog } from '../mood-log/mood-log.entity';
 
 
 @Entity('pets')
@@ -85,9 +86,17 @@ export class Pet {
   @OneToMany(() => Booking, (booking) => booking.pet)
   bookings: Booking[];
 
-  // 🆕 NEW RELATIONSHIP
+  // 🆕 Events relationship
   @OneToMany(() => Event, (event) => event.pet)
   events: Event[];
+
+  // 🆕 Mood logs relationship
+  @OneToMany(() => MoodLog, (moodLog) => moodLog.pet)
+  moodLogs: MoodLog[];
+
+  // 🆕 Last activity date for streak calculation
+  @Column({ type: 'date', nullable: true })
+  last_activity_date: Date;
 
   @CreateDateColumn()
   created_at: Date;
