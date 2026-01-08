@@ -1118,4 +1118,36 @@ class ApiService {
       rethrow;
     }
   }
+
+  // ... inside ApiService class ...
+
+  // ========================================================================
+  // LIKES API
+  // ========================================================================
+
+  /// POST /likes/:postId - Toggle like status
+  Future<Map<String, dynamic>> toggleLike(String postId) async {
+    try {
+      debugPrint('👍 API: POST $apiBaseUrl/likes/$postId');
+
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/likes/$postId'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return jsonDecode(response.body); // Returns { isLiked: bool, likesCount: int }
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed');
+      }
+
+      throw Exception('Failed to toggle like');
+    } catch (e) {
+      debugPrint('❌ Error toggling like: $e');
+      rethrow;
+    }
+  }
 }

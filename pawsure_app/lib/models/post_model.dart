@@ -10,8 +10,8 @@ class PostModel {
   final List<String> mediaUrls; // This name must match PostCard
   final String? location;
   final bool isUrgent;
-  final bool isLiked;
-  final int likes;
+  bool isLiked;
+  int likes; //remove final
   final DateTime createdAt;
 
   // Vacancy fields for the new Sitter Vacancy logic
@@ -86,7 +86,8 @@ class PostModel {
 
       location: json['location_name'] ?? json['location'],
       isUrgent: json['is_urgent'] ?? false,
-      likes: json['likes_count'] ?? json['likes'] ?? 0,
+      //likes: json['likes_count'] ?? json['likes'] ?? 0,
+      likes: json['likesCount'] ?? json['likes_count'] ?? json['likes'] ?? 0,
       isLiked: json['isLiked'] ?? false,
       createdAt: DateTime.tryParse(json['created_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
 
