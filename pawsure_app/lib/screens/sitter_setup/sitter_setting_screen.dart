@@ -13,13 +13,10 @@ import 'sitter_dashboard.dart';
 import 'sitter_preview_page.dart';
 import 'sitter_edit_profile.dart';
 import '../../models/sitter_model.dart';
-
-// ⚠️ IMPORTANT: Ensure you have these imports if you use these specific controllers/services
-// If you don't have StorageService, use SharedPreferences directly (see comment inside function)
-// import 'package:pawsure_app/services/storage_service.dart';
-// import 'package:pawsure_app/controllers/health_controller.dart';
-// import 'package:pawsure_app/controllers/home_controller.dart';
-// import 'package:pawsure_app/controllers/profile_controller.dart';
+import 'package:pawsure_app/services/storage_service.dart';
+import 'package:pawsure_app/controllers/health_controller.dart';
+import 'package:pawsure_app/controllers/home_controller.dart';
+import 'package:pawsure_app/controllers/profile_controller.dart';
 
 class SitterSettingScreen extends StatefulWidget {
   const SitterSettingScreen({super.key});
@@ -61,7 +58,9 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
           isLoading = false;
         });
       } else {
-        throw Exception('Failed to load: ${response.statusCode} - ${response.body}');
+        throw Exception(
+          'Failed to load: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       setState(() {
@@ -101,14 +100,13 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.clear(); // Clears UserID, Token, etc.
 
-        // If you strictly use StorageService, uncomment below and import it:
-        // final storageService = Get.find<StorageService>();
-        // await storageService.deleteToken();
+        final storageService = Get.find<StorageService>();
+        await storageService.deleteToken();
 
         // --- RESET GETX CONTROLLERS ---
         // These checks are safe (they won't crash if the controller isn't found)
         // Ensure you import these Controllers at the top if they are in different files.
-        /* if (Get.isRegistered<HealthController>()) {
+        if (Get.isRegistered<HealthController>()) {
           Get.find<HealthController>().resetState();
         }
         if (Get.isRegistered<HomeController>()) {
@@ -117,13 +115,12 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
         if (Get.isRegistered<ProfileController>()) {
           Get.find<ProfileController>().resetState();
         }
-        */
 
         // Clear all dependencies from memory
-        Get.deleteAll(force: false);
+        Get.deleteAll(force: true);
 
         // Navigate to Login
-        Get.offAll(() => LoginScreen()); 
+        Get.offAll(() => LoginScreen());
 
         Get.snackbar(
           'Success',
@@ -160,15 +157,18 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
     if (errorMessage != null && currentUser == null) {
       return Scaffold(
         body: Center(
-            child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(errorMessage!, textAlign: TextAlign.center),
-            const SizedBox(height: 10),
-            ElevatedButton(
-                onPressed: _fetchUserData, child: const Text("Retry"))
-          ],
-        )),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(errorMessage!, textAlign: TextAlign.center),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: _fetchUserData,
+                child: const Text("Retry"),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -186,11 +186,26 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
           if (index == 3) Get.to(() => const SitterInbox());
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), label: 'Discover'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'Calendar'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Inbox'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Setting'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_filled),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.explore_outlined),
+            label: 'Discover',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today_outlined),
+            label: 'Calendar',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            label: 'Inbox',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings_outlined),
+            label: 'Setting',
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -206,18 +221,28 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: brandColor.withOpacity(0.3), width: 2),
+                  border: Border.all(
+                    color: brandColor.withOpacity(0.3),
+                    width: 2,
+                  ),
                 ),
                 child: CircleAvatar(
                   radius: 40,
                   backgroundColor: lightGreen,
-                  child: const Icon(Icons.person_outline, size: 40, color: brandColor),
+                  child: const Icon(
+                    Icons.person_outline,
+                    size: 40,
+                    color: brandColor,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
               Text(
                 currentUser!.name,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               const Row(
@@ -225,14 +250,20 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                 children: [
                   Icon(Icons.star, color: Colors.amber, size: 20),
                   SizedBox(width: 4),
-                  Text("4.9", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(
+                    "4.9",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                   SizedBox(width: 4),
                   Text("(32 Reviews)", style: TextStyle(color: Colors.grey)),
                 ],
               ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: lightGreen,
                   borderRadius: BorderRadius.circular(20),
@@ -240,9 +271,19 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.check_circle_outline, size: 16, color: brandColor),
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 16,
+                      color: brandColor,
+                    ),
                     SizedBox(width: 6),
-                    Text("Verified Sitter", style: TextStyle(color: brandColor, fontWeight: FontWeight.w600)),
+                    Text(
+                      "Verified Sitter",
+                      style: TextStyle(
+                        color: brandColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -258,7 +299,8 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                     final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => EditProfilePage(user: currentUser!),
+                        builder: (context) =>
+                            EditProfilePage(user: currentUser!),
                       ),
                     );
                     if (result != null && result is UserProfile) {
@@ -269,10 +311,15 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: brandColor,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     elevation: 0,
                   ),
-                  child: const Text("Edit Profile", style: TextStyle(fontSize: 16, color: Colors.white)),
+                  child: const Text(
+                    "Edit Profile",
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -285,16 +332,26 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => SitterPreviewPage(user: currentUser!),
+                        builder: (context) =>
+                            SitterPreviewPage(user: currentUser!),
                       ),
                     );
                   },
-                  icon: const Icon(Icons.visibility_outlined, color: Colors.black87, size: 20),
-                  label: const Text("Preview as Owner", style: TextStyle(fontSize: 16, color: Colors.black87)),
+                  icon: const Icon(
+                    Icons.visibility_outlined,
+                    color: Colors.black87,
+                    size: 20,
+                  ),
+                  label: const Text(
+                    "Preview as Owner",
+                    style: TextStyle(fontSize: 16, color: Colors.black87),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey[100],
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -305,7 +362,11 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   "Sitter Tools",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -330,7 +391,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                 lightGreen: lightGreen,
                 onTap: () {},
               ),
-              
+
               // --- 🆕 LOGOUT TILE CONNECTED ---
               _buildToolTile(
                 icon: Icons.logout,
@@ -377,8 +438,15 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
           radius: 20,
           child: Icon(icon, color: brandColor, size: 22),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        ),
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: Colors.grey,
+        ),
       ),
     );
   }
