@@ -10,6 +10,7 @@ import 'package:pawsure_app/models/sitter_model.dart'; // Ensure you have this m
 import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/constants/api_config.dart';
+import 'package:pawsure_app/models/comment_model.dart';
 
 String get apiBaseUrl => ApiConfig.baseUrl;
 
@@ -1147,6 +1148,89 @@ class ApiService {
       throw Exception('Failed to toggle like');
     } catch (e) {
       debugPrint('❌ Error toggling like: $e');
+      rethrow;
+    }
+  }
+
+ Map<String, dynamic> _flattenCommentData(Map<String, dynamic> json, String postId) {
+    final user = json['user'] ?? {};
+    
+    // Check if 'post' is an object or just an ID
+    String responsePostId = postId;
+    if (json['post'] != null && json['post'] is Map) {
+      responsePostId = json['post']['id'].toString();
+    }
+
+    return {
+      'id': json['id'].toString(),
+      'postId': responsePostId,
+      'userId': (user['id'] ?? '').toString(),
+      'userName': user['name'] ?? 'Unknown',
+      'content': json['content'] ?? '',
+      'likesCount': json['likesCount'] ?? 0,
+      'createdAt': json['created_at'] ?? json['createdAt'] ?? DateTime.now().toIso8601String(), 
+      'updatedAt': json['updated_at'] ?? json['updatedAt'] ?? DateTime.now().toIso8601String(),
+    };
+  }
+
+  Future<List<CommentModel>> getComments(String postId) async {
+    try {
+      final headers = await _getHeaders();
+      // 🆕 UPDATED: Added print to verify the exact URL being called
+      debugPrint('🔍 API: GET $apiBaseUrl/comments/post/$postId'); 
+      
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/comments/post/$postId'),
+        headers: headers,
+      );
+
+      // 🆕 UPDATED: Print status code and body to debug the error
+      debugPrint('📦 API Response Code: ${response.statusCode}'); 
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        
+        return data.map((json) {
+          final flatData = _flattenCommentData(json, postId);
+          return CommentModel.fromJson(flatData);
+        }).toList();
+      } else {
+        // 🆕 UPDATED: Print the actual server error message before throwing
+        debugPrint('❌ Server Error Body: ${response.body}');
+        throw Exception('Failed to load comments: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint("Error fetching comments: $e");
+      return [];
+    }
+  }
+
+  Future<CommentModel> addComment(String postId, String content) async {
+    try {
+      final headers = await _getHeaders();
+      // 🆕 UPDATED: Log the payload being sent
+      debugPrint('➕ API: POST $apiBaseUrl/comments/post/$postId with content: $content');
+
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/comments/post/$postId'),
+        headers: headers,
+        body: jsonEncode({'content': content}),
+      );
+
+      // 🆕 UPDATED: Print status code and body
+      debugPrint('📦 API Response Code: ${response.statusCode}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        final flatData = _flattenCommentData(json, postId);
+        return CommentModel.fromJson(flatData);
+      } else {
+        // 🆕 UPDATED: Print the actual server error message before throwing
+        debugPrint('❌ Server Error Body: ${response.body}');
+        throw Exception('Failed to post comment: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint("Error posting comment: $e");
       rethrow;
     }
   }

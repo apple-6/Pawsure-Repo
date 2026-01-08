@@ -10,6 +10,7 @@ import 'sitter_details.dart';
 import 'vacancy_post_card.dart';
 import 'owner_inbox.dart';
 import 'package:pawsure_app/services/api_service.dart';
+import 'package:pawsure_app/services/auth_service.dart';
 
 // --- POST MODEL ---
 class Post {

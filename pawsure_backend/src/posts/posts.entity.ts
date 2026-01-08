@@ -12,6 +12,7 @@ import { PostMedia } from './post-media.entity';
 import { Comment } from '../comments/comments.entity'; // Import your Comment entity
 import { Like } from '../likes/likes.entity';       // Import your Like entity
 
+
 @Entity('posts')
 export class Post {
   @PrimaryGeneratedColumn()

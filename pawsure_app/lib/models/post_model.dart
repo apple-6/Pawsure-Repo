@@ -13,6 +13,7 @@ class PostModel {
   bool isLiked;
   int likes; //remove final
   final DateTime createdAt;
+  int commentsCount;
 
   // Vacancy fields for the new Sitter Vacancy logic
   final bool isVacancy;
@@ -36,6 +37,7 @@ class PostModel {
     this.startDate,
     this.endDate,
     this.petId,
+    this.commentsCount = 0,
   });
 
   /// Fix localhost URLs for Android emulator
@@ -100,6 +102,7 @@ class PostModel {
           ? DateTime.tryParse(json['end_date'])
           : null,
       petId: json['petId']?.toString(),
+      commentsCount: json['commentsCount'] ?? json['comments_count'] ?? 0,
     );
   }
 }

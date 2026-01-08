@@ -79,6 +79,8 @@ export class PostsService {
       // This maps the count of the 'likes' relation to a property 'likesCount' on the Post object
       query.loadRelationCountAndMap('post.likesCount', 'post.likes');
 
+      query.loadRelationCountAndMap('post.commentsCount', 'post.comments');
+
       // 4. Check if Current User Liked the Post
       // We use addSelect with a subquery. If count > 0, it returns "1", else "0".
       if (userId) {
