@@ -824,6 +824,7 @@ class ApiService {
       final response = await http.post(
         Uri.parse('$apiBaseUrl/bookings/$bookingId/pay'),
         headers: headers,
+        body: jsonEncode({}),
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
@@ -1355,3 +1356,4 @@ class ApiService {
     }
   }
 }
+

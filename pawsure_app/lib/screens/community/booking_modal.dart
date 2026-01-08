@@ -540,7 +540,7 @@ class _BookingModalState extends State<BookingModal> {
                     ),
                     const SizedBox(width: 16),
                     // 2. Button Section (Takes ~60% width)
-                    // 2. Button Section (Takes ~60% width)
+                   // 2. Button Section (Takes ~60% width)
                     Expanded(
                       flex: 3,
                       child: SizedBox(
@@ -582,15 +582,15 @@ class _BookingModalState extends State<BookingModal> {
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+                  ], // Close Footer Row Children
+                ), // Close Footer Row
+              ), // Close SafeArea
+            ), // Close Footer Container
+          ], // Close Main Column Children
+        ), // Close Main Column
+      ), // Close Padding
+    ); // Close Root Container
+  } // Close Build Method
   // Helper Widget for Date display
   Widget _buildDateColumn(String label, DateTime? date) {
     return Column(
@@ -1051,4 +1051,3 @@ class _BookingModalState extends State<BookingModal> {
     );
   }
 }
-
