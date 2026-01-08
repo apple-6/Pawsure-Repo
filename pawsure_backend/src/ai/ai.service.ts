@@ -2,10 +2,18 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as ort from 'onnxruntime-node';
 import sharp = require('sharp');
 import { join } from 'path';
+import { InjectRepository } from '@nestjs/typeorm';
+import { AiScan } from './ai-scan.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class AiService implements OnModuleInit {
   private session: ort.InferenceSession;
+
+  constructor(
+    @InjectRepository(AiScan)
+    private readonly aiScanRepository: Repository<AiScan>, // 'private' makes it available as 'this.aiScanRepository'
+  ) {}
   
   // These must match your YOLO model's training order exactly
   private readonly labels = {
@@ -24,6 +32,19 @@ export class AiService implements OnModuleInit {
     } catch (e) {
       console.error('❌ Failed to load AI model:', e);
     }
+  }
+
+  // 2. Add the method to save the scan result to the database
+  async saveScan(petId: number, result: string, confidence: string) {
+    const scan = this.aiScanRepository.create({
+      type: 'Stool Analysis',
+      result: result,
+      // Clean the confidence string (e.g., "99.60%" -> 99.60)
+      confidence: parseFloat(confidence.replace('%', '')),
+      pet: { id: petId } as any, // Link to the pet via ID
+    });
+    
+    return await this.aiScanRepository.save(scan);
   }
 
   async classify(imageBuffer: Buffer) {
@@ -79,5 +100,12 @@ export class AiService implements OnModuleInit {
       console.error('Classification error:', error);
       throw error;
     }
+  }
+
+  async getScanHistory(petId: number): Promise<AiScan[]> {
+    return await this.aiScanRepository.find({
+      where: { pet: { id: petId } },
+      order: { scannedAt: 'DESC' }, // Show newest scans first
+    });
   }
 }

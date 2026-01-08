@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AiService } from './ai.service';
 import { AiController } from './ai.controller';
-// import { ConfigModule } from '@nestjs/config'; // <-- No longer needed
+import { Pet } from '../pet/pet.entity';
+import { AiScan } from './ai-scan.entity';
 
 @Module({
-  // imports: [ConfigModule], // <-- No longer needed
+  imports: [TypeOrmModule.forFeature([AiScan, Pet])], 
   controllers: [AiController],
   providers: [AiService],
   exports: [AiService],
