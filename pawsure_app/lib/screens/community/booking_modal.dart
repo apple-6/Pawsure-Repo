@@ -540,6 +540,7 @@ class _BookingModalState extends State<BookingModal> {
                     ),
                     const SizedBox(width: 16),
                     // 2. Button Section (Takes ~60% width)
+                    // 2. Button Section (Takes ~60% width)
                     Expanded(
                       flex: 3,
                       child: SizedBox(
@@ -564,22 +565,19 @@ class _BookingModalState extends State<BookingModal> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: const [
-                                      Icon(Icons.payment, size: 20),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        "Pay & Book Now",
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(Icons.payment, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      "Pay & Book Now",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                         ),
                       ),
@@ -588,12 +586,11 @@ class _BookingModalState extends State<BookingModal> {
                 ),
               ),
             ),
-          ], // This closes the Column's children
-        ), // This closes the Column
-      ), // This closes the Padding
-    ); // This closes the main Container
+          ],
+        ),
+      ),
+    );
   }
-
   // Helper Widget for Date display
   Widget _buildDateColumn(String label, DateTime? date) {
     return Column(
@@ -1054,3 +1051,4 @@ class _BookingModalState extends State<BookingModal> {
     );
   }
 }
+
