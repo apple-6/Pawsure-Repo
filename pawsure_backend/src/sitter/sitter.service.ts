@@ -137,32 +137,74 @@ export class SitterService {
     return finalSitter;
   }
 
-  async findAll(minRating?: number): Promise<Sitter[]> {
+async findAll(minRating?: number): Promise<any[]> {
     const query = this.sitterRepository
       .createQueryBuilder('sitter')
       .leftJoinAndSelect('sitter.user', 'user')
+      .leftJoin('sitter.reviews', 'review')
+      // 1. Standardize aliases to snake_case to match raw results
+      .addSelect('COUNT(review.id)', 'review_count')
+      .addSelect('COALESCE(AVG(review.rating), 0)', 'avg_rating')
       .where('sitter.deleted_at IS NULL')
-      .orderBy('sitter.rating', 'DESC');
+      .groupBy('sitter.id')
+      .addGroupBy('user.id')
+      // 2. Quote alias in orderBy for Postgres safety
+      .orderBy('"avg_rating"', 'DESC');
 
     if (minRating) {
-      query.where('sitter.rating >= :minRating', { minRating });
+      query.having('COALESCE(AVG(review.rating), 0) >= :minRating', { minRating });
     }
 
-    return await query.getMany();
-  }
+    try {
+      const { entities, raw } = await query.getRawAndEntities();
 
-  async findOne(id: number): Promise<Sitter> {
+      return entities.map((sitter) => {
+        const rawData = raw.find(r => r.sitter_id === sitter.id);
+        
+        // 🔴 FIX: Added 'as any' here to solve Error 2561
+        return {
+          ...sitter,
+          // Map raw 'review_count' (string) to 'reviewCount' (number)
+          reviewCount: rawData ? parseInt(rawData.review_count, 10) : 0,
+          // Map raw 'avg_rating' (string) to 'rating' (number)
+          rating: rawData ? parseFloat(rawData.avg_rating) : 0.0,
+        } as any; 
+      });
+    } catch (error) {
+      console.error("Error in findAll sitters:", error);
+      throw new BadRequestException("Could not fetch sitters");
+    }
+  }
+  
+  async findOne(id: number): Promise<any> {
     const sitter = await this.sitterRepository.findOne({
       where: { id },
       withDeleted: false,
-      relations: ['user', 'reviews', 'bookings'],
+      relations: ['user', 'reviews', 'reviews.owner', 'bookings'],
     });
 
     if (!sitter) {
       throw new NotFoundException(`Sitter with ID ${id} not found`);
     }
 
-    return sitter;
+    // 1. Calculate fresh stats from the reviews array
+    const reviewCount = sitter.reviews ? sitter.reviews.length : 0;
+
+    const totalRating = sitter.reviews
+      ? sitter.reviews.reduce((sum, review) => sum + review.rating, 0)
+      : 0;
+
+    const avgRating = reviewCount > 0 ? totalRating / reviewCount : 0;
+    return {
+      ...sitter,
+      rating: avgRating,  
+      reviewCount: reviewCount, 
+      reviews_count: reviewCount,
+      
+      reviews: sitter.reviews 
+        ? sitter.reviews.sort((a, b) => b.created_at.getTime() - a.created_at.getTime()) 
+        : []
+    } as any;
   }
 
   async findByUserId(userId: number): Promise<Sitter | null> {
@@ -247,14 +289,18 @@ export class SitterService {
 
   // --- SEARCH METHOD (From Version M - The "Feature") ---
   // This uses the advanced range search and exclusion logic.
-  async searchByAvailability(startDate: string, endDate: string): Promise<Sitter[]> {
+  async searchByAvailability(startDate: string, endDate: string): Promise<any[]> {
     // 1. Generate the required arrays for the search range
     const { searchDates, searchDays } = generateSearchRangeArrays(startDate, endDate);
 
     // 2. Build the query to find sitters NOT overlapping with any unavailability
-    return await this.sitterRepository
+   // return await this.sitterRepository
+   const query = this.sitterRepository
         .createQueryBuilder('sitter')
         .leftJoinAndSelect('sitter.user', 'user')
+        .leftJoin('sitter.reviews', 'review')
+        .addSelect('COUNT(review.id)', 'reviewCountRaw')
+        .addSelect('COALESCE(AVG(review.rating), 0)', 'averageRatingRaw')
         
         // --- Unavailability Check 1: Specific Dates ---
         // Filter OUT sitters where their unavailable_dates array OVERLAPS (&&) the requested searchDates array.
@@ -270,8 +316,25 @@ export class SitterService {
         
         // --- General Filtering ---
         .andWhere('sitter.deleted_at IS NULL')
-        .orderBy('sitter.rating', 'DESC')
-        .getMany();
+        .groupBy('sitter.id')
+        .addGroupBy('user.id')
+        .orderBy('averageRatingRaw', 'DESC');
+try {
+      const { entities, raw } = await query.getRawAndEntities();
+
+      return entities.map((sitter) => {
+        const rawData = raw.find(r => r.sitter_id === sitter.id);
+        
+        return {
+          ...sitter,
+          reviewCount: rawData ? parseInt(rawData.reviewCountRaw, 10) : 0, 
+  rating: rawData ? parseFloat(rawData.averageRatingRaw) : 0.0,
+        } as any;
+      });
+    } catch (error) {
+      console.error("Error in searchByAvailability:", error);
+      throw new BadRequestException("Search failed.");
+    }
   }
 
   async updateAvailability(
