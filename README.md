@@ -1,3 +1,8 @@
+I apologize for the formatting breaks. It happens because the code blocks inside the README conflict with the chat's formatting.
+
+Here is the **entire file** wrapped in a safe block. You can copy everything inside this box directly into your `README.md`.
+
+```markdown
 # PawSure: The Integrated Pet Care Ecosystem 🐾
 
 > **A cross-platform Superapp bridging the gap between Pet Owners and Caretakers through secure marketplace dynamics, AI-driven health monitoring, and real-time community engagement.**
@@ -9,6 +14,7 @@
 
 ## 📖 Project Overview
 PawSure is an ambitious engineering capstone project designed to solve the fragmentation in the pet care industry. Unlike single-purpose apps, PawSure is architected as a **Superapp Ecosystem** that unifies three critical domains:
+
 1.  **Service Marketplace:** A secure, dual-role booking system for Sitters and Owners.
 2.  **Health Intelligence:** AI-powered diagnostics and comprehensive medical logging.
 3.  **Community Social Graph:** Real-time social interaction and event coordination.
@@ -42,6 +48,7 @@ PawSure implements a complex authorization flow allowing users to exist as both 
 
 ### 2. The "Gatekeeper" Security Module
 We moved beyond basic authentication by implementing a custom Guard that acts as a firewall for API routes.
+
 ```typescript
 // Example: RBAC Guard Logic
 @Injectable()
@@ -52,3 +59,69 @@ export class RolesGuard implements CanActivate {
     return requiredRoles.some((role) => user.roles?.includes(role));
   }
 }
+```
+
+### 3. AI-Powered Health Scanning
+- **Module:** `AiModule`
+- **Logic:** Users capture images of pet waste; the backend processes the image against a pre-trained ONNX model to detect potential digestive issues, logging the result directly to the `HealthRecord` entity.
+
+### 4. Real-Time Geospatial Tracking
+- **Module:** `ActivityLogModule`
+- **Logic:** Integrated GPS stream handling to visualize pet walking routes in real-time, storing coordinate arrays for historical route playback and sitter accountability.
+
+---
+
+## 📂 Repository Structure
+
+```bash
+pawsure-repo/
+├── pawsure_app/          # Flutter Mobile Client
+│   ├── lib/controllers/  # GetX Controllers (Business Logic)
+│   ├── lib/services/     # API & Socket Services
+│   └── lib/widgets/      # Reusable UI Components
+├── pawsure_backend/      # NestJS Server
+│   ├── src/auth/         # JWT Strategies & Guards
+│   ├── src/ai/           # ONNX Model & Inference Logic
+│   ├── src/chat/         # WebSocket Gateway
+│   └── src/database/     # TypeORM Entities & Migrations
+└── README.md             # You are here
+```
+
+---
+
+## 🛠️ Getting Started
+
+### Prerequisites
+* Node.js (v18+)
+* Flutter SDK (v3.19+)
+* PostgreSQL (v16)
+* Docker (Optional for DB)
+
+### Installation
+
+1. **Clone the Monorepo:**
+   ```bash
+   git clone [https://github.com/your-username/pawsure-repo.git](https://github.com/your-username/pawsure-repo.git)
+   ```
+
+2. **Backend Setup:**
+   ```bash
+   cd pawsure_backend
+   npm install
+   # Configure .env file with DB credentials
+   npm run start:dev
+   ```
+
+3. **Frontend Setup:**
+   ```bash
+   cd pawsure_app
+   flutter pub get
+   flutter run
+   ```
+
+---
+
+## Note to Recruiters
+This repository represents **Sprint 5** of the PawSure development lifecycle. It focuses on the architectural implementation of core modules (Auth, AI, Chat, Database). While the codebase is functional, certain features are optimized for local development environments.
+
+```
