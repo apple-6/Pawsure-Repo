@@ -15,81 +15,42 @@ class CalendarController extends GetxController {
   // STATE VARIABLES
   // ========================================================================
 
-  /// All events grouped by date (for calendar widget)
   var events = <DateTime, List<EventModel>>{}.obs;
-
-  /// Currently selected day in the calendar
   var selectedDay = Rx<DateTime>(DateTime.now());
-
-  /// Focused day for calendar navigation
   var focusedDay = Rx<DateTime>(DateTime.now());
-
-  /// Upcoming events specifically for the Dashboard (Next 3)
   var upcomingEvents = <EventModel>[].obs;
-
-  /// Loading states
   var isLoadingEvents = false.obs;
   var isLoadingUpcoming = false.obs;
 
-  // ========================================================================
-  // LIFECYCLE
-  // ========================================================================
-
-  @override
-  void onInit() {
-    super.onInit();
-    debugPrint('📅 CalendarController initialized');
-  }
+  // Dialog lock
+  bool _isDialogShowing = false;
 
   // ========================================================================
-  // CORE LOADING METHODS - UPDATED TO LOAD ALL OWNER'S EVENTS
+  // CORE LOADING METHODS
   // ========================================================================
 
-  /// ✅ NEW: Load all events for ALL pets owned by the user
   Future<void> loadAllOwnerEvents() async {
     try {
       isLoadingEvents.value = true;
-      debugPrint('📅 Loading all events for owner...');
-
       final fetchedEvents = await _apiService.getAllOwnerEvents();
-      debugPrint('✅ Fetched ${fetchedEvents.length} events from all pets');
-
-      // Group events by date
       _groupEventsByDate(fetchedEvents);
-
-      debugPrint('📊 Events grouped into ${events.length} days');
     } catch (e) {
       debugPrint('❌ Error loading owner events: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to load events: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red[900],
-      );
     } finally {
       isLoadingEvents.value = false;
     }
   }
 
-  /// ✅ UPDATED: Load upcoming events for ALL owner's pets
   Future<void> loadAllUpcomingEvents() async {
     try {
       isLoadingUpcoming.value = true;
-      debugPrint('🏠 Loading upcoming events for all pets...');
-
       final fetchedEvents = await _apiService.getAllOwnerUpcomingEvents(
         limit: 3,
       );
 
-      // Filter out missed events and sort by date
       upcomingEvents.value =
           fetchedEvents.where((e) => e.status != EventStatus.missed).toList()
             ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
-
-      debugPrint(
-        '✅ Loaded ${upcomingEvents.length} upcoming events for dashboard',
-      );
     } catch (e) {
       debugPrint('❌ Error loading upcoming events: $e');
       upcomingEvents.clear();
@@ -98,27 +59,26 @@ class CalendarController extends GetxController {
     }
   }
 
-  /// DEPRECATED: Keep for backward compatibility but not used
-  @Deprecated('Use loadAllOwnerEvents() instead')
-  Future<void> loadEvents(int petId) async {
-    await loadAllOwnerEvents();
+  // Backwards compatibility methods
+  void resetState() {
+    events.clear();
+    upcomingEvents.clear();
+    selectedDay.value = DateTime.now();
+    focusedDay.value = DateTime.now();
+    isLoadingEvents.value = false;
+    isLoadingUpcoming.value = false;
+    _isDialogShowing = false;
   }
 
-  /// DEPRECATED: Keep for backward compatibility but not used
-  @Deprecated('Use loadAllUpcomingEvents() instead')
-  Future<void> loadUpcomingEvents(int petId) async {
+  Future<void> loadEvents(int petId) async {
+    await loadAllOwnerEvents();
     await loadAllUpcomingEvents();
   }
 
-  // ========================================================================
-  // EVENT GROUPING LOGIC
-  // ========================================================================
-
-  /// Group events by date (strips time component)
   void _groupEventsByDate(List<EventModel> eventList) {
     final Map<DateTime, List<EventModel>> grouped = {};
-
     for (final event in eventList) {
+      // Normalize to Local Year/Month/Day
       final localDateTime = event.dateTime.toLocal();
       final dateKey = DateTime(
         localDateTime.year,
@@ -132,310 +92,226 @@ class CalendarController extends GetxController {
       grouped[dateKey]!.add(event);
     }
 
-    // Sort events within each day by time
     for (final eventList in grouped.values) {
       eventList.sort((a, b) => a.dateTime.compareTo(b.dateTime));
     }
-
     events.value = grouped;
   }
 
   // ========================================================================
-  // HELPER METHODS FOR UI
+  // HELPER METHODS
   // ========================================================================
 
-  /// Get events for a specific day (used by calendar widget)
+  /// ✅ FIX: Added local helper to replace table_calendar's isSameDay
+  bool isSameDay(DateTime? a, DateTime? b) {
+    if (a == null || b == null) {
+      return false;
+    }
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
   List<EventModel> getEventsForDay(DateTime day) {
     try {
       final normalizedDay = DateTime(day.year, day.month, day.day);
-
-      if (!events.containsKey(normalizedDay)) {
-        return [];
-      }
-
-      final dayEvents = events[normalizedDay];
-      return dayEvents ?? [];
+      return events[normalizedDay] ?? [];
     } catch (e) {
-      debugPrint('⚠️ Error in getEventsForDay: $e');
       return [];
     }
   }
 
-  /// Get events for the currently selected day
   List<EventModel> get selectedDayEvents => getEventsForDay(selectedDay.value);
 
-  /// Check if a day has any events (for calendar markers)
   bool hasEventsOnDay(DateTime day) {
     try {
       final normalizedDay = DateTime(day.year, day.month, day.day);
       return events.containsKey(normalizedDay) &&
-          events[normalizedDay] != null &&
           events[normalizedDay]!.isNotEmpty;
     } catch (e) {
-      debugPrint('⚠️ Error in hasEventsOnDay: $e');
       return false;
     }
   }
 
-  /// Get the marker color for a day based on event statuses
   Color? getMarkerColorForDay(DateTime day) {
     try {
       final dayEvents = getEventsForDay(day);
       if (dayEvents.isEmpty) return null;
-
-      final hasPending = dayEvents.any((e) => e.status == EventStatus.pending);
-      final hasMissed = dayEvents.any((e) => e.status == EventStatus.missed);
-      final hasUpcoming = dayEvents.any(
-        (e) => e.status == EventStatus.upcoming,
-      );
-      final hasCompleted = dayEvents.any(
-        (e) => e.status == EventStatus.completed,
-      );
-
-      if (hasPending || hasMissed) {
+      if (dayEvents.any(
+        (e) =>
+            e.status == EventStatus.pending || e.status == EventStatus.missed,
+      )) {
         return Colors.red;
-      } else if (hasCompleted) {
-        return Colors.green;
-      } else if (hasUpcoming) {
-        return Colors.grey;
       }
-
-      return null;
+      if (dayEvents.any((e) => e.status == EventStatus.completed)) {
+        return Colors.green;
+      }
+      return Colors.grey;
     } catch (e) {
-      debugPrint('⚠️ Error in getMarkerColorForDay: $e');
       return null;
     }
   }
 
-  /// Update selected day
   void selectDay(DateTime day) {
     selectedDay.value = day;
     focusedDay.value = day;
-    debugPrint('📅 Selected day: ${day.toString().split(' ')[0]}');
   }
 
   // ========================================================================
   // EVENT ACTIONS
   // ========================================================================
 
-  /// Mark an event as completed
   Future<void> markAsComplete(EventModel event) async {
     try {
-      debugPrint('✅ Marking event ${event.id} as completed...');
-
       final updatedEvent = await _apiService.updateEventStatus(
         event.id,
         EventStatus.completed,
       );
-
       _updateEventInState(updatedEvent);
 
       Get.snackbar(
         'Event Completed',
         '${event.title} marked as done!',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.1),
+        backgroundColor: Colors.green.withValues(alpha: 0.1),
         colorText: Colors.green[900],
-        duration: const Duration(seconds: 2),
       );
 
-      // ✅ UPDATED: Check if health event and handle multiple pets
       if (event.eventType == EventType.health) {
-        _showHealthRecordDialog(event);
+        showHealthRecordDialog(updatedEvent);
       }
-
       await loadAllUpcomingEvents();
     } catch (e) {
-      debugPrint('❌ Error marking event as complete: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to update event: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red[900],
-      );
+      debugPrint('❌ Error: $e');
     }
   }
 
-  /// Mark an event as missed
   Future<void> markAsMissed(EventModel event) async {
     try {
-      debugPrint('❌ Marking event ${event.id} as missed...');
-
       final updatedEvent = await _apiService.updateEventStatus(
         event.id,
         EventStatus.missed,
       );
-
       _updateEventInState(updatedEvent);
-
-      Get.snackbar(
-        'Event Missed',
-        '${event.title} marked as missed',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange.withOpacity(0.1),
-        colorText: Colors.orange[900],
-        duration: const Duration(seconds: 2),
-      );
-
       await loadAllUpcomingEvents();
     } catch (e) {
-      debugPrint('❌ Error marking event as missed: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to update event: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red[900],
-      );
+      debugPrint('❌ Error: $e');
     }
   }
 
-  /// Update an event with full details
   Future<void> updateEvent(
     EventModel event, {
     bool triggerHealthDialog = false,
   }) async {
     try {
-      debugPrint('🔄 Updating event ${event.id}...');
-
       final dateTimeString = event.dateTime.toIso8601String();
-
       final payload = {
         'title': event.title,
         'dateTime': dateTimeString,
         'eventType': event.eventType.toJson(),
         'status': event.status.toJson(),
-        // ✅ UPDATED: Include pet_ids array
         'pet_ids': event.petIds,
-        if (event.location != null && event.location!.isNotEmpty)
-          'location': event.location,
-        if (event.notes != null && event.notes!.isNotEmpty)
-          'notes': event.notes,
+        if (event.location != null) 'location': event.location,
+        if (event.notes != null) 'notes': event.notes,
       };
 
-      debugPrint('📤 Payload: ${jsonEncode(payload)}');
-
-      final headers = {
-        'Content-Type': 'application/json; charset=UTF-8',
-        'Accept': 'application/json',
-      };
-
-      try {
-        final authService = Get.find<AuthService>();
-        final token = await authService.getToken();
-        if (token != null && token.isNotEmpty) {
-          headers['Authorization'] = 'Bearer $token';
-        }
-      } catch (e) {
-        debugPrint('⚠️ Could not get auth token: $e');
-      }
-
-      final apiUrl = ApiConfig.baseUrl;
-
+      final authService = Get.find<AuthService>();
+      final token = await authService.getToken();
       final response = await http.patch(
-        Uri.parse('$apiUrl/events/${event.id}'),
-        headers: headers,
+        Uri.parse('${ApiConfig.baseUrl}/events/${event.id}'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
         body: jsonEncode(payload),
       );
 
-      debugPrint('📦 API Response: ${response.statusCode}');
-
       if (response.statusCode == 200) {
-        final updatedEvent = EventModel.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final updatedEvent = EventModel.fromJson(jsonDecode(response.body));
 
-        debugPrint('✅ Event updated successfully');
-
+        // Update local state safely
         _updateEventInState(updatedEvent);
 
-        if (triggerHealthDialog) {
-          _showHealthRecordDialog(updatedEvent);
-        }
-
         await loadAllUpcomingEvents();
-        await loadAllOwnerEvents();
       } else {
-        throw Exception(
-          'Failed to update event (${response.statusCode}): ${response.body}',
-        );
+        throw Exception('Failed to update event');
       }
     } catch (e) {
-      debugPrint('❌ Error updating event: $e');
+      debugPrint('❌ Error: $e');
       rethrow;
     }
   }
 
-  /// Delete an event
   Future<void> deleteEvent(EventModel event) async {
     try {
-      debugPrint('🗑️ Deleting event ${event.id}...');
-
       await _apiService.deleteEvent(event.id);
-
       _removeEventFromState(event);
-
-      Get.snackbar(
-        'Event Deleted',
-        '${event.title} has been removed',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.grey.withOpacity(0.1),
-        colorText: Colors.grey[900],
-        duration: const Duration(seconds: 2),
-      );
-
       await loadAllUpcomingEvents();
     } catch (e) {
-      debugPrint('❌ Error deleting event: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to delete event: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red[900],
-      );
+      debugPrint('❌ Error: $e');
       rethrow;
     }
   }
 
   // ========================================================================
-  // STATE MANAGEMENT HELPERS
+  // STATE MANAGEMENT HELPERS (FIXED)
   // ========================================================================
 
   void _updateEventInState(EventModel updatedEvent) {
     try {
       final localDateTime = updatedEvent.dateTime.toLocal();
-      final newDateKey = DateTime(
+      final newKey = DateTime(
         localDateTime.year,
         localDateTime.month,
         localDateTime.day,
       );
 
-      debugPrint('🔄 Updating event ${updatedEvent.id} in local state');
+      // 1. SEARCH: Find where the event currently is
+      DateTime? oldKey;
+      int? oldIndex;
 
-      DateTime? oldDateKey;
-      for (final entry in events.entries) {
-        final index = entry.value.indexWhere((e) => e.id == updatedEvent.id);
-        if (index != -1) {
-          oldDateKey = entry.key;
-          entry.value.removeAt(index);
-          if (entry.value.isEmpty) {
-            events.remove(entry.key);
+      for (final key in events.keys) {
+        final list = events[key];
+        if (list != null) {
+          final idx = list.indexWhere((e) => e.id == updatedEvent.id);
+          if (idx != -1) {
+            oldKey = key;
+            oldIndex = idx;
+            break;
           }
-          break;
         }
       }
 
-      if (!events.containsKey(newDateKey)) {
-        events[newDateKey] = [];
+      // 2. LOGIC: Update or Move
+      if (oldKey != null && oldIndex != null) {
+        if (isSameDay(oldKey, newKey)) {
+          // ✅ SAME DAY: Update in place
+          events[oldKey]![oldIndex] = updatedEvent;
+          events[oldKey]!.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+        } else {
+          // ⚠️ CHANGED DAY: Remove from old, add to new
+          events[oldKey]!.removeAt(oldIndex);
+          // ✅ FIX: Curly braces added for linter
+          if (events[oldKey]!.isEmpty) {
+            events.remove(oldKey);
+          }
+
+          if (!events.containsKey(newKey)) {
+            events[newKey] = [];
+          }
+          events[newKey]!.add(updatedEvent);
+          events[newKey]!.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+        }
+      } else {
+        // New event or not found
+        if (!events.containsKey(newKey)) {
+          events[newKey] = [];
+        }
+        events[newKey]!.add(updatedEvent);
+        events[newKey]!.sort((a, b) => a.dateTime.compareTo(b.dateTime));
       }
 
-      events[newDateKey]!.add(updatedEvent);
-      events[newDateKey]!.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+      events.refresh(); // Trigger GetX update
 
-      events.refresh();
-
+      // 3. Update Upcoming List
       final upcomingIndex = upcomingEvents.indexWhere(
         (e) => e.id == updatedEvent.id,
       );
@@ -444,89 +320,114 @@ class CalendarController extends GetxController {
         upcomingEvents.refresh();
       }
     } catch (e) {
-      debugPrint('⚠️ Error updating event in state: $e');
+      debugPrint('⚠️ Error updating state: $e');
     }
   }
 
   void _removeEventFromState(EventModel event) {
     try {
-      final localDateTime = event.dateTime.toLocal();
-      final dateKey = DateTime(
-        localDateTime.year,
-        localDateTime.month,
-        localDateTime.day,
-      );
-
-      if (events.containsKey(dateKey) && events[dateKey] != null) {
-        events[dateKey]!.removeWhere((e) => e.id == event.id);
-        if (events[dateKey]!.isEmpty) {
-          events.remove(dateKey);
+      DateTime? keyToRemove;
+      for (final key in events.keys) {
+        final list = events[key];
+        if (list != null) {
+          list.removeWhere((e) => e.id == event.id);
+          if (list.isEmpty) keyToRemove = key;
         }
-        events.refresh();
       }
+      if (keyToRemove != null) events.remove(keyToRemove);
 
+      events.refresh();
       upcomingEvents.removeWhere((e) => e.id == event.id);
     } catch (e) {
-      debugPrint('⚠️ Error removing event from state: $e');
+      debugPrint('⚠️ Error removing from state: $e');
     }
   }
 
   // ========================================================================
-  // HEALTH RECORD INTEGRATION - UPDATED FOR MULTIPLE PETS
+  // HEALTH RECORD INTEGRATION
   // ========================================================================
 
-  /// ✅ UPDATED: Handle multiple pets for health records
-  void _showHealthRecordDialog(EventModel event) {
-    Get.defaultDialog(
-      title: 'Save to Health Records?',
-      middleText: event.petIds.length > 1
-          ? 'This event involves ${event.petIds.length} pets. Would you like to add health records for all of them?'
-          : 'Would you like to add this health event to your pet\'s health records?',
-      textConfirm: 'Yes, Save',
-      textCancel: 'Skip',
-      confirmTextColor: Colors.white,
-      onConfirm: () {
-        Get.back();
+  Future<void> showHealthRecordDialog(EventModel event) async {
+    if (_isDialogShowing) return;
+    _isDialogShowing = true;
+
+    try {
+      final bool? result = await Get.dialog<bool>(
+        AlertDialog(
+          title: const Text(
+            'Save to Health Records?',
+            textAlign: TextAlign.center,
+          ),
+          content: Text(
+            event.petIds.length > 1
+                ? 'This event involves ${event.petIds.length} pets. Save records for all?'
+                : 'Save this event to ${event.petIds.isNotEmpty ? "your pet's" : "the"} health records?',
+            textAlign: TextAlign.center,
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.of(Get.overlayContext!).pop(false),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+                side: BorderSide(color: Colors.grey[400]!),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              child: const Text('Skip'),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton(
+              onPressed: () => Navigator.of(Get.overlayContext!).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4A5D52),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              child: const Text('Yes, Save'),
+            ),
+          ],
+        ),
+        barrierDismissible: false,
+      );
+
+      _isDialogShowing = false;
+
+      if (result == true) {
         _navigateToHealthRecordForm(event);
-      },
-      onCancel: () {
-        Get.back();
-      },
-    );
+      }
+    } catch (e) {
+      debugPrint('❌ Dialog Error: $e');
+      _isDialogShowing = false;
+    }
   }
 
-  /// ✅ UPDATED: Navigate to health record form with multi-pet support
   void _navigateToHealthRecordForm(EventModel event) {
-    debugPrint('🏥 Navigating to health record form...');
-    debugPrint(
-      '📦 Event involves ${event.petIds.length} pets: ${event.petIds}',
-    );
+    // Determine Correct Pet ID (First one in list)
+    int targetPetId = event.petId;
+    if (event.petIds.isNotEmpty) {
+      targetPetId = event.petIds.first;
+    }
 
+    debugPrint('🏥 Adding Health Record for Pet ID: $targetPetId');
+
+    // ✅ Just push the form on top (No Tab Switch)
     Get.toNamed(
       '/health/add-record',
       arguments: {
-        'petIds': event.petIds, // ✅ Pass array of pet IDs
+        'petIds': event.petIds,
+        'petId': targetPetId,
         'prefillDate': event.dateTime,
         'prefillTitle': event.title,
         'prefillLocation': event.location,
         'prefillNotes': event.notes,
       },
     );
-
-    debugPrint('✅ Navigation initiated to /health/add-record');
-  }
-
-  // ========================================================================
-  // CLEANUP
-  // ========================================================================
-
-  void resetState() {
-    events.clear();
-    upcomingEvents.clear();
-    selectedDay.value = DateTime.now();
-    focusedDay.value = DateTime.now();
-    isLoadingEvents.value = false;
-    isLoadingUpcoming.value = false;
-    debugPrint('✅ CalendarController state reset');
   }
 }
