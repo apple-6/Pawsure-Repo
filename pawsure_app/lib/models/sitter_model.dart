@@ -38,6 +38,8 @@ class UserProfile {
   int experienceYears;
   int staysCompleted;
   List<ServiceModel> services;
+  double rating;
+  int reviewCount;
 
   UserProfile({
     required this.id,
@@ -47,6 +49,8 @@ class UserProfile {
     required this.experienceYears,
     required this.staysCompleted,
     required this.services,
+    this.rating = 0.0,
+    this.reviewCount = 0,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -64,6 +68,10 @@ class UserProfile {
               ?.map((e) => ServiceModel.fromJson(e))
               .toList() ??
           [],
+
+          // ✅ Capture dynamic rating and review count from backend
+      rating: double.tryParse(json['rating']?.toString() ?? '0') ?? 0.0,
+      reviewCount: int.tryParse(json['reviewCount']?.toString() ?? '0') ?? 0,
     );
   }
 }
