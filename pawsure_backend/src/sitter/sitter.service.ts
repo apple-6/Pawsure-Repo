@@ -160,6 +160,8 @@ async findAll(minRating?: number): Promise<any[]> {
 
       return entities.map((sitter) => {
         const rawData = raw.find(r => r.sitter_id === sitter.id);
+        let ratingVal = rawData ? parseFloat(rawData.avg_rating) : 0.0;
+        ratingVal = parseFloat(ratingVal.toFixed(1));
         
         // 🔴 FIX: Added 'as any' here to solve Error 2561
         return {
@@ -194,7 +196,8 @@ async findAll(minRating?: number): Promise<any[]> {
       ? sitter.reviews.reduce((sum, review) => sum + review.rating, 0)
       : 0;
 
-    const avgRating = reviewCount > 0 ? totalRating / reviewCount : 0;
+    let avgRating = reviewCount > 0 ? totalRating / reviewCount : 0;
+    avgRating = parseFloat(avgRating.toFixed(1));
     return {
       ...sitter,
       rating: avgRating,  
@@ -324,6 +327,9 @@ try {
 
       return entities.map((sitter) => {
         const rawData = raw.find(r => r.sitter_id === sitter.id);
+      
+        let ratingVal = rawData ? parseFloat(rawData.averageRatingRaw) : 0.0;
+        ratingVal = parseFloat(ratingVal.toFixed(1));
         
         return {
           ...sitter,
