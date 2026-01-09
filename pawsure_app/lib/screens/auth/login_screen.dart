@@ -5,6 +5,7 @@ import '../../services/auth_service.dart';
 import 'register_screen.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_setup_screen.dart';
 import '../../models/role.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   final UserRole? role;
@@ -19,7 +20,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailOrPhoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  final AuthService _authService = AuthService();
+  // ✅ FIX: Use the GetX singleton instead of creating a new instance
+  AuthService get _authService => Get.find<AuthService>();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -377,6 +379,12 @@ class _LoginScreenState extends State<LoginScreen> {
       final profile = await _authService.profile();
 
       if (profile != null) {
+        final prefs = await SharedPreferences.getInstance();
+        if (profile['id'] != null) {
+           await prefs.setInt('userId', profile['id']); // Save the ID!
+           print("User ID ${profile['id']} saved to storage.");
+        }
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

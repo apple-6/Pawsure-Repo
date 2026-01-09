@@ -37,7 +37,7 @@ class Sitter {
       json['unavailable_dates'],
     );
 
-    final photoGallery = json['photo_gallery'] as String?;
+    final photoGallery = json['photo_gallery'];
     final galleryImage = _extractFirstPhoto(photoGallery);
     final profileImage = userJson != null ? userJson['profile_picture'] : null;
 
@@ -49,10 +49,7 @@ class Sitter {
       rating: _toDouble(json['rating']) ?? _toDouble(json['avgRating']) ?? 0.0,
       reviewCount:
           _toInt(json['reviews_count']) ?? _toInt(json['reviewCount']) ?? 0,
-      services:
-          json['experience'] as String? ??
-          json['services'] as String? ??
-          'Pet care services',
+      services: _parseServices(json['experience'], json['services']),
       price: _toDouble(json['ratePerNight']) ??
           _toDouble(json['price']) ??
           0.0,
@@ -100,10 +97,22 @@ class Sitter {
     return null;
   }
 
-  static String? _extractFirstPhoto(String? gallery) {
-    if (gallery == null || gallery.isEmpty) return null;
-    final parts = gallery.split(',');
-    return parts.isNotEmpty ? parts.first.trim() : null;
+  static String? _extractFirstPhoto(dynamic gallery) {
+    if (gallery == null) return null;
+    
+    // Handle List type (array of URLs from backend)
+    if (gallery is List && gallery.isNotEmpty) {
+      final firstItem = gallery.first;
+      return firstItem is String && firstItem.isNotEmpty ? firstItem.trim() : null;
+    }
+    
+    // Handle String type (comma-separated URLs)
+    if (gallery is String && gallery.isNotEmpty) {
+      final parts = gallery.split(',');
+      return parts.isNotEmpty ? parts.first.trim() : null;
+    }
+    
+    return null;
   }
 
   static double? _toDouble(dynamic value) {
@@ -122,6 +131,36 @@ class Sitter {
       return int.tryParse(value.trim());
     }
     return null;
+  }
+
+  /// Parses services from either 'experience' string or 'services' List
+  static String _parseServices(dynamic experience, dynamic services) {
+    // First try experience (simple string)
+    if (experience != null && experience is String && experience.isNotEmpty) {
+      return experience;
+    }
+    
+    // Then try services (could be List or String)
+    if (services != null) {
+      // Handle List of service objects: [{"name": "Pet Boarding", ...}]
+      if (services is List && services.isNotEmpty) {
+        final serviceNames = services
+            .where((s) => s is Map && s['isActive'] == true)
+            .map((s) => s['name'] as String?)
+            .where((name) => name != null && name.isNotEmpty)
+            .toList();
+        if (serviceNames.isNotEmpty) {
+          return serviceNames.join(', ');
+        }
+      }
+      
+      // Handle String
+      if (services is String && services.isNotEmpty) {
+        return services;
+      }
+    }
+    
+    return 'Pet care services';
   }
 }
 

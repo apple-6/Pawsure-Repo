@@ -1,67 +1,145 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:pawsure_app/models/activity_model.dart';
-import 'package:pawsure_app/constants/api_endpoints.dart';
+import 'package:pawsure_app/models/activity_log_model.dart';
+import 'package:pawsure_app/services/auth_service.dart';
+import 'package:pawsure_app/constants/api_config.dart';
+import 'package:get/get.dart';
+
+String get apiBaseUrl => ApiConfig.baseUrl;
 
 class ActivityService {
-  Future<List<ActivityModel>> getActivitiesByPet(String petId) async {
+  Future<Map<String, String>> _getHeaders() async {
+    final headers = {
+      'Content-Type': 'application/json; charset=UTF-8',
+      'Accept': 'application/json',
+    };
     try {
-      final response = await http.get(
-        Uri.parse(
-            '${ApiEndpoints.baseUrl}${ApiEndpoints.activitiesByPet(petId)}'),
-      );
-      if (response.statusCode == 200) {
-        final List<dynamic> jsonList =
-            jsonDecode(response.body) as List<dynamic>;
-        return jsonList
-            .map((activity) =>
-                ActivityModel.fromJson(activity as Map<String, dynamic>))
-            .toList();
+      final authService = Get.find<AuthService>();
+      final token = await authService.getToken();
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      } else {
+        debugPrint('⚠️ ActivityService: No auth token');
       }
-      throw Exception('Failed to load activities (${response.statusCode})');
     } catch (e) {
-      debugPrint('Error fetching activities: $e');
+      debugPrint('❌ ActivityService: Auth token error: $e');
+    }
+    return headers;
+  }
+
+  Future<List<ActivityLog>> getActivities(
+    int petId, {
+    String? type,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('🌐 ActivityService.getActivities(petId: $petId)');
+
+      final headers = await _getHeaders();
+      var url = '$apiBaseUrl/activity-logs/pets/$petId';
+      final queryParams = <String, String>{};
+
+      if (type != null) queryParams['type'] = type;
+      if (startDate != null)
+        queryParams['startDate'] = startDate.toIso8601String();
+      if (endDate != null) queryParams['endDate'] = endDate.toIso8601String();
+
+      if (queryParams.isNotEmpty) {
+        url +=
+            '?' +
+            queryParams.entries.map((e) => '${e.key}=${e.value}').join('&');
+      }
+
+      debugPrint('📡 Request: $url');
+      final response = await http.get(Uri.parse(url), headers: headers);
+      debugPrint('📦 Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = jsonDecode(response.body);
+        if (jsonList.isEmpty) return [];
+
+        final activities = <ActivityLog>[];
+        for (int i = 0; i < jsonList.length; i++) {
+          try {
+            activities.add(ActivityLog.fromJson(jsonList[i]));
+          } catch (itemError) {
+            debugPrint('⚠️ Skipping invalid activity at index $i: $itemError');
+          }
+        }
+        debugPrint('✅ Parsed ${activities.length} valid activities');
+        return activities;
+      } else if (response.statusCode == 401) {
+        throw Exception('Unauthorized');
+      }
+
+      throw Exception('Failed to load activities: ${response.statusCode}');
+    } catch (e) {
+      debugPrint('❌ Error in getActivities: $e');
       rethrow;
     }
   }
 
-  Future<ActivityModel> addActivity({
-    required String petId,
-    required String activityType,
-    required String title,
-    required String description,
-    required DateTime activityDate,
-    required int durationMinutes,
-    double? distanceKm,
-    int? caloriesBurned,
-  }) async {
-    try {
-      final payload = {
-        'petId': petId,
-        'activityType': activityType,
-        'title': title,
-        'description': description,
-        'activityDate': activityDate.toIso8601String(),
-        'durationMinutes': durationMinutes,
-        'distanceKm': distanceKm,
-        'caloriesBurned': caloriesBurned,
-      };
+  Future<ActivityStats> getStats(int petId, String period) async {
+    final headers = await _getHeaders();
+    final url = '$apiBaseUrl/activity-logs/pets/$petId/stats?period=$period';
+    final response = await http.get(Uri.parse(url), headers: headers);
 
-      final response = await http.post(
-        Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.addActivity}'),
-        headers: const {'Content-Type': 'application/json'},
+    if (response.statusCode == 200) {
+      return ActivityStats.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to load stats');
+  }
+
+  Future<ActivityLog> createActivity(
+    int petId,
+    Map<String, dynamic> payload,
+  ) async {
+    final headers = await _getHeaders();
+    final response = await http.post(
+      Uri.parse('$apiBaseUrl/activity-logs/pets/$petId'),
+      headers: headers,
+      body: jsonEncode(payload),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return ActivityLog.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Create failed');
+  }
+
+  // 🔧 FIX: Added the missing updateActivity method
+  Future<ActivityLog> updateActivity(
+    int id,
+    Map<String, dynamic> payload,
+  ) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.put(
+        Uri.parse('$apiBaseUrl/activity-logs/$id'),
+        headers: headers,
         body: jsonEncode(payload),
       );
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        return ActivityModel.fromJson(
-            jsonDecode(response.body) as Map<String, dynamic>);
+      if (response.statusCode == 200) {
+        return ActivityLog.fromJson(jsonDecode(response.body));
       }
-      throw Exception('Failed to add activity (${response.statusCode})');
+      throw Exception('Failed to update activity: ${response.statusCode}');
     } catch (e) {
-      debugPrint('Error adding activity: $e');
+      debugPrint('❌ Error updating activity: $e');
       rethrow;
+    }
+  }
+
+  Future<void> deleteActivity(int id) async {
+    final headers = await _getHeaders();
+    final response = await http.delete(
+      Uri.parse('$apiBaseUrl/activity-logs/$id'),
+      headers: headers,
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Delete failed: ${response.statusCode}');
     }
   }
 }

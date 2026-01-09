@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pawsure_app/screens/auth/login_screen.dart';
 import 'package:pawsure_app/models/role.dart';
 import '../../services/auth_service.dart';
@@ -38,7 +39,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     });
 
     try {
-      await AuthService().register(
+      // ✅ FIX: Use GetX singleton instead of creating new instance
+      await Get.find<AuthService>().register(
         widget.registerName!,
         widget.registerEmail!,
         widget.registerPassword!,

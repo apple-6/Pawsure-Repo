@@ -1,11 +1,12 @@
+//pawsure_app\lib\screens\profile\my_pets_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/screens/profile/create_pet_profile_screen.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/services/api_service.dart';
 import 'package:pawsure_app/controllers/navigation_controller.dart';
-import 'package:pawsure_app/controllers/health_controller.dart';
-import 'package:pawsure_app/controllers/home_controller.dart'; // 🔑 New: Import HomeController
+import 'package:pawsure_app/controllers/pet_controller.dart'; // 🔧 Changed to PetController
 
 class MyPetsScreen extends StatefulWidget {
   const MyPetsScreen({super.key});
@@ -60,18 +61,12 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
     }
   }
 
-  // 🆕 NEW: Helper function to trigger data refresh in other screens
+  // 🔧 FIXED: Refresh the global PetController (updates Home & Health automatically)
   void _refreshGlobalControllers() {
-    // 1. Refresh Home Screen data
-    if (Get.isRegistered<HomeController>()) {
-      final HomeController homeController = Get.find<HomeController>();
-      homeController.loadPets(); 
-    }
-    
-    // 2. Refresh Health Screen data
-    if (Get.isRegistered<HealthController>()) {
-      final HealthController healthController = Get.find<HealthController>();
-      healthController.loadPets(); 
+    if (Get.isRegistered<PetController>()) {
+      final PetController petController = Get.find<PetController>();
+      petController.loadPets(); // This updates both Home and Health screens
+      debugPrint('✅ Global PetController refreshed');
     }
   }
 
@@ -141,16 +136,13 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
 
   void _handlePetClick(Pet pet) {
     if (!_isEditMode) {
-      // Get controllers
+      // Get PetController
+      final PetController petController = Get.find<PetController>();
       final NavigationController navController =
           Get.find<NavigationController>();
-      final HealthController healthController =
-          Get.isRegistered<HealthController>()
-              ? Get.find<HealthController>()
-              : Get.put(HealthController());
 
-      // Select the pet in HealthController
-      healthController.selectPet(pet);
+      // 🔧 FIXED: Select the pet globally (updates both Home and Health)
+      petController.selectPet(pet);
 
       // Navigate to Health tab (index 1)
       navController.changePage(1);
@@ -309,11 +301,13 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
     );
   }
 
-  /// Builds the Pet Card with improved image loading and fallback logic.
+  /// Builds the Pet Card with robust image loading and fallback logic.
   Widget _buildPetCard(BuildContext context, Pet pet) {
-    // Check if the URL is valid/present to decide the image source
-    final bool hasValidPhotoUrl = pet.photoUrl?.isNotEmpty == true &&
-        !pet.photoUrl!.contains('your-supabase-url') &&
+    // 1. Improved URL Validation
+    final bool hasValidPhotoUrl =
+        pet.photoUrl != null &&
+        pet.photoUrl!.isNotEmpty &&
+        pet.photoUrl!.startsWith('http') &&
         !pet.photoUrl!.contains('undefined');
 
     return Padding(
@@ -330,35 +324,41 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
             padding: const EdgeInsets.all(12.0),
             child: Row(
               children: [
-                // Pet Photo/Avatar with Fallback
-                CircleAvatar(
-                  radius: 36,
-                  // Use default color for the text initial
-                  backgroundColor: Colors.green.shade100,
-                  
-                  // Use NetworkImage only if a valid URL exists
-                  backgroundImage: hasValidPhotoUrl
-                      ? NetworkImage(pet.photoUrl!)
-                      : null,
-                  
-                  // Logging for debugging network errors
-                  onBackgroundImageError: hasValidPhotoUrl
-                      ? (exception, stackTrace) {
-                            debugPrint('Error loading image: $exception');
-                        }
-                      : null,
-                  
-                  // Show text initial if NO valid URL is present
-                  child: !hasValidPhotoUrl
-                      ? Text(
-                          pet.name.isNotEmpty ? pet.name[0].toUpperCase() : 'P',
-                          style: TextStyle(
-                            fontSize: 28,
-                            color: Colors.green.shade700,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      : null,
+                // --- FIXED PHOTO AREA ---
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: ClipOval(
+                    child: hasValidPhotoUrl
+                        ? Image.network(
+                            pet.photoUrl!,
+                            fit: BoxFit.cover,
+                            // Proper loading state
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  value:
+                                      loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
+                            },
+                            // Proper error state (Fallback to Initial)
+                            errorBuilder: (context, error, stackTrace) {
+                              debugPrint('❌ Image Load Error: $error');
+                              return _buildInitialFallback(pet.name);
+                            },
+                          )
+                        : _buildInitialFallback(pet.name),
+                  ),
                 ),
                 const SizedBox(width: 16),
 
@@ -377,14 +377,9 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        pet.species?.isNotEmpty == true &&
-                                pet.breed?.isNotEmpty == true
+                        (pet.species != null && pet.breed != null)
                             ? '${pet.species} • ${pet.breed}'
-                            : pet.species?.isNotEmpty == true
-                                ? pet.species!
-                                : pet.breed?.isNotEmpty == true
-                                    ? pet.breed!
-                                    : 'Pet',
+                            : (pet.species ?? pet.breed ?? 'Pet'),
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade600,
@@ -394,7 +389,7 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
                   ),
                 ),
 
-                // Edit Mode Icon (Remove button)
+                // Edit Mode Icon
                 if (_isEditMode)
                   IconButton(
                     icon: const Icon(
@@ -402,13 +397,25 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
                       color: Colors.red,
                       size: 30,
                     ),
-                    onPressed: () {
-                      _handleRemovePet(pet.id, pet.name);
-                    },
+                    onPressed: () => _handleRemovePet(pet.id, pet.name),
                   ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // Helper widget to show the first letter of the pet's name
+  Widget _buildInitialFallback(String name) {
+    return Center(
+      child: Text(
+        name.isNotEmpty ? name[0].toUpperCase() : 'P',
+        style: TextStyle(
+          fontSize: 28,
+          color: Colors.green.shade700,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );

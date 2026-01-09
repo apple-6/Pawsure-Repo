@@ -13,7 +13,9 @@ import { User } from '../user/user.entity';
 import { ActivityLog } from '../activity-log/activity-log.entity';
 import { HealthRecord } from '../health-record/health-record.entity';
 import { Booking } from '../booking/booking.entity';
-import { Event } from '../events/entities/event.entity'; // 🆕 IMPORT
+import { Event } from '../events/entities/event.entity';
+import { MoodLog } from '../mood-log/mood-log.entity';
+
 
 @Entity('pets')
 export class Pet {
@@ -35,8 +37,23 @@ export class Pet {
   @Column({ type: 'double precision', nullable: true })
   weight: number;
 
+  @Column({ type: 'double precision', nullable: true })
+  height: number;
+
+  @Column({ type: 'int', nullable: true })
+  body_condition_score: number;
+
+  @Column({ type: 'jsonb', nullable: true })
+  weight_history: { date: string; weight: number }[];
+
   @Column({ type: 'text', nullable: true })
   allergies: string;
+
+  @Column({ nullable: true })
+  food_brand: string;
+
+  @Column({ nullable: true })
+  daily_food_amount: string;
 
   @Column({ type: 'simple-array', nullable: true })
   vaccination_dates: string[];
@@ -66,12 +83,20 @@ export class Pet {
   @OneToMany(() => HealthRecord, (healthRecord) => healthRecord.pet)
   healthRecords: HealthRecord[];
 
-  @OneToMany(() => Booking, (booking) => booking.pet)
+  @OneToMany(() => Booking, (booking) => booking.pets)
   bookings: Booking[];
 
-  // 🆕 NEW RELATIONSHIP
+  // 🆕 Events relationship
   @OneToMany(() => Event, (event) => event.pet)
   events: Event[];
+
+  // 🆕 Mood logs relationship
+  @OneToMany(() => MoodLog, (moodLog) => moodLog.pet)
+  moodLogs: MoodLog[];
+
+  // 🆕 Last activity date for streak calculation
+  @Column({ type: 'date', nullable: true })
+  last_activity_date: Date;
 
   @CreateDateColumn()
   created_at: Date;

@@ -4,16 +4,23 @@ import 'package:get/get.dart';
 import 'package:pawsure_app/models/health_record_model.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/services/api_service.dart';
+import 'package:pawsure_app/controllers/pet_controller.dart'; // 1. Import PetController
 
 class HealthController extends GetxController
     with GetSingleTickerProviderStateMixin {
   // Get ApiService lazily
   ApiService get _apiService => Get.find<ApiService>();
 
+  // 2. Inject the Central PetController
+  PetController get _petController => Get.find<PetController>();
+
   // --- STATE VARIABLES ---
-  var pets = <Pet>[].obs;
-  var selectedPet = Rx<Pet?>(null);
-  var isLoadingPets = true.obs;
+
+  // 3. Bridge state to PetController (Source of Truth)
+  // Instead of maintaining separate lists, we point to the central ones.
+  RxList<Pet> get pets => _petController.pets;
+  Rx<Pet?> get selectedPet => _petController.selectedPet;
+  RxBool get isLoadingPets => _petController.isLoadingPets;
 
   var healthRecords = <HealthRecord>[].obs;
   var filteredRecords = <HealthRecord>[].obs;
@@ -28,17 +35,23 @@ class HealthController extends GetxController
   void onInit() {
     super.onInit();
     tabController = TabController(length: 3, vsync: this);
-    _fetchPets();
 
-    ever(selectedPet, (Pet? pet) {
+    // 4. LISTEN TO GLOBAL PET CHANGES
+    // When Home/Activity/PetController changes the pet, this fires automatically.
+    ever(_petController.selectedPet, (Pet? pet) {
       if (pet != null) {
-        debugPrint('🐕 Selected pet: ${pet.name}, ID: ${pet.id}');
+        debugPrint('🐕 HealthController: Global pet changed to ${pet.name}');
         _fetchHealthRecords(pet.id);
       } else {
         healthRecords.clear();
         filteredRecords.clear();
       }
     });
+
+    // Initial Load: If a pet is already selected globally, load data immediately
+    if (_petController.selectedPet.value != null) {
+      _fetchHealthRecords(_petController.selectedPet.value!.id);
+    }
 
     everAll([healthRecords, selectedFilter], (_) {
       _updateFilteredRecords();
@@ -53,38 +66,7 @@ class HealthController extends GetxController
 
   // --- BUSINESS LOGIC ---
 
-  Future<void> _fetchPets() async {
-    try {
-      isLoadingPets.value = true;
-      debugPrint('🔍 Fetching pets from API...');
-
-      final fetchedPets = await _apiService.getPets();
-      debugPrint('📦 Fetched ${fetchedPets.length} pets');
-
-      if (fetchedPets.isNotEmpty) {
-        pets.assignAll(fetchedPets);
-        selectedPet.value = fetchedPets.first;
-        debugPrint('✅ Selected first pet: ${fetchedPets.first.name}');
-      } else {
-        debugPrint('⚠️ No pets found');
-      }
-    } catch (e, stackTrace) {
-      debugPrint('❌ Error loading pets: $e');
-      debugPrint('Stack trace: $stackTrace');
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Get.snackbar(
-          'Error',
-          'Failed to load pets: ${e.toString()}',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-      });
-    } finally {
-      isLoadingPets.value = false;
-    }
-  }
+  // Note: _fetchPets() is removed because PetController handles it.
 
   Future<void> _fetchHealthRecords(int petId) async {
     try {
@@ -101,13 +83,7 @@ class HealthController extends GetxController
       debugPrint('Stack trace: $stackTrace');
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Get.snackbar(
-          'Error',
-          'Failed to load health records',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
+        // Kept silent or minimal error handling to avoid noise during transitions
       });
 
       healthRecords.clear();
@@ -136,7 +112,8 @@ class HealthController extends GetxController
 
   void selectPet(Pet? pet) {
     if (pet != null) {
-      selectedPet.value = pet;
+      // 5. Update Global Controller instead of local variable
+      _petController.selectPet(pet);
     }
   }
 
@@ -158,6 +135,7 @@ class HealthController extends GetxController
       debugPrint('✅ HealthController: Record created with ID: ${newRecord.id}');
 
       // Add to local state immediately for instant feedback
+      // selectedPet is now a getter, so this checks against the global pet
       if (selectedPet.value?.id == petId) {
         healthRecords.add(newRecord);
         _updateFilteredRecords();
@@ -167,20 +145,16 @@ class HealthController extends GetxController
       // Refresh from server to ensure sync
       await _fetchHealthRecords(petId);
       debugPrint('✅ HealthController: Health records refreshed from server');
-
-      // 🔧 CRITICAL: Don't call Get.back() or show snackbar here!
-      // Let the screen handle all UI feedback and navigation
     } catch (e, stackTrace) {
       debugPrint('❌ HealthController: Error adding health record: $e');
       debugPrint('Stack trace: $stackTrace');
-
-      // Rethrow to let the screen handle the error
       rethrow;
     }
   }
 
   Future<void> refreshPets() async {
-    await _fetchPets();
+    // Delegate to central controller
+    await _petController.refreshPets();
   }
 
   Future<void> refreshHealthRecords() async {
@@ -196,11 +170,10 @@ class HealthController extends GetxController
 
   /// Reset controller state (call after logout)
   void resetState() {
-    pets.clear();
-    selectedPet.value = null;
+    // 6. Only reset Health specific data.
+    // Pet data is cleared by PetController.resetState() which AuthService calls.
     healthRecords.clear();
     filteredRecords.clear();
-    isLoadingPets.value = true;
     isLoadingRecords.value = false;
     selectedFilter.value = 'All';
 
@@ -209,9 +182,6 @@ class HealthController extends GetxController
     }
 
     debugPrint('✅ HealthController state reset');
-
-    // Fetch fresh data
-    _fetchPets();
   }
 
   /// 🆕 Update an existing health record
@@ -272,46 +242,19 @@ class HealthController extends GetxController
     }
   }
 
-    // Inside the HealthController class
-
-  /// Loads pets from the database and ensures the selected pet is still valid.
-  Future<void> loadPets() async { // 🔑 PUBLIC METHOD
+  /// Loads pets from the database.
+  /// 🔧 FIXED: Delegates to central PetController to ensure consistency.
+  Future<void> loadPets() async {
     try {
-      isLoadingPets.value = true;
-      debugPrint('🔍 HealthController: Loading pets for refresh...');
+      // Delegate to PetController which handles fetching and selection logic
+      await _petController.loadPets();
 
-      final fetchedPets = await _apiService.getPets();
-      debugPrint('📦 HealthController: Fetched ${fetchedPets.length} pets');
-
-      if (fetchedPets.isNotEmpty) {
-        pets.assignAll(fetchedPets);
-
-        // Check if the current selected pet was deleted
-        final currentSelectedId = selectedPet.value?.id;
-        final isSelectedPetStillAvailable = currentSelectedId != null && 
-                                          fetchedPets.any((p) => p.id == currentSelectedId);
-
-        if (!isSelectedPetStillAvailable) {
-          // If the old pet is gone, select the first one
-          selectedPet.value = fetchedPets.first;
-        }
-        // If the selected pet is still available, the selection remains the same.
-        
-        // Load health records for the newly selected/kept pet
-        if (selectedPet.value != null) {
-            _fetchHealthRecords(selectedPet.value!.id);
-        }
-
-      } else {
-        pets.clear();
-        selectedPet.value = null; // No pets left
-        healthRecords.clear();
+      // If a pet is selected after load, ensure records are fetched
+      if (selectedPet.value != null) {
+        await _fetchHealthRecords(selectedPet.value!.id);
       }
-    } catch (e, stackTrace) {
-      debugPrint('❌ HealthController: Error loading pets: $e');
-      // ... error handling ...
-    } finally {
-      isLoadingPets.value = false;
+    } catch (e) {
+      debugPrint('❌ HealthController: Error loading pets (delegated): $e');
     }
   }
 }

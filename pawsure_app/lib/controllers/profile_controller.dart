@@ -1,3 +1,4 @@
+//pawsure_app/lib/controllers/profile_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/services/auth_service.dart';
@@ -8,6 +9,8 @@ class ProfileController extends GetxController {
   // Observable user data
   var user = <String, dynamic>{}.obs;
   var isLoading = true.obs;
+
+  String? get token => _authService.token;
 
   @override
   void onInit() {

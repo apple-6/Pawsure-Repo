@@ -1,47 +1,68 @@
+// pawsure_app/lib/services/auth_service.dart
 import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:pawsure_app/constants/api_config.dart';
 import './storage_service.dart';
 
+// 🟢 IMPORTS: Controllers needed for the Refresh/Reset Protocol
+import 'package:pawsure_app/controllers/pet_controller.dart';
+import 'package:pawsure_app/controllers/profile_controller.dart';
+import 'package:pawsure_app/controllers/home_controller.dart';
+import 'package:pawsure_app/controllers/health_controller.dart';
+import 'package:pawsure_app/controllers/booking_controller.dart';
+import 'package:pawsure_app/controllers/calendar_controller.dart';
+
 class AuthService {
-  // Determine base URL depending on platform so emulator can reach host machine.
-  // - Android emulator (AVD): use 10.0.2.2 to reach host localhost
-  // - iOS simulator: use localhost
-  // - Real devices: replace with your machine's LAN IP (e.g. http://192.168.1.100:3000)
-  static String get _baseUrl {
-    try {
-      if (Platform.isAndroid) return 'http://10.203.105.212:3000';
-      if (Platform.isIOS) return 'http://localhost:3000';
-    } catch (_) {}
-    return 'http://localhost:3000';
-    // return 'http://127.0.0.1:3000';
-    // return 'http://10.202.109.35:3000';
+  static String get _baseUrl => ApiConfig.baseUrl;
+
+  // ✅ Get StorageService from GetX dependency injection
+  StorageService get _storage => Get.find<StorageService>();
+
+  // ✅ In-memory token for immediate access
+  String? _token;
+
+  // ✅ Public getter
+  String? get token => _token;
+
+  /// Constructor: Syncs memory with disk storage on app startup
+  AuthService() {
+    _loadTokenFromStorage();
   }
 
-  // Use file-based storage implementation
-  final StorageService _storage = FileStorageService();
+  Future<void> _loadTokenFromStorage() async {
+    _token = await _storage.read(key: 'jwt');
+  }
+
+  /// Check if user is authenticated
+  Future<bool> isAuthenticated() async {
+    final token = await getToken();
+    final isAuth = token != null && token.isNotEmpty;
+    debugPrint('🔐 isAuthenticated: $isAuth');
+    return isAuth;
+  }
 
   /// Login with email or phone number
-  /// Automatically adds +60 prefix for phone numbers
   Future<String> login(
     String emailOrPhone,
     String password, {
     bool isPhone = false,
   }) async {
     final uri = Uri.parse('$_baseUrl/auth/login');
-    // Debug: print the request target
-    // ignore: avoid_print
-    print('AuthService.login -> POST $uri');
+    debugPrint('AuthService.login -> POST $uri');
+
     http.Response resp;
     try {
-      // Add +60 prefix for phone numbers if not already present
       String identifier = emailOrPhone;
       if (isPhone && !emailOrPhone.startsWith('+')) {
         identifier = '+60$emailOrPhone';
       }
 
-      // Backend accepts 'identifier' which can be either email or phone
       final body = {'identifier': identifier, 'password': password};
 
       resp = await http
@@ -56,26 +77,51 @@ class AuthService {
     } on TimeoutException {
       throw Exception('Request timed out');
     }
-    // Debug: print status and body for troubleshooting
-    // ignore: avoid_print
-    print('AuthService.login <- ${resp.statusCode} ${resp.body}');
+
+    debugPrint('AuthService.login <- ${resp.statusCode} ${resp.body}');
 
     if (resp.statusCode == 201 || resp.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(resp.body);
       final token = data['access_token'] as String?;
       if (token == null) throw Exception('access_token not found in response');
+
+      // ✅ Store token in memory and storage
+      _token = token;
       await _storage.write(key: 'jwt', value: token);
+      debugPrint('🔑 JWT token stored');
+
+      final prefs = await SharedPreferences.getInstance();
+
+      // Attempt to get ID from login response directly
+      if (data.containsKey('user') && data['user'] != null) {
+        final userId = data['user']['id'];
+        if (userId is int) {
+          await prefs.setInt('userId', userId);
+          print("✅ Saved User ID from Login: $userId");
+        }
+      }
 
       // Fetch and store user profile
       try {
         final profile = await this.profile();
-        if (profile != null && profile.containsKey('role')) {
-          await _storage.write(key: 'user_role', value: profile['role']);
+        if (profile != null) {
+          if (profile.containsKey('id') && profile['id'] is int) {
+            await prefs.setInt('userId', profile['id']);
+            print("✅ Saved User ID from Profile: ${profile['id']}");
+          }
+
+          if (profile.containsKey('role')) {
+            await _storage.write(key: 'user_role', value: profile['role']);
+            debugPrint('👤 User role stored: ${profile['role']}');
+          }
         }
       } catch (e) {
-        // ignore: avoid_print
-        print('⚠️ Failed to fetch profile after login: $e');
+        debugPrint('⚠️ Failed to fetch profile after login: $e');
       }
+
+      // 🟢 THE FIX: Force Global Refresh of All Controllers
+      // This ensures "John's" stale data is replaced by "Test's" new data immediately.
+      await _refreshAllControllers();
 
       return token;
     } else {
@@ -88,13 +134,105 @@ class AuthService {
     }
   }
 
+  /// 🟢 NEW HELPER: Refreshes data for the new user
+  Future<void> _refreshAllControllers() async {
+    debugPrint(
+      '🔄 REFRESH PROTOCOL: Reloading all controllers for new user...',
+    );
+
+    // 1. Refresh Profile
+    if (Get.isRegistered<ProfileController>()) {
+      Get.find<ProfileController>().loadProfile();
+    }
+
+    // 2. Refresh Pets (Critical for Home/Activity screens)
+    if (Get.isRegistered<PetController>()) {
+      await Get.find<PetController>().loadPets();
+    }
+
+    // 3. Refresh Bookings
+    if (Get.isRegistered<BookingController>()) {
+      Get.find<BookingController>().fetchMyBookings();
+    }
+
+    // 4. Reset/Reload Calendar
+    if (Get.isRegistered<CalendarController>()) {
+      Get.find<CalendarController>().resetState();
+      // If a pet is selected after loadPets above, we might want to trigger loadEvents
+      final petController = Get.find<PetController>();
+      if (petController.selectedPet.value != null) {
+        Get.find<CalendarController>().loadEvents(
+          petController.selectedPet.value!.id,
+        );
+      }
+    }
+
+    // 5. Refresh Home Data
+    if (Get.isRegistered<HomeController>()) {
+      Get.find<HomeController>().refreshHomeData();
+    }
+
+    debugPrint('✅ REFRESH PROTOCOL: Complete.');
+  }
+
   Future<void> logout() async {
+    debugPrint('🚪 Logging out...');
+    _token = null;
     await _storage.delete(key: 'jwt');
     await _storage.delete(key: 'user_role');
+
+    // ✅ Clear User ID on logout
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('userId');
+    debugPrint('✅ Logout complete - cleared userId');
+
+    // 🟢 THE FIX: Reset All Controllers
+    // This wipes "John's" data from memory so it doesn't persist.
+    _resetAllControllers();
+  }
+
+  /// 🟢 NEW HELPER: Resets all controllers to empty state
+  void _resetAllControllers() {
+    debugPrint('🧹 RESET PROTOCOL: Clearing all controller state...');
+
+    if (Get.isRegistered<ProfileController>()) {
+      Get.find<ProfileController>().resetState();
+    }
+    if (Get.isRegistered<PetController>()) {
+      Get.find<PetController>().resetState();
+    }
+    if (Get.isRegistered<BookingController>()) {
+      // BookingController didn't have a resetState method in your snippet,
+      // so we manually clear the list.
+      Get.find<BookingController>().userBookings.clear();
+    }
+    if (Get.isRegistered<HomeController>()) {
+      Get.find<HomeController>().resetState();
+    }
+    if (Get.isRegistered<HealthController>()) {
+      Get.find<HealthController>().resetState();
+    }
+    if (Get.isRegistered<CalendarController>()) {
+      Get.find<CalendarController>().resetState();
+    }
+
+    debugPrint('✨ RESET PROTOCOL: Memory cleared.');
   }
 
   Future<String?> getToken() async {
-    return _storage.read(key: 'jwt');
+    // Return memory token for better performance
+    if (_token != null) {
+      debugPrint('🔑 Using cached token');
+      return _token;
+    }
+
+    _token = await _storage.read(key: 'jwt');
+    if (_token != null) {
+      debugPrint('🔑 Loaded token from storage');
+    } else {
+      debugPrint('⚠️ No auth token found');
+    }
+    return _token;
   }
 
   /// Get user role
@@ -103,62 +241,68 @@ class AuthService {
   }
 
   /// Get current user profile
-  /// ✅ FIXED: Changed from /auth/me to /auth/profile
   Future<Map<String, dynamic>?> profile() async {
     final token = await getToken();
     if (token == null) {
-      // ignore: avoid_print
-      print('⚠️ No token available for profile request');
+      debugPrint('⚠️ No token available for profile request');
       return null;
     }
 
-    final uri = Uri.parse('$_baseUrl/auth/profile'); // ✅ Changed from /auth/me
-    // ignore: avoid_print
-    print('🔍 AuthService.profile -> GET $uri');
+    final uri = Uri.parse('$_baseUrl/auth/profile');
+    debugPrint('🔍 AuthService.profile -> GET $uri');
 
     try {
       final resp = await http
           .get(uri, headers: {'Authorization': 'Bearer $token'})
           .timeout(const Duration(seconds: 10));
 
-      // ignore: avoid_print
-      print('📦 Profile Response: ${resp.statusCode}');
+      debugPrint('📦 Profile Response: ${resp.statusCode}');
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        // ignore: avoid_print
-        print('✅ Profile data received: ${data['name']}');
+        debugPrint('✅ Profile data received: ${data['name']}');
+
+        // Update stored role if available
+        if (data.containsKey('role')) {
+          await _storage.write(key: 'user_role', value: data['role']);
+        }
+
         return data;
+      } else if (resp.statusCode == 401) {
+        debugPrint('🔒 Token expired or invalid, clearing storage');
+        await logout();
+        return null;
       } else {
-        // ignore: avoid_print
-        print(
+        debugPrint(
           '⚠️ Profile endpoint returned: ${resp.statusCode} - ${resp.body}',
         );
       }
+    } on SocketException catch (e) {
+      debugPrint('❌ Network error in profile: ${e.message}');
+      return null;
+    } on TimeoutException {
+      debugPrint('❌ Profile request timed out');
+      return null;
     } catch (e) {
-      // ignore: avoid_print
-      print('❌ AuthService.profile error: $e');
+      debugPrint('❌ AuthService.profile error: $e');
+      return null;
     }
     return null;
   }
 
-  /// Register a new user with optional phone number and role
-  /// Expects body: { name, email, password, phone_number?, role }
-  /// Automatically adds +60 prefix for phone numbers
-  /// If backend returns access_token, it will be stored and returned.
+  /// Register a new user
   Future<String?> register(
     String name,
     String email,
     String password, {
     String? phoneNumber,
-    String role = 'owner', // Default role is 'owner'
+    String role = 'owner',
   }) async {
     final uri = Uri.parse('$_baseUrl/auth/register');
-    // ignore: avoid_print
-    print('AuthService.register -> POST $uri');
+    debugPrint('AuthService.register -> POST $uri');
+
     http.Response resp;
     try {
-      // Add +60 prefix for phone numbers if provided and not already present
       String? formattedPhone = phoneNumber;
       if (phoneNumber != null &&
           phoneNumber.isNotEmpty &&
@@ -187,8 +331,8 @@ class AuthService {
     } on TimeoutException {
       throw Exception('Request timed out');
     }
-    // ignore: avoid_print
-    print('AuthService.register <- ${resp.statusCode} ${resp.body}');
+
+    debugPrint('AuthService.register <- ${resp.statusCode} ${resp.body}');
 
     if (resp.statusCode == 201 || resp.statusCode == 200) {
       try {
@@ -196,11 +340,15 @@ class AuthService {
         final token = data['access_token'] as String?;
         if (token != null) {
           await _storage.write(key: 'jwt', value: token);
+          await _storage.write(key: 'user_role', value: role);
+          debugPrint('✅ Registration successful, token stored');
+
+          // 🟢 Refresh controllers after registration (auto-login scenario)
+          await _refreshAllControllers();
+
           return token;
         }
-      } catch (_) {
-        // ignore parse errors - treat as success without token
-      }
+      } catch (_) {}
       return null;
     } else {
       String message = 'Register failed: ${resp.statusCode}';
@@ -212,8 +360,7 @@ class AuthService {
     }
   }
 
-  /// --- SITTER SETUP FUNCTION ---
-  /// Submits the 4-step sitter setup form.
+  /// Submits the 4-step sitter setup form
   Future<void> submitSitterSetup(Map<String, dynamic> setupData) async {
     // 1. Get the stored token
     final token = await getToken();
@@ -222,20 +369,13 @@ class AuthService {
     }
 
     final uri = Uri.parse('$_baseUrl/sitters/setup');
-    // ignore: avoid_print
-    print('AuthService.submitSitterSetup -> POST $uri');
+    debugPrint('AuthService.submitSitterSetup -> POST $uri');
 
-    // 2. Create a Multipart Request (Required for files)
     var request = http.MultipartRequest('POST', uri);
-
-    // Add Headers
     request.headers['Authorization'] = 'Bearer $token';
     request.headers['Content-Type'] = 'multipart/form-data';
 
-    // 3. Add Text Fields
     setupData.forEach((key, value) {
-      // Skip the file path keys (we handle the file separately below)
-      // Also skip null values
       if (key != 'idDocumentUrl' &&
           key != 'idDocumentFilePath' &&
           value != null) {
@@ -243,48 +383,37 @@ class AuthService {
       }
     });
 
-    // 4. Add the File (The Critical Fix)
-    // We look for 'idDocumentFilePath' which contains the local path on your phone
     final filePath = setupData['idDocumentFilePath'];
-
     if (filePath != null && filePath.toString().isNotEmpty) {
       final file = File(filePath);
-
       if (await file.exists()) {
-        // Create the file part
         var stream = http.ByteStream(file.openRead());
         var length = await file.length();
-
         var multipartFile = http.MultipartFile(
-          'idDocumentFile', // <--- This MUST match the NestJS @UseInterceptors name
+          'idDocumentFile',
           stream,
           length,
           filename: file.path.split(Platform.pathSeparator).last,
         );
-
         request.files.add(multipartFile);
       } else {
-        print('⚠️ Warning: File not found at path: $filePath');
+        debugPrint('⚠️ Warning: File not found at path: $filePath');
       }
     }
 
-    // 5. Send the request
     try {
-      // MERGE FIX: Used Sprint3 logic to send Multipart request
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
 
-      // ignore: avoid_print
-      print(
+      debugPrint(
         'AuthService.submitSitterSetup <- ${response.statusCode} ${response.body}',
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        // MERGE FIX: Used HEAD logic to update Role in storage
         await _storage.write(key: 'user_role', value: 'sitter');
+        debugPrint('✅ Sitter setup complete');
         return;
       } else if (response.statusCode == 401) {
-        // MERGE FIX: Used HEAD logic to handle token expiration
         await logout();
         throw Exception('Session expired. Please log in again.');
       } else {
@@ -302,5 +431,17 @@ class AuthService {
     } catch (e) {
       throw Exception('Error sending request: $e');
     }
+  }
+
+  /// Validate if the current token is still valid
+  Future<bool> validateToken() async {
+    final profile = await this.profile();
+    return profile != null;
+  }
+
+  // Add this method to get the ID from storage
+  Future<int?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('userId');
   }
 }

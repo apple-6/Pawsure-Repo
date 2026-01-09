@@ -1,13 +1,21 @@
+// pawsure_app/lib/screens/community/sitter_details.dart
 import 'dart:convert';
-import 'dart:io'; // Required for Platform detection
-import 'package:flutter/foundation.dart'; // Required for kIsWeb detection
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pawsure_app/screens/community/booking_modal.dart';
+import 'package:pawsure_app/constants/api_config.dart';
 
 class SitterDetailsScreen extends StatefulWidget {
   final String sitterId;
+  final DateTime? startDate;
+  final DateTime? endDate;
 
-  const SitterDetailsScreen({super.key, required this.sitterId});
+  const SitterDetailsScreen({
+    super.key,
+    required this.sitterId,
+    this.startDate,
+    this.endDate,
+  });
 
   @override
   State<SitterDetailsScreen> createState() => _SitterDetailsScreenState();
@@ -16,18 +24,6 @@ class SitterDetailsScreen extends StatefulWidget {
 class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
   late Future<Map<String, dynamic>> _sitterFuture;
 
-  // DYNAMIC BASE URL
-  // This automatically selects the correct URL based on the device you are running on.
-  String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:3000'; // For Web
-    } else if (Platform.isAndroid) {
-      return 'http://10.0.2.2:3000'; // For Android Emulator
-    } else {
-      return 'http://localhost:3000'; // For Windows, macOS, and iOS Simulator
-    }
-  }
-
   @override
   void initState() {
     super.initState();
@@ -35,10 +31,10 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
   }
 
   Future<Map<String, dynamic>> _fetchSitterData() async {
-    final url = '$baseUrl/sitters/${widget.sitterId}';
+    final url = '${ApiConfig.baseUrl}/sitters/${widget.sitterId}';
 
     try {
-      print("Attempting to fetch: $url"); // Debug print to see exact URL
+      print("Attempting to fetch: $url");
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -49,7 +45,6 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
         );
       }
     } catch (e) {
-      // Re-throw with a clearer message for the UI
       throw Exception('Failed to connect to $url.\n\nError: $e');
     }
   }
@@ -111,32 +106,57 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
             return const Center(child: Text("Sitter not found"));
           }
 
-          // 3. Data Loaded - Map JSON to your existing UI variables
+          // 3. Data Loaded
           final data = snapshot.data!;
           final user = data['user'] ?? {};
           final List<dynamic> reviewsData = data['reviews'] ?? [];
 
-          // --- MAPPING BACKEND DATA TO UI ---
+          // String? galleryImage;
+          // if (data['photo_gallery'] != null &&
+          //     data['photo_gallery'].toString().isNotEmpty) {
+          //   galleryImage = data['photo_gallery']
+          //       .toString()
+          //       .split(',')
+          //       .first
+          //       .trim();
+          // }
+          // final String imageUrl =
+          //     galleryImage ??
+          //     user['profile_picture'] ??
+          //     'https://via.placeholder.com/400';
 
-          // Logic to handle photo_gallery (comma separated string) -> First Image
-          String? galleryImage;
+          String? rawFilename;
           if (data['photo_gallery'] != null &&
               data['photo_gallery'].toString().isNotEmpty) {
-            galleryImage = data['photo_gallery']
+            rawFilename = data['photo_gallery']
                 .toString()
                 .split(',')
                 .first
                 .trim();
           }
-          final String imageUrl =
-              galleryImage ??
-              user['profile_picture'] ??
-              'https://via.placeholder.com/400';
 
+          // 2. Construct the Full URL
+          String imageUrl;
+
+          if (rawFilename != null) {
+            if (rawFilename.startsWith('http')) {
+              // It's already a full link
+              imageUrl = rawFilename;
+            } else {
+              // It's a filename, manually build Supabase URL
+              // Ensure 'sitter_gallery' matches your actual bucket name
+              imageUrl =
+                  "${ApiConfig.supabaseUrl}/storage/v1/object/public/sitter_gallery/$rawFilename";
+            }
+          } else {
+            // Fallback
+            imageUrl =
+                user['profile_picture'] ?? 'https://via.placeholder.com/400';
+          }
+          // ---------------------------
           final bool isVerified = data['status'] == 'approved';
           final String name = user['name'] ?? 'Sitter Name';
 
-          // Handle ratings that might come as int or double
           final double rating = (data['rating'] ?? data['avgRating'] ?? 0)
               .toDouble();
           final int reviewCount =
@@ -145,34 +165,74 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
           final String location =
               data['address'] ?? data['location'] ?? 'Unknown Location';
 
-          // Handle price parsing safely
           final double price =
               double.tryParse(data['ratePerNight'].toString()) ??
               double.tryParse(data['price'].toString()) ??
               0.0;
 
           final String bio = data['bio'] ?? 'No bio available';
-          final String houseType = data['houseType'] ?? 'Apartment';
+          // 1. Fetch the raw string from the database (e.g., "condo", "apartment")
+          String rawHouseType = data['houseType']?.toString() ?? 'Apartment';
 
-          // Logic for bookings
+          // 2. Capitalize the first letter (e.g., convert "condo" -> "Condo")
+          final String houseType = rawHouseType.isNotEmpty
+              ? "${rawHouseType[0].toUpperCase()}${rawHouseType.substring(1)}"
+              : rawHouseType;
+
           final int bookingsLen = (data['bookings'] as List? ?? []).length;
           final String bookingsCompleted = "$bookingsLen+ bookings";
 
-          // Mapped services from backend instead of hardcoded
-          final String servicesString =
-              data['experience'] ??
-              data['services'] ??
-              "House Sitting,Dog Walking";
-          final List<String> petTypes = [
-            "Dog",
-            "Cat",
-          ]; // This can remain hardcoded or fetched if API has it
+          // --- MODIFIED: PARSE SERVICES (Now captures Price & Unit) ---
+          List<Map<String, dynamic>> servicesList = [];
+          final dynamic rawServices = data['services'];
+
+          if (rawServices is List) {
+            // Case 1: Database returns a JSON List
+            for (var item in rawServices) {
+              if (item is Map && item['name'] != null) {
+                if (item['isActive'] != false) {
+                  servicesList.add({
+                    'name': item['name'].toString(),
+                    'price':
+                        item['price']?.toString() ??
+                        price.toStringAsFixed(0), // Fallback to base price
+                    'unit': item['unit']?.toString() ?? '', // e.g. "/hr"
+                  });
+                }
+              }
+            }
+          } else if (rawServices is String) {
+            // Case 2: Fallback for JSON strings
+            if (rawServices.trim().startsWith('[')) {
+              try {
+                final List decoded = jsonDecode(rawServices);
+                for (var item in decoded) {
+                  if (item is Map &&
+                      item['name'] != null &&
+                      item['isActive'] != false) {
+                    servicesList.add({
+                      'name': item['name'].toString(),
+                      'price':
+                          item['price']?.toString() ?? price.toStringAsFixed(0),
+                      'unit': item['unit']?.toString() ?? '',
+                    });
+                  }
+                }
+              } catch (_) {}
+            }
+          }
+
+          String rawExp = data['experience']?.toString() ?? "1";
+
+          String yearsExp = rawExp.replaceAll(RegExp(r'[^0-9]'), '');
+          if (yearsExp.isEmpty) yearsExp = "0";
+
+          final String experienceText = "$yearsExp Years Experience";
 
           return SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- 1. Top Image & Back Button ---
                 Stack(
                   children: [
                     SizedBox(
@@ -185,6 +245,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                             Container(color: Colors.grey[300]),
                       ),
                     ),
+
                     SafeArea(
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
@@ -202,11 +263,16 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                                 ),
                               ],
                             ),
-                            child: const Icon(Icons.arrow_back, size: 20),
+                            child: const Icon(
+                              Icons.arrow_back,
+                              size: 20,
+                              color: Colors.black87,
+                            ),
                           ),
                         ),
                       ),
                     ),
+
                     if (isVerified)
                       Positioned(
                         top: 40,
@@ -217,9 +283,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF34D399,
-                            ), // Green verify color
+                            color: const Color(0xFF34D399),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Row(
@@ -251,7 +315,6 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Name
                       Text(
                         name,
                         style: const TextStyle(
@@ -261,7 +324,6 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // Rating
                       Row(
                         children: [
                           const Icon(
@@ -280,8 +342,6 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                         ],
                       ),
                       const SizedBox(height: 8),
-
-                      // Location
                       Row(
                         children: [
                           const Icon(
@@ -299,7 +359,6 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 24),
 
                       // --- 3. Rate & Booking Card ---
@@ -307,67 +366,52 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: const Color(
-                            0xFFE6F7F0,
-                          ), // Very light green background
+                          color: const Color(0xFFE6F7F0),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.grey.shade200),
                         ),
-                        child: Column(
-                          children: [
-                            const Text(
-                              "Nightly Rate",
-                              style: TextStyle(color: Colors.grey),
+                        // Removed Column and price Text widgets, keeping only the button
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (context) => BookingModal(
+                                  sitterId: widget.sitterId,
+                                  sitterName: name,
+                                  ratePerNight: price,
+                                  startDate: widget.startDate,
+                                  endDate: widget.endDate,
+                                  services: servicesList,
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF34D399),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              elevation: 0,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "RM${price.toStringAsFixed(0)}",
-                              style: const TextStyle(
-                                fontSize: 28,
+                            child: const Text(
+                              "Book Now",
+                              style: TextStyle(
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF34D399),
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "Booking feature coming soon!",
-                                      ),
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF34D399),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                child: const Text(
-                                  "Book Now",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
 
                       const SizedBox(height: 24),
 
-                      // --- 4. Experience (Combined About Me + Experience) ---
+                      // --- 4. Experience ---
                       _buildSectionCard(
                         title: "Experience",
                         icon: Icons.pets,
@@ -382,14 +426,80 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                                 fontSize: 14,
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              bookingsCompleted,
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.w500,
-                                fontSize: 13,
-                              ),
+                            const SizedBox(height: 16),
+
+                            // 2. Stats Row (Bookings & Years of Experience)
+                            Row(
+                              children: [
+                                // Bookings Badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFFF0FDF4,
+                                    ), // Light Green
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFFDCFCE7),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.calendar_today,
+                                        size: 14,
+                                        color: Color(0xFF059669),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        bookingsCompleted,
+                                        style: const TextStyle(
+                                          color: Color(0xFF059669),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+
+                                // Years of Experience Badge (Moved Here)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.blue.shade100,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.history,
+                                        size: 16,
+                                        color: Colors.blue.shade700,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        experienceText,
+                                        style: TextStyle(
+                                          color: Colors.blue.shade700,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -403,7 +513,6 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Display House Type here
                             Row(
                               children: [
                                 const Icon(
@@ -423,8 +532,6 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                               ],
                             ),
                             const SizedBox(height: 12),
-
-                            // Photos Row
                             Row(
                               children: [
                                 _buildEnvironmentPlaceholder(),
@@ -441,23 +548,44 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                       // --- 6. Services Offered ---
                       _buildSectionCard(
                         title: "Services Offered",
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: servicesString
-                              .split(',')
-                              .map((service) => _buildChip(service.trim()))
-                              .toList(),
-                        ),
+                        // Check if list is empty
+                        child: servicesList.isEmpty
+                            ? const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  "No specific services offered at this time.",
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 14,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              )
+                            : Column(
+                                children: servicesList.map((service) {
+                                  return Column(
+                                    children: [
+                                      _buildServiceRow(
+                                        service['name'],
+                                        "RM ${service['price']}${service['unit']}",
+                                        const Color(0xFF34D399),
+                                      ),
+                                      // Only show divider if it's not the last item (optional polish)
+                                      if (service != servicesList.last)
+                                        const Divider(height: 24),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
                       ),
 
                       const SizedBox(height: 16),
-                      // --- 8. Rate / Reviews ---
+
+                      // --- 8. Reviews ---
                       _buildSectionCard(
                         title: "Reviews",
                         trailing: GestureDetector(
                           onTap: () {
-                            // Navigation to full review list would go here
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text("See more clicked")),
                             );
@@ -476,7 +604,6 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                           ),
                         ),
                         child: Column(
-                          // Only show first 2 reviews here
                           children: reviewsData
                               .take(2)
                               .map((review) => _buildReviewItem(review))
@@ -589,9 +716,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
   }
 
   Widget _buildReviewItem(dynamic reviewData) {
-    // Parsing review data safely
     final String userName = reviewData['userName'] ?? 'User';
-    // Handle date formatting as needed
     final String date = reviewData['created_at'] != null
         ? reviewData['created_at'].toString().substring(0, 10)
         : 'Recent';
@@ -662,6 +787,26 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildServiceRow(String name, String price, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          name,
+          style: const TextStyle(fontSize: 15, color: Color(0xFF4B5563)),
+        ),
+        Text(
+          price,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: color,
+            fontSize: 15,
+          ),
+        ),
+      ],
     );
   }
 }
