@@ -109,26 +109,26 @@ class HomeScreen extends StatelessWidget {
                   // Divider
                   const PopupMenuDivider(),
                   // Add Pet option
-                  const PopupMenuItem<String>(
-                    value: 'add_pet',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.add_circle_outline,
-                          size: 20,
-                          color: Color(0xFF22C55E),
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'Add New Pet',
-                          style: TextStyle(
-                            color: Color(0xFF22C55E),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  // const PopupMenuItem<String>(
+                  //   value: 'add_pet',
+                  //   child: Row(
+                  //     children: [
+                  //       Icon(
+                  //         Icons.add_circle_outline,
+                  //         size: 20,
+                  //         color: Color(0xFF22C55E),
+                  //       ),
+                  //       SizedBox(width: 12),
+                  //       Text(
+                  //         'Add New Pet',
+                  //         style: TextStyle(
+                  //           color: Color(0xFF22C55E),
+                  //           fontWeight: FontWeight.w500,
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
                 ],
                 child: Container(
                   padding: const EdgeInsets.symmetric(

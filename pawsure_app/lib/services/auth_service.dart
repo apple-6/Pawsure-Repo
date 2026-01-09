@@ -339,6 +339,8 @@ class AuthService {
         final Map<String, dynamic> data = jsonDecode(resp.body);
         final token = data['access_token'] as String?;
         if (token != null) {
+          // Update in-memory token immediately (was missing)
+          _token = token;
           await _storage.write(key: 'jwt', value: token);
           await _storage.write(key: 'user_role', value: role);
           debugPrint('✅ Registration successful, token stored');
