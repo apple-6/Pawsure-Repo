@@ -84,35 +84,69 @@ pawsure-repo/
 
 ---
 
-## 🛠️ Getting Started
+## ⚡ Automated Environment Setup (Recommended)
 
-### Prerequisites
-* Node.js (v18+)
-* Flutter SDK (v3.19+)
-* PostgreSQL (v16)
-* Docker (Optional for DB)
+To ensure consistency across all developer machines and prevent "it works on my machine" errors, we have included automated PowerShell scripts. **Run these every time you pull or merge changes.**
 
-### Installation
+### 1. Backend Setup (`pawsure_backend`)
+**Environment:** Command Prompt (CMD) or PowerShell
 
-1. **Clone the Monorepo:**
-   ```bash
-   git clone [https://github.com/your-username/pawsure-repo.git](https://github.com/your-username/pawsure-repo.git)
-   ```
+```powershell
+cd pawsure_backend
+powershell -ExecutionPolicy Bypass -File setup-backend.ps1
+```
 
-2. **Backend Setup:**
-   ```bash
-   cd pawsure_backend
-   npm install
-   # Configure .env file with DB credentials
-   npm run start:dev
-   ```
+**What it does:**
+* ✅ **Verifies Node.js Version:** Enforces `v22.21.0` to prevent runtime crashes.
+* ✅ **Deep Clean:** Deletes old `dist/` and `node_modules` artifacts.
+* ✅ **Clean Install:** Installs fresh dependencies using `npm ci`.
 
-3. **Frontend Setup:**
-   ```bash
-   cd pawsure_app
-   flutter pub get
-   flutter run
-   ```
+### 2. Mobile App Setup (`pawsure_app`)
+**Environment:** Command Prompt (CMD) or PowerShell
+
+```powershell
+cd pawsure_app
+powershell -ExecutionPolicy Bypass -File setup-flutter.ps1
+```
+
+**What it does:**
+* ✅ **Flutter Doctor:** Checks for SDK installation issues.
+* ✅ **Platform Regeneration:** Rebuilds Windows/Android platform files (Fixes `CMake` errors).
+* ✅ **Dependency Sync:** Runs `flutter clean` and `flutter pub get`.
+
+---
+
+## 🎯 Why Run This Every Time?
+
+| If you DON'T run setup scripts ❌ | If you DO run setup scripts ✅ |
+| :--- | :--- |
+| "Cannot find module" errors | Latest dependencies installed |
+| Version conflicts (Node/Flutter) | Clean build files |
+| Stale build artifacts | No version conflicts |
+| **Wasted time debugging** | **Everything just works** |
+
+---
+
+## 🐛 Troubleshooting Common Issues
+
+If the automated scripts fail, refer to this matrix to resolve common environment issues.
+
+| Problem | Error Message | Solution Steps |
+| :--- | :--- | :--- |
+| **Node.js Mismatch** | `Node.js version mismatch` | 1. Download **Node v22.21.0** from nodejs.org<br>2. Install & Restart Terminal<br>3. Rerun script. |
+| **Missing Module** | `Cannot find module @nestjs/...` | The `dist` folder is stale.<br>**CMD:** `rmdir /s /q dist` then `npm run start:dev` |
+| **Windows Build Fail** | `CMake Error: does not contain CMakeLists.txt` | Missing platform files.<br>**CMD:** `cd pawsure_app` then `flutter create --platforms=windows .` |
+| **DB Connection** | `Unable to connect (ENETUNREACH)` | You are likely blocked by the ISP (Supabase issue).<br>**Fix:** Turn on **Cloudflare WARP (1.1.1.1)** and restart backend. |
+| **Script Blocked** | `...cannot be loaded because running scripts is disabled` | **PowerShell Fix:**<br>`Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` |
+
+### 📞 Quick Help Commands
+Run these to verify your environment manually:
+
+```bash
+node -v          # Must be v22.21.0
+npm -v           # Must be >= 10.0.0
+flutter --version # Must be 3.x.x
+```
 
 ---
 
