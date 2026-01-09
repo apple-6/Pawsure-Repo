@@ -161,16 +161,25 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
       );
     }
 
-    if (errorMessage != null && currentUser == null) {
+    if (currentUser == null) {
       return Scaffold(
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(errorMessage!, textAlign: TextAlign.center),
+              // Display specific error if available, or generic message
+              Text(
+                errorMessage ?? "Failed to load profile data.", 
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey),
+              ),
               const SizedBox(height: 10),
               ElevatedButton(
                 onPressed: _fetchUserData,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: brandColor,
+                  foregroundColor: Colors.white,
+                ),
                 child: const Text("Retry"),
               ),
             ],
@@ -306,7 +315,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        currentUser!.name,
+                                        currentUser?.name ?? "Sitter",
                                         style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
