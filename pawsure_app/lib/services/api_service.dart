@@ -1471,5 +1471,35 @@ class ApiService {
       };
     }
   }
+
+  Future<void> createReview({
+  required int bookingId,
+  required double rating,
+  required String comment,
+}) async {
+  try {
+    debugPrint('⭐ API: POST $apiBaseUrl/reviews');
+    
+    final headers = await _getHeaders(); // Uses your existing helper
+    final response = await http.post(
+      Uri.parse('$apiBaseUrl/reviews'),
+      headers: headers,
+      body: jsonEncode({
+        'bookingId': bookingId,
+        'rating': rating,
+        'comment': comment,
+      }),
+    );
+
+    debugPrint('📦 API Response: ${response.statusCode}');
+
+    if (response.statusCode != 201 && response.statusCode != 200) {
+      throw Exception('Failed to submit review: ${response.body}');
+    }
+  } catch (e) {
+    debugPrint('❌ Error submitting review: $e');
+    rethrow;
+  }
+}
 }
 

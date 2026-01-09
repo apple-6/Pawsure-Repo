@@ -47,8 +47,9 @@ class Sitter {
           (userJson != null ? userJson['name'] : json['name']) as String? ??
           'Pet Sitter',
       rating: _toDouble(json['rating']) ?? _toDouble(json['avgRating']) ?? 0.0,
-      reviewCount:
-          _toInt(json['reviews_count']) ?? _toInt(json['reviewCount']) ?? 0,
+      
+      // ✅ READ REVIEW COUNT (Matches backend 'reviewCount' field)
+      reviewCount: _toInt(json['reviewCount']) ?? _toInt(json['reviews_count']) ?? 0,
       services: _parseServices(json['experience'], json['services']),
       price: _toDouble(json['ratePerNight']) ??
           _toDouble(json['price']) ??
@@ -167,7 +168,7 @@ class Sitter {
 // Mock Data List used as a fallback when API calls fail
 List<Sitter> mockSitters = [
   Sitter(
-    id: 'sitter1',
+    id: '1',
     name: 'Jane Doe',
     rating: 4.9,
     reviewCount: 85,
@@ -182,7 +183,7 @@ List<Sitter> mockSitters = [
     ],
   ),
   Sitter(
-    id: 'sitter2',
+    id: '2',
     name: 'Ramesh Kumar',
     rating: 4.7,
     reviewCount: 52,
@@ -197,7 +198,7 @@ List<Sitter> mockSitters = [
     ],
   ),
   Sitter(
-    id: 'sitter3',
+    id: '3',
     name: 'Alice Tan',
     rating: 5.0,
     reviewCount: 120,

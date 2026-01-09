@@ -111,47 +111,34 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
           final user = data['user'] ?? {};
           final List<dynamic> reviewsData = data['reviews'] ?? [];
 
-          // String? galleryImage;
-          // if (data['photo_gallery'] != null &&
-          //     data['photo_gallery'].toString().isNotEmpty) {
-          //   galleryImage = data['photo_gallery']
-          //       .toString()
-          //       .split(',')
-          //       .first
-          //       .trim();
-          // }
-          // final String imageUrl =
-          //     galleryImage ??
-          //     user['profile_picture'] ??
-          //     'https://via.placeholder.com/400';
+         String? rawFilename;
+          final dynamic gallery = data['photo_gallery'];
 
-          String? rawFilename;
-          if (data['photo_gallery'] != null &&
-              data['photo_gallery'].toString().isNotEmpty) {
-            rawFilename = data['photo_gallery']
-                .toString()
-                .split(',')
-                .first
-                .trim();
+          if (gallery != null) {
+            if (gallery is List && gallery.isNotEmpty) {
+              // If backend returns a List (e.g. ["url1", "url2"])
+              rawFilename = gallery.first.toString();
+            } else if (gallery is String && gallery.isNotEmpty) {
+              // If backend returns a String (e.g. "url1,url2")
+              // Remove brackets just in case it's a stringified list "[url1]"
+              String cleanString = gallery.replaceAll('[', '').replaceAll(']', '');
+              rawFilename = cleanString.split(',').first.trim();
+            }
           }
 
-          // 2. Construct the Full URL
+          // Construct the Full URL
           String imageUrl;
-
-          if (rawFilename != null) {
+          if (rawFilename != null && rawFilename.isNotEmpty) {
             if (rawFilename.startsWith('http')) {
-              // It's already a full link
               imageUrl = rawFilename;
             } else {
-              // It's a filename, manually build Supabase URL
-              // Ensure 'sitter_gallery' matches your actual bucket name
-              imageUrl =
-                  "${ApiConfig.supabaseUrl}/storage/v1/object/public/sitter_gallery/$rawFilename";
+              // Fallback for Supabase paths if needed
+              imageUrl = "${ApiConfig.supabaseUrl}/storage/v1/object/public/sitter_gallery/$rawFilename";
             }
           } else {
-            // Fallback
-            imageUrl =
-                user['profile_picture'] ?? 'https://via.placeholder.com/400';
+            // Fallback to profile picture or placeholder
+            imageUrl = user['profile_picture'] ?? 
+                       'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=400&q=80';
           }
           // ---------------------------
           final bool isVerified = data['status'] == 'approved';
@@ -159,8 +146,10 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
 
           final double rating = (data['rating'] ?? data['avgRating'] ?? 0)
               .toDouble();
-          final int reviewCount =
-              data['reviews_count'] ?? data['reviewCount'] ?? 0;
+         final int reviewCount = data['reviewCount'] ?? 
+                                  data['reviews_count'] ?? 
+                                  data['review_count'] ?? 
+                                  0;
 
           final String location =
               data['address'] ?? data['location'] ?? 'Unknown Location';
@@ -582,31 +571,65 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                       const SizedBox(height: 16),
 
                       // --- 8. Reviews ---
-                      _buildSectionCard(
+                      // _buildSectionCard(
+                      //   title: "Reviews",
+                      //   trailing: GestureDetector(
+                      //     onTap: () {
+                      //       ScaffoldMessenger.of(context).showSnackBar(
+                      //         const SnackBar(content: Text("See more clicked")),
+                      //       );
+                      //     },
+                      //     behavior: HitTestBehavior.opaque,
+                      //     child: const Padding(
+                      //       padding: EdgeInsets.only(left: 8.0),
+                      //       child: Text(
+                      //         "See more",
+                      //         style: TextStyle(
+                      //           color: Color(0xFF34D399),
+                      //           fontWeight: FontWeight.bold,
+                      //           fontSize: 14,
+                      //         ),
+                      //       ),
+                      //     ),
+                      //   ),
+                      //   child: Column(
+                      //     children: reviewsData
+                      //         .take(2)
+                      //         .map((review) => _buildReviewItem(review))
+                      //         .toList(),
+                      //   ),
+                      // ),
+                     _buildSectionCard(
                         title: "Reviews",
-                        trailing: GestureDetector(
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("See more clicked")),
-                            );
-                          },
-                          behavior: HitTestBehavior.opaque,
-                          child: const Padding(
-                            padding: EdgeInsets.only(left: 8.0),
-                            child: Text(
-                              "See more",
-                              style: TextStyle(
-                                color: Color(0xFF34D399),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
+                        // ✅ OPTIONAL IMPROVEMENT: Only show "See more" if there are more than 2 reviews
+                        trailing: reviewsData.length > 2 
+                            ? GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => AllReviewsScreen(reviews: reviewsData),
+                                    ),
+                                  );
+                                },
+                                behavior: HitTestBehavior.opaque,
+                                child: const Padding(
+                                  padding: EdgeInsets.only(left: 8.0),
+                                  child: Text(
+                                    "See more",
+                                    style: TextStyle(
+                                      color: Color(0xFF34D399),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : null, // Hide button if 2 or fewer reviews
                         child: Column(
                           children: reviewsData
                               .take(2)
-                              .map((review) => _buildReviewItem(review))
+                              .map((review) => ReviewCard(reviewData: review))
                               .toList(),
                         ),
                       ),
@@ -715,8 +738,196 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
     );
   }
 
-  Widget _buildReviewItem(dynamic reviewData) {
-    final String userName = reviewData['userName'] ?? 'User';
+// Widget _buildReviewItem(dynamic reviewData) {
+//     final owner = reviewData['owner'];
+//     final String userName = owner != null ? (owner['name'] ?? 'Anonymous') : 'User';
+    
+//     // ---------------------------------------------------------
+//     // 1. Image Logic: Construct the full URL
+//     // ---------------------------------------------------------
+//     String? finalProfileUrl;
+    
+//     if (owner != null && owner['profile_picture'] != null) {
+//       String rawPic = owner['profile_picture'].toString();
+      
+//       if (rawPic.isNotEmpty) {
+//         if (rawPic.startsWith('http')) {
+//           // Case A: It's already a full URL (like PostCard)
+//           finalProfileUrl = rawPic;
+//         } else {
+//           // Case B: It's just a filename. We MUST prepend the Supabase path.
+//           // Note: Ensure 'profile_pictures' matches your Supabase bucket name for users
+//           finalProfileUrl = "${ApiConfig.supabaseUrl}/storage/v1/object/public/profile_pictures/$rawPic";
+//         }
+//       }
+//     }
+//     // ---------------------------------------------------------
+
+//     final String date = reviewData['created_at'] != null
+//         ? reviewData['created_at'].toString().substring(0, 10)
+//         : 'Recent';
+//     final double rating = (reviewData['rating'] ?? 5).toDouble();
+//     final String comment = reviewData['comment'] ?? '';
+
+//     return Padding(
+//       padding: const EdgeInsets.only(bottom: 16.0),
+//       child: Container(
+//         padding: const EdgeInsets.all(12),
+//         decoration: BoxDecoration(
+//           border: Border.all(color: Colors.grey.shade200),
+//           borderRadius: BorderRadius.circular(12),
+//         ),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Row(
+//               children: [
+//                 // ------------------------------------------------
+//                 // 2. Display Logic (Matches PostCard style)
+//                 // ------------------------------------------------
+//                 CircleAvatar(
+//                   backgroundColor: Colors.grey[200],
+//                   radius: 20,
+//                   // If we successfully built a URL, display it
+//                   backgroundImage: (finalProfileUrl != null)
+//                       ? NetworkImage(finalProfileUrl)
+//                       : null,
+//                   // If no URL, show the fallback icon
+//                   child: (finalProfileUrl == null)
+//                       ? Icon(Icons.person_outline, color: Colors.grey[600])
+//                       : null,
+//                 ),
+//                 const SizedBox(width: 12),
+//                 Expanded(
+//                   child: Column(
+//                     crossAxisAlignment: CrossAxisAlignment.start,
+//                     children: [
+//                       Row(
+//                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                         children: [
+//                           Text(
+//                             userName,
+//                             style: const TextStyle(
+//                               fontWeight: FontWeight.bold,
+//                               fontSize: 14,
+//                             ),
+//                           ),
+//                           Text(
+//                             date,
+//                             style: const TextStyle(
+//                               color: Colors.grey,
+//                               fontSize: 12,
+//                             ),
+//                           ),
+//                         ],
+//                       ),
+//                       const SizedBox(height: 4),
+//                       Row(
+//                         children: List.generate(5, (index) {
+//                           return Icon(
+//                             index < rating ? Icons.star : Icons.star_border,
+//                             color: Colors.amber,
+//                             size: 14,
+//                           );
+//                         }),
+//                       ),
+//                     ],
+//                   ),
+//                 ),
+//               ],
+//             ),
+//             const SizedBox(height: 8),
+//             Text(
+//               comment,
+//               style: const TextStyle(fontSize: 13, color: Colors.black87),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+
+  Widget _buildServiceRow(String name, String price, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          name,
+          style: const TextStyle(fontSize: 15, color: Color(0xFF4B5563)),
+        ),
+        Text(
+          price,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: color,
+            fontSize: 15,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 1. New Screen to display ALL reviews
+// ---------------------------------------------------------------------------
+class AllReviewsScreen extends StatelessWidget {
+  final List<dynamic> reviews;
+
+  const AllReviewsScreen({super.key, required this.reviews});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text("All Reviews", style: TextStyle(color: Colors.black)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
+      ),
+      body: reviews.isEmpty
+          ? const Center(child: Text("No reviews yet."))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: reviews.length,
+              itemBuilder: (context, index) {
+                return ReviewCard(reviewData: reviews[index]);
+              },
+            ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 2. Reusable Widget for a single review (Logic extracted from your previous code)
+// ---------------------------------------------------------------------------
+class ReviewCard extends StatelessWidget {
+  final dynamic reviewData;
+
+  const ReviewCard({super.key, required this.reviewData});
+
+  @override
+  Widget build(BuildContext context) {
+    final owner = reviewData['owner'];
+    final String userName = owner != null ? (owner['name'] ?? 'Anonymous') : 'User';
+
+    // --- Image Logic (Reused) ---
+    String? finalProfileUrl;
+    if (owner != null && owner['profile_picture'] != null) {
+      String rawPic = owner['profile_picture'].toString();
+      if (rawPic.isNotEmpty) {
+        if (rawPic.startsWith('file:') || rawPic.contains('C:/') || rawPic.contains('/Users/')) {
+          finalProfileUrl = null;
+        } else if (rawPic.startsWith('http')) {
+          finalProfileUrl = rawPic;
+        } else {
+          finalProfileUrl = "${ApiConfig.supabaseUrl}/storage/v1/object/public/profile_pictures/$rawPic";
+        }
+      }
+    }
+    // ----------------------------
+
     final String date = reviewData['created_at'] != null
         ? reviewData['created_at'].toString().substring(0, 10)
         : 'Recent';
@@ -737,7 +948,19 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: Colors.grey[100],
+                  backgroundColor: Colors.grey[200],
+                  radius: 20,
+                  // 1. Provide the image (or null)
+                  foregroundImage: (finalProfileUrl != null)
+                      ? NetworkImage(finalProfileUrl)
+                      : null,
+                  
+                  // 2. ✅ FIX: Only provide the error handler if the image is NOT null
+                  onForegroundImageError: (finalProfileUrl != null) 
+                      ? (_, __) {} 
+                      : null, 
+
+                  // 3. Fallback child (shown if image is null or fails to load)
                   child: Icon(Icons.person_outline, color: Colors.grey[600]),
                 ),
                 const SizedBox(width: 12),
@@ -750,17 +973,11 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                         children: [
                           Text(
                             userName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                           ),
                           Text(
                             date,
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
-                            ),
+                            style: const TextStyle(color: Colors.grey, fontSize: 12),
                           ),
                         ],
                       ),
@@ -787,26 +1004,6 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildServiceRow(String name, String price, Color color) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          name,
-          style: const TextStyle(fontSize: 15, color: Color(0xFF4B5563)),
-        ),
-        Text(
-          price,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: color,
-            fontSize: 15,
-          ),
-        ),
-      ],
     );
   }
 }
