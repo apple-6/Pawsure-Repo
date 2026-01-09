@@ -4,16 +4,12 @@ import 'package:get/get.dart';
 import 'package:pawsure_app/models/event_model.dart';
 import 'package:pawsure_app/services/api_service.dart';
 import 'package:pawsure_app/controllers/calendar_controller.dart';
+import 'package:pawsure_app/controllers/home_controller.dart';
 
 class AddEventModal extends StatefulWidget {
-  final int petId;
   final DateTime initialDate;
 
-  const AddEventModal({
-    super.key,
-    required this.petId,
-    required this.initialDate,
-  });
+  const AddEventModal({super.key, required this.initialDate});
 
   @override
   State<AddEventModal> createState() => _AddEventModalState();
@@ -31,11 +27,21 @@ class _AddEventModalState extends State<AddEventModal> {
 
   bool _isLoading = false;
 
+  // ✅ NEW: Multi-pet selection
+  final Set<int> _selectedPetIds = {};
+  late HomeController homeController;
+
   @override
   void initState() {
     super.initState();
     _selectedDate = widget.initialDate;
     _selectedTime = TimeOfDay.now();
+    homeController = Get.find<HomeController>();
+
+    // ✅ Auto-select current pet if available
+    if (homeController.selectedPet.value != null) {
+      _selectedPetIds.add(homeController.selectedPet.value!.id);
+    }
   }
 
   @override
@@ -100,6 +106,11 @@ class _AddEventModalState extends State<AddEventModal> {
                     return null;
                   },
                 ),
+
+                const SizedBox(height: 16),
+
+                // ✅ NEW: Pet Selector (Multi-select)
+                _buildPetSelector(),
 
                 const SizedBox(height: 16),
 
@@ -237,6 +248,111 @@ class _AddEventModalState extends State<AddEventModal> {
     );
   }
 
+  // ✅ NEW: Multi-pet selector widget
+  Widget _buildPetSelector() {
+    return Obx(() {
+      if (homeController.isLoadingPets.value) {
+        return const Center(child: LinearProgressIndicator(color: Colors.blue));
+      }
+
+      String displayString = "Select pets *";
+      if (_selectedPetIds.isNotEmpty) {
+        final names = homeController.pets
+            .where((p) => _selectedPetIds.contains(p.id))
+            .map((p) => p.name)
+            .toList();
+        if (names.isNotEmpty) displayString = names.join(", ");
+      }
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.pets, color: Colors.blue),
+          title: Text(
+            displayString,
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          trailing: Theme(
+            data: Theme.of(context).copyWith(
+              splashColor: Colors.transparent,
+              highlightColor: Colors.transparent,
+            ),
+            child: PopupMenuButton<int>(
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
+              tooltip: "Select Pets",
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              onSelected: null,
+              itemBuilder: (context) {
+                return homeController.pets.map((pet) {
+                  return PopupMenuItem<int>(
+                    enabled: false,
+                    value: pet.id,
+                    child: StatefulBuilder(
+                      builder: (context, setStateItem) {
+                        final isSelected = _selectedPetIds.contains(pet.id);
+
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              if (isSelected) {
+                                _selectedPetIds.remove(pet.id);
+                              } else {
+                                _selectedPetIds.add(pet.id);
+                              }
+                            });
+                            setStateItem(() {});
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isSelected
+                                      ? Icons.check_box
+                                      : Icons.check_box_outline_blank,
+                                  color: isSelected ? Colors.blue : Colors.grey,
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    pet.name,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      color: isSelected
+                                          ? Colors.black87
+                                          : Colors.black54,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                }).toList();
+              },
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -270,12 +386,23 @@ class _AddEventModalState extends State<AddEventModal> {
       return;
     }
 
+    // ✅ Validate pet selection
+    if (_selectedPetIds.isEmpty) {
+      Get.snackbar(
+        'Validation Error',
+        'Please select at least one pet',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.withOpacity(0.1),
+        colorText: Colors.orange[900],
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Combine date and time
       final dateTime = DateTime(
         _selectedDate.year,
         _selectedDate.month,
@@ -284,12 +411,12 @@ class _AddEventModalState extends State<AddEventModal> {
         _selectedTime.minute,
       );
 
-      // Build payload
+      // ✅ Build payload with pet_ids array
       final payload = {
         'title': _titleController.text.trim(),
         'dateTime': dateTime.toIso8601String(),
         'eventType': _selectedType.toJson(),
-        'petId': widget.petId,
+        'pet_ids': _selectedPetIds.toList(), // ✅ Multi-pet support
         'status': 'upcoming',
         if (_locationController.text.isNotEmpty)
           'location': _locationController.text.trim(),
@@ -297,19 +424,16 @@ class _AddEventModalState extends State<AddEventModal> {
           'notes': _notesController.text.trim(),
       };
 
-      // Call API
       final apiService = Get.find<ApiService>();
       await apiService.createEvent(payload);
 
       // Reload calendar data
       final calendarController = Get.find<CalendarController>();
-      await calendarController.loadEvents(widget.petId);
-      await calendarController.loadUpcomingEvents(widget.petId);
+      await calendarController.loadAllOwnerEvents();
+      await calendarController.loadAllUpcomingEvents();
 
-      // Close modal
       Navigator.pop(context);
 
-      // Show success message
       Get.snackbar(
         'Success',
         'Event created successfully!',

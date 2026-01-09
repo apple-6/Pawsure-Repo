@@ -2,12 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/calendar_controller.dart';
+import 'package:pawsure_app/controllers/home_controller.dart';
 import 'package:pawsure_app/models/event_model.dart';
 
+/// ✅ UPDATED: Now shows events from ALL owner's pets, not just selected pet
 class UpcomingEventsCard extends StatefulWidget {
-  final int petId;
-
-  const UpcomingEventsCard({super.key, required this.petId});
+  const UpcomingEventsCard({super.key});
 
   @override
   State<UpcomingEventsCard> createState() => _UpcomingEventsCardState();
@@ -15,17 +15,17 @@ class UpcomingEventsCard extends StatefulWidget {
 
 class _UpcomingEventsCardState extends State<UpcomingEventsCard> {
   late CalendarController controller;
+  late HomeController homeController;
   bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    // Get or create the controller
     controller = Get.isRegistered<CalendarController>()
         ? Get.find<CalendarController>()
         : Get.put(CalendarController());
+    homeController = Get.find<HomeController>();
 
-    // Load data after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
@@ -33,23 +33,16 @@ class _UpcomingEventsCardState extends State<UpcomingEventsCard> {
 
   void _loadData() {
     if (!_isInitialized && mounted) {
-      debugPrint('🏠 Loading upcoming events for pet ${widget.petId}');
-      controller.loadUpcomingEvents(widget.petId);
+      debugPrint('🏠 Loading upcoming events for ALL owner pets');
+      // ✅ UPDATED: Load all owner events instead of per-pet
+      controller.loadAllUpcomingEvents();
       setState(() {
         _isInitialized = true;
       });
     }
   }
 
-  @override
-  void didUpdateWidget(UpcomingEventsCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Reload if pet changed
-    if (oldWidget.petId != widget.petId) {
-      debugPrint('🔄 Pet changed, reloading events for pet ${widget.petId}');
-      controller.loadUpcomingEvents(widget.petId);
-    }
-  }
+  // ✅ REMOVED: didUpdateWidget - no longer needed since we don't track specific pet
 
   @override
   Widget build(BuildContext context) {
@@ -127,7 +120,6 @@ class _UpcomingEventsCardState extends State<UpcomingEventsCard> {
               );
             }
 
-            // Display up to 3 events
             return ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -136,7 +128,10 @@ class _UpcomingEventsCardState extends State<UpcomingEventsCard> {
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final event = controller.upcomingEvents[index];
-                return _EventListItem(event: event);
+                return _EventListItem(
+                  event: event,
+                  homeController: homeController,
+                );
               },
             );
           }),
@@ -150,14 +145,28 @@ class _UpcomingEventsCardState extends State<UpcomingEventsCard> {
 
 class _EventListItem extends StatelessWidget {
   final EventModel event;
+  final HomeController homeController;
 
-  const _EventListItem({required this.event});
+  const _EventListItem({required this.event, required this.homeController});
 
   @override
   Widget build(BuildContext context) {
+    // ✅ NEW: Get pet names for this event
+    final petNames = event.petIds
+        .map((petId) {
+          try {
+            final pet = homeController.pets.firstWhere((p) => p.id == petId);
+            return pet.name;
+          } catch (e) {
+            return 'Pet #$petId';
+          }
+        })
+        .toList()
+        .join(', ');
+
     return InkWell(
       onTap: () {
-        Get.toNamed('/calendar'); // Navigate to calendar on tap
+        Get.toNamed('/calendar');
       },
       borderRadius: BorderRadius.circular(12),
       child: Container(
@@ -216,6 +225,30 @@ class _EventListItem extends StatelessWidget {
                       ),
                     ],
                   ),
+
+                  // ✅ NEW: Show pet names
+                  if (petNames.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.pets, size: 12, color: Colors.blue[600]),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            petNames,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue[700],
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
                   if (event.location != null) ...[
                     const SizedBox(height: 4),
                     Row(

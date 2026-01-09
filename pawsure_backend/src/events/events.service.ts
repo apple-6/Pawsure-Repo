@@ -1,53 +1,105 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan, LessThan, Not } from 'typeorm'; // 👈 Added MoreThan, LessThan, Not
-import { Event, EventStatus } from './entities/event.entity'; // 👈 Added EventStatus
+import { Repository, MoreThan, LessThan, Not, In } from 'typeorm';
+import { Event, EventStatus } from './entities/event.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { Pet } from '../pet/pet.entity';
 
 @Injectable()
 export class EventsService {
   constructor(
     @InjectRepository(Event)
     private eventsRepository: Repository<Event>,
+    @InjectRepository(Pet)
+    private petRepository: Repository<Pet>,
   ) {}
 
-  async create(createEventDto: CreateEventDto): Promise<Event> {
-    const event = this.eventsRepository.create({
-      ...createEventDto,
-      pet: { id: createEventDto.petId },
-    });
-    return this.eventsRepository.save(event);
+  async create(createEventDto: CreateEventDto) {
+    // ✅ Logic to handle "One Event, Multiple Pets"
+    const petsToCreateFor: number[] = [];
+
+    if (createEventDto.pet_ids && createEventDto.pet_ids.length > 0) {
+       petsToCreateFor.push(...createEventDto.pet_ids);
+    } else if (createEventDto.petId) {
+       petsToCreateFor.push(createEventDto.petId);
+    }
+
+    const createdEvents: Event[] = []; // Explicit type
+
+    for (const pId of petsToCreateFor) {
+      const event = this.eventsRepository.create({
+        ...createEventDto,
+        petId: pId,
+        pet: { id: pId } as any,
+      });
+      const saved = await this.eventsRepository.save(event);
+      createdEvents.push(saved);
+    }
+
+    return createdEvents.length === 1 ? createdEvents[0] : createdEvents;
   }
 
-  async findAllByPet(petId: number): Promise<Event[]> {
-    // 1. Auto-update: Mark past 'upcoming' events as 'pending'
+  // ✅ NEW: Find all events for an Owner (User)
+  async findAllByOwner(userId: number) {
+    // 🛡️ Safety Check: Prevent NaN crash
+    if (!userId || isNaN(userId)) {
+      console.error('❌ findAllByOwner called with invalid userId:', userId);
+      return []; 
+    }
+
+    // 1. Get owner's pets
+    const ownerPets = await this.petRepository.find({ where: { owner: { id: userId } } });
+    const petIds = ownerPets.map(p => p.id);
+
+    if (petIds.length === 0) return []; // No pets = no events
+
+    // 2. Mark past 'upcoming' as 'pending'
     await this.eventsRepository.update(
       {
-        pet: { id: petId },
+        pet: { id: In(petIds) },
         dateTime: LessThan(new Date()),
         status: EventStatus.UPCOMING,
       },
       { status: EventStatus.PENDING },
     );
 
-    // 2. Fetch all
+    // 3. Fetch events
     return this.eventsRepository.find({
-      where: { pet: { id: petId } },
+      where: {
+        pet: { owner: { id: userId } }
+      },
+      relations: ['pet'],
       order: { dateTime: 'ASC' },
     });
   }
 
-  // 🆕 NEW METHOD: Get next few events
-  async findUpcoming(petId: number, limit: number): Promise<Event[]> {
+  // ✅ NEW: Find upcoming for Owner
+  async findUpcomingByOwner(userId: number, limit: number) {
+    // 🛡️ Safety Check
+    if (!userId || isNaN(userId)) {
+      console.error('❌ findUpcomingByOwner called with invalid userId:', userId);
+      return [];
+    }
+
     return this.eventsRepository.find({
       where: {
-        pet: { id: petId },
-        dateTime: MoreThan(new Date()), // Future events only
-        status: Not(EventStatus.MISSED) // Don't show missed ones
+        pet: { owner: { id: userId } },
+        dateTime: MoreThan(new Date()),
+        status: Not(EventStatus.MISSED)
       },
+      relations: ['pet'],
       order: { dateTime: 'ASC' },
       take: limit,
+    });
+  }
+
+  // Existing methods...
+  async findAllByPet(petId: number): Promise<Event[]> {
+    if (!petId || isNaN(petId)) return [];
+    return this.eventsRepository.find({
+      where: { pet: { id: petId } },
+      order: { dateTime: 'ASC' },
     });
   }
 

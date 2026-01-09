@@ -335,6 +335,8 @@ class _EditEventModalState extends State<EditEventModal> {
       final controller = Get.find<CalendarController>();
       await controller.deleteEvent(widget.event);
 
+      // ✅ FIX: Check mounted before using context
+      if (!mounted) return;
       Navigator.pop(context); // Close modal
     } catch (e) {
       debugPrint('❌ Error in modal delete: $e');
@@ -380,8 +382,6 @@ class _EditEventModalState extends State<EditEventModal> {
 
       final controller = Get.find<CalendarController>();
 
-      // 🔍 LOGIC FIX: Check if we need to trigger the Health Dialog
-      // Condition: It is a Health event AND the status is NOW Completed (and wasn't before, or just always check on completion)
       final shouldTriggerHealth =
           _selectedType == EventType.health &&
           _selectedStatus == EventStatus.completed &&
@@ -389,16 +389,19 @@ class _EditEventModalState extends State<EditEventModal> {
 
       await controller.updateEvent(
         updatedEvent,
-        triggerHealthDialog: shouldTriggerHealth, // Pass the flag!
+        triggerHealthDialog: shouldTriggerHealth,
       );
 
+      // ✅ FIX: Check mounted before using context
+      if (!mounted) return;
       Navigator.pop(context);
 
       Get.snackbar(
         'Success',
         'Event updated successfully!',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.1),
+        // ✅ FIX: Use withValues instead of deprecated withOpacity
+        backgroundColor: Colors.green.withValues(alpha: 0.1),
         colorText: Colors.green[900],
       );
     } catch (e) {
@@ -407,7 +410,8 @@ class _EditEventModalState extends State<EditEventModal> {
         'Error',
         'Failed to update event: $e',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.1),
+        // ✅ FIX: Use withValues
+        backgroundColor: Colors.red.withValues(alpha: 0.1),
         colorText: Colors.red[900],
       );
     } finally {

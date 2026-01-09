@@ -60,7 +60,6 @@ class HomeScreen extends StatelessWidget {
                 ),
                 offset: const Offset(0, 45),
                 itemBuilder: (context) => [
-                  // Pet list items
                   ...controller.pets.map(
                     (pet) => PopupMenuItem<String>(
                       value: pet.id.toString(),
@@ -106,7 +105,6 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Divider
                   const PopupMenuDivider(),
                   // Add Pet option
                   // const PopupMenuItem<String>(
@@ -235,7 +233,6 @@ class HomeScreen extends StatelessWidget {
             padding: const EdgeInsets.all(24.0),
             child: Column(
               children: [
-                // Pet Info Row
                 Row(
                   children: [
                     Text(
@@ -255,7 +252,6 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Status Card (uses controller.currentStreak for real-time updates)
                 StatusCard(
                   petName: pet.name,
                   petType: pet.species ?? 'Pet',
@@ -267,21 +263,19 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // Daily Activity Progress Card
                 _buildDailyActivityCard(controller),
 
                 const SizedBox(height: 24),
 
-                // Quick Actions
                 const QuickActions(),
 
                 const SizedBox(height: 24),
 
-                // Upcoming Events Card
-                UpcomingEventsCard(petId: pet.id),
+                // ✅ UPDATED: Removed petId parameter
+                const UpcomingEventsCard(),
+
                 const SizedBox(height: 24),
 
-                // ✅ UPDATED: Bookings Section - Show ALL bookings
                 Obx(() {
                   return Container(
                     width: double.infinity,
@@ -313,7 +307,6 @@ class HomeScreen extends StatelessWidget {
                                 color: Colors.black87,
                               ),
                             ),
-                            // ✅ Show total count
                             if (!bookingController.isLoadingBookings.value)
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -336,7 +329,6 @@ class HomeScreen extends StatelessWidget {
                           ],
                         ),
 
-                        // ⚠️ UNPAID BOOKINGS WARNING
                         if (!bookingController.isLoadingBookings.value) ...[
                           (() {
                             final unpaidCount = bookingController.userBookings
@@ -392,7 +384,6 @@ class HomeScreen extends StatelessWidget {
 
                         const SizedBox(height: 16),
 
-                        // Logic for Loading, Empty, or List
                         if (bookingController.isLoadingBookings.value)
                           const Center(
                             child: Padding(
@@ -425,7 +416,6 @@ class HomeScreen extends StatelessWidget {
                             ),
                           )
                         else
-                          // ✅ REMOVED FILTERING - Show ALL bookings
                           Column(
                             children: bookingController.userBookings
                                 .map(
@@ -457,7 +447,6 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // Daily Activity Progress Card Widget
   Widget _buildDailyActivityCard(HomeController controller) {
     return Obx(() {
       final progress = controller.calculateDailyProgress();
@@ -490,7 +479,6 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // Progress Bar
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
@@ -504,7 +492,6 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // Activity Stats Summary
               if (controller.isLoadingActivityStats.value)
                 const Center(
                   child: Padding(
@@ -581,7 +568,6 @@ class HomeScreen extends StatelessWidget {
     });
   }
 
-  // Helper method for progress items
   Widget _buildProgressItem({
     required IconData icon,
     required String label,

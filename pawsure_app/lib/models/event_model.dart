@@ -74,7 +74,9 @@ class EventModel {
     required this.updatedAt,
   });
 
-  // Factory constructor from JSON
+  // Helper for UI to treat single pet ID as list (for compatibility)
+  List<int> get petIds => [petId];
+
   factory EventModel.fromJson(Map<String, dynamic> json) {
     return EventModel(
       id: json['id'] as int,
@@ -90,7 +92,6 @@ class EventModel {
     );
   }
 
-  // Convert to JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -106,10 +107,8 @@ class EventModel {
     };
   }
 
-  // Helper: Check if event is in the past
   bool get isPast => dateTime.isBefore(DateTime.now());
 
-  // Helper: Check if event is today
   bool get isToday {
     final now = DateTime.now();
     return dateTime.year == now.year &&
@@ -117,11 +116,8 @@ class EventModel {
         dateTime.day == now.day;
   }
 
-  // Helper: Get display date string
   String get displayDate {
-    if (isToday) {
-      return 'Today';
-    }
+    if (isToday) return 'Today';
     final now = DateTime.now();
     final tomorrow = now.add(const Duration(days: 1));
     if (dateTime.year == tomorrow.year &&
@@ -132,7 +128,6 @@ class EventModel {
     return '${dateTime.day} ${_monthName(dateTime.month)}';
   }
 
-  // Helper: Get display time string
   String get displayTime {
     final hour = dateTime.hour.toString().padLeft(2, '0');
     final minute = dateTime.minute.toString().padLeft(2, '0');
@@ -157,7 +152,7 @@ class EventModel {
     return months[month - 1];
   }
 
-  // CopyWith method for updates
+  // ✅ FIX: Added copyWith method
   EventModel copyWith({
     int? id,
     String? title,
