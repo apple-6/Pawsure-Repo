@@ -1,69 +1,54 @@
-## Development Workflow: Linking Code to Jira Tasks
+# PawSure: The Integrated Pet Care Ecosystem 🐾
 
-To ensure we can track progress effectively, it's essential to link your code changes directly to the corresponding tasks in Jira. We do this by including the **Jira Issue Key** (e.g., `APPLE-16`, `APPLE-19`) in your branch names and commit summaries using GitHub Desktop.
+> **A cross-platform Superapp bridging the gap between Pet Owners and Caretakers through secure marketplace dynamics, AI-driven health monitoring, and real-time community engagement.**
 
----
+![Flutter](https://img.shields.io/badge/Flutter-3.19-02569B?style=for-the-badge&logo=flutter&logoColor=white)
+![NestJS](https://img.shields.io/badge/NestJS-10.0-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+![TypeORM](https://img.shields.io/badge/TypeORM-Active_Record-orange?style=for-the-badge)
 
-### Step-by-Step Tutorial (Using GitHub Desktop)
-
-#### 1. Get the Jira Issue Key
-
-* Go to our Jira project board or backlog: [`https://apple-6.atlassian.net/jira/software/projects/APPLE/boards/1/backlog`](https://apple-6.atlassian.net/jira/software/projects/APPLE/boards/1/backlog).
-* Find the task or story you are working on (e.g., "Setup: Backend - Create NestJS + PostgreSQL boilerplate").
-* Note down its unique key (e.g., `APPLE-16`). 
-#### 2. Create a New Branch in GitHub Desktop
-
-* Open the `Pawsure-Repo` repository in GitHub Desktop.
-* Make sure your "Current branch" is `main` (or your primary development branch). Click **"Fetch origin"** to ensure you have the latest updates.
-* Click on the **"Current branch"** button (where it says `main`).
-* Click the blue **"New branch"** button.
-* In the "Name" field, type the Jira key followed by a short description (use hyphens, no spaces).
-    * Example: `APPLE-16-setup-backend-boilerplate`
-* Click **"Create branch"**.
-* Click **"Publish branch"** to push the new branch to GitHub.
-
-
-*Jira will automatically detect this new branch and link it to the `APPLE-16` issue.*
-
-#### 3. Write Your Code
-
-* Use Cursor IDE (or your preferred editor) to make the code changes for the task. Save your files.
-
-#### 4. Commit Changes in GitHub Desktop
-
-* Switch back to GitHub Desktop. You will see your changed files listed in the "Changes" tab.
-* Review the changes.
-* In the **"Summary"** field (bottom left), **start your commit message with the Jira Issue Key**, followed by a concise description of the changes.
-    * Example: `APPLE-16: Add initial NestJS module setup`
-* Optionally, add more details in the "Description" field.
-* Click the blue **"Commit to `APPLE-16-setup-backend-boilerplate`"** button.
-
-
-*Jira will detect this commit and link it to the `APPLE-16` issue.*
-
-#### 5. Push Commits
-
-* After making one or more commits, click the **"Push origin"** button at the top of GitHub Desktop to upload your commits to GitHub.
-
-#### 6. (Optional) Create a Pull Request
-
-* If your team uses Pull Requests (PRs) for review:
-    * Click the **"Create Pull Request"** button that often appears after pushing a new branch in GitHub Desktop, or go to the repository on GitHub.com.
-    * When creating the PR on GitHub, **include the Jira Issue Key (`APPLE-16`) in the PR title**.
-    * Example Title: `APPLE-16: Setup Backend Boilerplate`
-* *Jira will detect the PR and link it.*
+## 📖 Project Overview
+PawSure is an ambitious engineering capstone project designed to solve the fragmentation in the pet care industry. Unlike single-purpose apps, PawSure is architected as a **Superapp Ecosystem** that unifies three critical domains:
+1.  **Service Marketplace:** A secure, dual-role booking system for Sitters and Owners.
+2.  **Health Intelligence:** AI-powered diagnostics and comprehensive medical logging.
+3.  **Community Social Graph:** Real-time social interaction and event coordination.
 
 ---
 
-### Seeing the Results in Jira
+## 🏗️ System Architecture
 
-Go back to the specific issue (e.g., `APPLE-16`) in Jira. You should now see a "Development" panel showing the linked branch, commits, and pull request (if created). This confirms the integration is working! 
-By consistently following these steps, we ensure all code changes are traceable back to their original tasks in Jira.
+This project utilizes a **Monorepo** structure to ensure type safety and unified development standards across the stack.
 
-Jira detects the link automatically because:
+### 📱 Frontend: Mobile Superapp (`/pawsure_app`)
+- **Framework:** Flutter (Dart)
+- **State Management:** **GetX** (Reactive State Manager) for high-performance UI rebuilds.
+- **UX Strategy:** Implemented **Optimistic UI** updates for zero-latency user feedback during network requests.
+- **Real-Time:** Integrated `socket_io_client` for bi-directional chat latency < 100ms.
 
-Scanning: Jira continuously scans the linked GitHub repository (Pawsure-Repo) for new activity (commits, branches, pull requests).
+### ⚙️ Backend: API Gateway (`/pawsure_backend`)
+- **Framework:** NestJS (TypeScript)
+- **Architecture:** Modular architecture with **Dependency Injection** and **DTO Validation**.
+- **Security:** Custom **JWT Strategy** with "Gatekeeper" Guards implementing strict **Role-Based Access Control (RBAC)**.
+- **AI Integration:** Hosted custom **ONNX Model** (`best.onnx`) for local inference of pet waste analysis.
+- **Database:** PostgreSQL managed via **TypeORM**, featuring a fully normalized (3NF) schema with Cascade constraints.
 
-Pattern Recognition: It specifically looks for text in branch names, commit messages, and pull request titles that matches the pattern of your project's issue keys. In your case, it looks for APPLE- followed by numbers (e.g., APPLE-16, APPLE-19).
+---
 
-Matching: When it finds a piece of text that matches this pattern (like APPLE-16 in a commit message), it knows which specific issue in your Jira project to link that code activity to.
+## 🚀 Key Technical Features (Sprint 5)
+
+### 1. Dual-Role Authentication & RBAC
+PawSure implements a complex authorization flow allowing users to exist as both "Owners" and "Sitters" within the same ecosystem without relogging.
+- **Technical Detail:** The `JwtStrategy` intercepts requests, decodes the Bearer token, and validates the user's `RoleID` against the specific endpoint's `@Roles()` decorator.
+
+### 2. The "Gatekeeper" Security Module
+We moved beyond basic authentication by implementing a custom Guard that acts as a firewall for API routes.
+```typescript
+// Example: RBAC Guard Logic
+@Injectable()
+export class RolesGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, ...);
+    const { user } = context.switchToHttp().getRequest();
+    return requiredRoles.some((role) => user.roles?.includes(role));
+  }
+}
