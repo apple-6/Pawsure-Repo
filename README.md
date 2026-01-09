@@ -1,8 +1,3 @@
-I apologize for the formatting breaks. It happens because the code blocks inside the README conflict with the chat's formatting.
-
-Here is the **entire file** wrapped in a safe block. You can copy everything inside this box directly into your `README.md`.
-
-```markdown
 # PawSure: The Integrated Pet Care Ecosystem 🐾
 
 > **A cross-platform Superapp bridging the gap between Pet Owners and Caretakers through secure marketplace dynamics, AI-driven health monitoring, and real-time community engagement.**
@@ -123,5 +118,3 @@ pawsure-repo/
 
 ## Note to Recruiters
 This repository represents **Sprint 5** of the PawSure development lifecycle. It focuses on the architectural implementation of core modules (Auth, AI, Chat, Database). While the codebase is functional, certain features are optimized for local development environments.
-
-```
