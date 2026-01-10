@@ -50,8 +50,10 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
       _startDate = widget.postToEdit!.startDate;
       _endDate = widget.postToEdit!.endDate;
 
-      for (var pet in widget.postToEdit!.pets!) {
-        _selectedPetIds.add(pet.id.toString());
+      if (widget.postToEdit!.pets != null) {
+        for (var pet in widget.postToEdit!.pets!) {
+          _selectedPetIds.add(pet.id.toString());
+        }
       }
     }
 

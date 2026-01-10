@@ -58,7 +58,7 @@ class _BookingModalState extends State<BookingModal> {
   //   }
   //   _loadPaymentMethods();
   // }
-  @override
+ @override
   void initState() {
     super.initState();
     // ✅ FIXED: Convert int ID to String when initializing
@@ -82,8 +82,8 @@ class _BookingModalState extends State<BookingModal> {
         // Auto-select default payment method
         _selectedPaymentMethod = _paymentMethods.firstWhere(
           (m) => m.isDefault,
-          orElse: () => _paymentMethods.isNotEmpty
-              ? _paymentMethods.first
+          orElse: () => _paymentMethods.isNotEmpty 
+              ? _paymentMethods.first 
               : _paymentMethods.first,
         );
         _isLoadingPaymentMethods = false;
@@ -144,9 +144,7 @@ class _BookingModalState extends State<BookingModal> {
         double serviceCost = 0.0;
 
         // Calculate cost based on unit (per night vs flat fee)
-        if (unit.contains('night') ||
-            unit.contains('day') ||
-            unit.contains('daily')) {
+        if (unit.contains('night') || unit.contains('day') || unit.contains('daily')) {
           serviceCost = price * days;
         } else {
           serviceCost = price;
@@ -232,13 +230,13 @@ class _BookingModalState extends State<BookingModal> {
     // 1. Validation
     if (!_formKey.currentState!.validate()) return;
     if (widget.startDate == null || widget.endDate == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select dates')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select dates')),
+      );
       return;
     }
 
-    // ✅ Validate Pets
+// ✅ Validate Pets
     if (_selectedPetIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select at least one pet')),
@@ -672,12 +670,10 @@ class _BookingModalState extends State<BookingModal> {
     );
   }
 
-  Widget _buildPetSelector() {
+ Widget _buildPetSelector() {
     return Obx(() {
       if (_petController.isLoadingPets.value) {
-        return const Center(
-          child: LinearProgressIndicator(color: Color(0xFF34D399)),
-        );
+        return const Center(child: LinearProgressIndicator(color: Color(0xFF34D399)));
       }
 
       // 1. Calculate display text (e.g., "Coco, Max" or "Select your pets")
@@ -699,7 +695,7 @@ class _BookingModalState extends State<BookingModal> {
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.favorite, color: Color(0xFF34D399)),
-
+          
           // Display the selected names
           title: Text(
             displayString,
@@ -708,7 +704,7 @@ class _BookingModalState extends State<BookingModal> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-
+          
           trailing: Theme(
             // Remove the splash effect to make it feel more like a checkbox list
             data: Theme.of(context).copyWith(
@@ -719,37 +715,33 @@ class _BookingModalState extends State<BookingModal> {
               icon: const Icon(Icons.keyboard_arrow_down_rounded),
               tooltip: "Select Pets",
               elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              
               // 2. We DO NOT use onSelected here because it closes the menu.
               // We handle taps directly inside the items.
-              onSelected: null,
+              onSelected: null, 
 
               itemBuilder: (context) {
                 return _petController.pets.map((pet) {
                   return PopupMenuItem<String>(
                     // Setting enabled: false prevents the menu from closing automatically!
-                    enabled: false,
+                    enabled: false, 
                     value: pet.id.toString(),
                     child: StatefulBuilder(
                       builder: (context, setStateItem) {
-                        final isSelected = _selectedPetIds.contains(
-                          pet.id.toString(),
-                        );
-
+                        final isSelected = _selectedPetIds.contains(pet.id.toString());
+                        
                         return InkWell(
                           onTap: () {
                             // 3. Update the Parent State (BookingModal)
-                            setState(() {
+                            this.setState(() {
                               if (isSelected) {
                                 _selectedPetIds.remove(pet.id.toString());
                               } else {
                                 _selectedPetIds.add(pet.id.toString());
                               }
                             });
-
+                            
                             // 4. Update the Local Item State (to show checkmark instantly)
                             setStateItem(() {});
                           },
@@ -759,12 +751,8 @@ class _BookingModalState extends State<BookingModal> {
                               children: [
                                 // Checkbox Style Icon
                                 Icon(
-                                  isSelected
-                                      ? Icons.check_box
-                                      : Icons.check_box_outline_blank,
-                                  color: isSelected
-                                      ? const Color(0xFF34D399)
-                                      : Colors.grey,
+                                  isSelected ? Icons.check_box : Icons.check_box_outline_blank,
+                                  color: isSelected ? const Color(0xFF34D399) : Colors.grey,
                                   size: 22,
                                 ),
                                 const SizedBox(width: 12),
@@ -773,9 +761,7 @@ class _BookingModalState extends State<BookingModal> {
                                     pet.name,
                                     style: TextStyle(
                                       fontWeight: FontWeight.w500,
-                                      color: isSelected
-                                          ? Colors.black87
-                                          : Colors.black54,
+                                      color: isSelected ? Colors.black87 : Colors.black54,
                                     ),
                                   ),
                                 ),

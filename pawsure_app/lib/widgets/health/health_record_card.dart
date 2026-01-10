@@ -56,9 +56,9 @@ class HealthRecordCard extends StatelessWidget {
       );
     }
 
-    if (record.description.isNotEmpty) {
+    if (record.description != null && record.description!.isNotEmpty) {
       subtitleChildren.add(
-        Text(record.description, style: textTheme.bodyMedium),
+        Text(record.description!, style: textTheme.bodyMedium),
       );
     }
 

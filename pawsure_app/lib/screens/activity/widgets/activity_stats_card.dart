@@ -98,7 +98,7 @@ class ActivityStatsCard extends StatelessWidget {
                   ),
                   _buildCompactStat(
                     icon: Icons.straighten,
-                    value: stats.totalDistance.toStringAsFixed(1),
+                    value: '${stats.totalDistance.toStringAsFixed(1)}',
                     label: 'km',
                     color: Colors.green,
                   ),

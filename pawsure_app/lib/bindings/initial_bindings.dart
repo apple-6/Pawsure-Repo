@@ -9,6 +9,7 @@ import 'package:pawsure_app/services/community_service.dart';
 import 'package:pawsure_app/controllers/pet_controller.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
 import 'package:pawsure_app/controllers/home_controller.dart';
+import 'package:pawsure_app/controllers/navigation_controller.dart';
 import 'package:pawsure_app/controllers/activity_controller.dart';
 import 'package:pawsure_app/controllers/community_controller.dart';
 import 'package:pawsure_app/controllers/profile_controller.dart';

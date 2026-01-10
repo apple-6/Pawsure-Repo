@@ -402,7 +402,7 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
 
                 // Record Type Dropdown
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedType,
+                  value: _selectedType,
                   decoration: const InputDecoration(
                     labelText: 'Record Type',
                     border: OutlineInputBorder(),

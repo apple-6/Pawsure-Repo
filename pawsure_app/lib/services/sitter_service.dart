@@ -85,7 +85,7 @@ class SitterService {
     try {
       final uri = Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.sitters}');
       debugPrint('🔍 Fetching sitters from: $uri');
-
+      
       final response = await _client.get(uri);
       debugPrint('📦 Sitter API Response: ${response.statusCode}');
 
@@ -111,8 +111,10 @@ class SitterService {
     }
   }
 
-  /// Fetches available sitters based on a continuous date range.
-  /// This calls the updated backend searchByAvailability logic.
+  /**
+   * Fetches available sitters based on a continuous date range.
+   * This calls the updated backend searchByAvailability logic.
+   */
   Future<List<Sitter>> fetchSittersByRange({
     required DateTime startDate,
     required DateTime endDate,
@@ -123,10 +125,8 @@ class SitterService {
       final formattedEndDate = DateFormat('yyyy-MM-dd').format(endDate);
 
       // 2. Build the URI with query parameters
-      final uri =
-          Uri.parse(
-            '${ApiEndpoints.baseUrl}${ApiEndpoints.sitterSearch}',
-          ).replace(
+      final uri = Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.sitterSearch}')
+          .replace(
             queryParameters: {
               'startDate': formattedStartDate,
               'endDate': formattedEndDate,
