@@ -143,6 +143,7 @@ class _UpcomingEventsCardState extends State<UpcomingEventsCard> {
   }
 }
 
+// 🔧 FIX: Make date column flexible to prevent text cutoff
 class _EventListItem extends StatelessWidget {
   final EventModel event;
   final HomeController homeController;
@@ -151,7 +152,6 @@ class _EventListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ NEW: Get pet names for this event
     final petNames = event.petIds
         .map((petId) {
           try {
@@ -165,17 +165,11 @@ class _EventListItem extends StatelessWidget {
         .join(', ');
 
     return InkWell(
-      // 🔧 FIX: Navigate to calendar with event argument
       onTap: () {
         debugPrint('🎯 Tapped on upcoming event: ${event.title}');
         debugPrint('   Event date: ${event.dateTime}');
 
-        Get.toNamed(
-          '/calendar',
-          arguments: {
-            'event': event, // 🔧 Pass the event
-          },
-        );
+        Get.toNamed('/calendar', arguments: {'event': event});
       },
       borderRadius: BorderRadius.circular(12),
       child: Container(
@@ -187,26 +181,35 @@ class _EventListItem extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Left Column: Date/Time
-            SizedBox(
-              width: 60,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    event.isToday ? event.displayTime : event.displayDate,
-                    style: TextStyle(
-                      fontSize: event.isToday ? 18 : 14,
-                      fontWeight: FontWeight.bold,
-                      color: event.isToday ? Colors.black : Colors.grey[700],
-                    ),
-                  ),
-                  if (!event.isToday)
+            // 🔧 FIX: Remove fixed width, use flexible layout instead
+            Flexible(
+              flex: 0, // Don't grow, but shrink if needed
+              child: Container(
+                constraints: const BoxConstraints(
+                  minWidth: 60, // Minimum width for short dates
+                  maxWidth: 80, // Maximum width for "Tomorrow"
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      event.displayTime,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      event.isToday ? event.displayTime : event.displayDate,
+                      style: TextStyle(
+                        fontSize: event.isToday ? 18 : 14,
+                        fontWeight: FontWeight.bold,
+                        color: event.isToday ? Colors.black : Colors.grey[700],
+                      ),
+                      maxLines: 1,
+                      overflow:
+                          TextOverflow.visible, // ✅ Allow text to show fully
                     ),
-                ],
+                    if (!event.isToday)
+                      Text(
+                        event.displayTime,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      ),
+                  ],
+                ),
               ),
             ),
 
@@ -235,7 +238,6 @@ class _EventListItem extends StatelessWidget {
                     ],
                   ),
 
-                  // ✅ NEW: Show pet names
                   if (petNames.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Row(
