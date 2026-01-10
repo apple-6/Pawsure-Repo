@@ -1565,4 +1565,64 @@ class ApiService {
     rethrow;
   }
 }
+
+// ========================================================================
+  // SITTER CHECK & REGISTRATION API (Added for Switch Mode)
+  // ========================================================================
+
+  /// GET /sitters/user/:userId - Check if sitter profile exists
+  /// Returns UserProfile if found (Scenario A), returns null if 404 (Scenario B).
+  Future<UserProfile?> getSitterByUserId(int userId) async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/sitters/user/$userId');
+      final headers = await _getHeaders();
+      
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/sitters/user/$userId'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        // ✅ Profile exists!
+        return UserProfile.fromJson(jsonDecode(response.body));
+      } else if (response.statusCode == 404) {
+        // ⚠️ Profile does not exist (User is not a sitter yet)
+        return null; 
+      } else {
+        // Other errors (500, etc)
+        debugPrint('⚠️ Unexpected status checking sitter: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error checking sitter status: $e');
+      return null;
+    }
+  }
+
+  /// POST /sitters - Create a new sitter profile
+  Future<void> createSitterProfile(Map<String, dynamic> payload) async {
+    try {
+      debugPrint('➕ API: POST $apiBaseUrl/sitters');
+      debugPrint('📤 Payload: ${jsonEncode(payload)}');
+      
+      final headers = await _getHeaders();
+      
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/sitters'),
+        headers: headers,
+        body: jsonEncode(payload),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        debugPrint('✅ Sitter profile created successfully');
+      } else {
+        throw Exception('Failed to register as sitter: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error in createSitterProfile: $e');
+      rethrow;
+    }
+  }
 }

@@ -6,6 +6,7 @@ import 'package:pawsure_app/screens/auth/login_screen.dart';
 import 'package:pawsure_app/screens/home/home_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pawsure_app/constants/api_config.dart';
+import 'package:pawsure_app/main_navigation.dart';
 
 // Navigation Imports
 import 'sitter_calendar.dart';
@@ -157,7 +158,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
 
       // 3. Navigate directly to Owner Dashboard
       // Make sure to import your OwnerDashboard file at the top!
-      Get.offAll(() => const HomeScreen());
+      Get.offAll(() => const MainNavigation());
       
       Get.snackbar(
         "Switched to Owner Mode", 
