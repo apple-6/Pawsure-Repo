@@ -548,7 +548,6 @@ class _FeedTabViewState extends State<FeedTabView>
                       post: post,
                       onLike: (id) => _handleLike(id),
                       onComment: (id) {},
-                      onShare: (id) {},
                     ),
                   );
                 },
