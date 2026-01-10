@@ -113,26 +113,22 @@ class ActivityListItem extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      if (activity.distanceKm != null)
-                        _buildStatItem(
-                          icon: Icons.straighten,
-                          label: 'Distance',
-                          value:
-                              '${activity.distanceKm!.toStringAsFixed(2)} km',
-                        ),
-                      if (activity.distanceKm != null &&
-                          activity.caloriesBurned != null)
+                      _buildStatItem(
+                        icon: Icons.straighten,
+                        label: 'Distance',
+                        value: '${activity.distanceKm!.toStringAsFixed(2)} km',
+                      ),
+                      if (activity.caloriesBurned != null)
                         Container(
                           width: 1,
                           height: 30,
                           color: Colors.grey[300],
                         ),
-                      if (activity.caloriesBurned != null)
-                        _buildStatItem(
-                          icon: Icons.local_fire_department,
-                          label: 'Calories',
-                          value: '${activity.caloriesBurned} cal',
-                        ),
+                      _buildStatItem(
+                        icon: Icons.local_fire_department,
+                        label: 'Calories',
+                        value: '${activity.caloriesBurned} cal',
+                      ),
                     ],
                   ),
                 ),

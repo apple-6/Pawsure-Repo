@@ -2,11 +2,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/models/post_model.dart';
 import 'package:pawsure_app/screens/community/create_vacancy_modal.dart';
 import 'package:pawsure_app/screens/sitter_setup/chat_screen.dart';
 import 'package:pawsure_app/services/auth_service.dart';
+import 'dart:convert';
 import 'post_card.dart';
 import 'create_post_modal.dart';
 import 'find_sitter_tab.dart';
@@ -14,10 +16,7 @@ import 'sitter_details.dart';
 import 'vacancy_post_card.dart';
 import 'owner_inbox.dart';
 import 'package:pawsure_app/services/api_service.dart';
-import 'package:pawsure_app/screens/sitter_setup/sitter_dashboard.dart';
-import 'package:pawsure_app/screens/sitter_setup/sitter_calendar.dart';
-import 'package:pawsure_app/screens/sitter_setup/sitter_inbox.dart';
-import 'package:pawsure_app/screens/sitter_setup/sitter_setting_screen.dart';
+import 'package:pawsure_app/screens/sitter_setup/sitter_main_navigation.dart';
 
 // --- POST MODEL ---
 class Post {
@@ -95,9 +94,6 @@ class CommunityScreenState extends State<CommunityScreen> {
   @override
   void initState() {
     super.initState();
-    debugPrint(
-      "✅ CommunityScreen initialized - Parent is: ${widget.runtimeType}",
-    );
     _getUserRole();
   }
 
@@ -105,15 +101,11 @@ class CommunityScreenState extends State<CommunityScreen> {
     try {
       final authService = Get.find<AuthService>();
       final role = await authService.getUserRole();
-      debugPrint("🔍 User Role Fetched from Storage: $role");
-      if (mounted) {
-        setState(() {
-          _userRole = role;
-        });
-        debugPrint("✅ User Role Set in State: $_userRole");
-      }
+      setState(() {
+        _userRole = role;
+      });
     } catch (e) {
-      debugPrint("❌ Error fetching user role: $e");
+      debugPrint("Error fetching user role: $e");
     }
   }
 
@@ -129,9 +121,9 @@ class CommunityScreenState extends State<CommunityScreen> {
 
   void _handlePostCreated() {
     setState(() {});
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Post created successfully!')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Post created successfully!')),
+    );
   }
 
   void _showCreatePostModal() {
@@ -150,15 +142,9 @@ class CommunityScreenState extends State<CommunityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint("🔨 CommunityScreen BUILD - _userRole = $_userRole");
-
-    // ✅ ADDED: Determine number of tabs based on user role
-    // Owners: 2 tabs (Feed, Find a Sitter)
-    // Sitters: 1 tab (Feed only)
-    final int tabCount = _userRole == 'sitter' ? 1 : 2;
-
-    return DefaultTabController(
-      length: tabCount,
+    // ✅ FIXED: Conditionally wrap with SitterMainNavigation for sitter role
+    Widget communityContent = DefaultTabController(
+      length: 2,
       child: Scaffold(
         body: SafeArea(
           child: NestedScrollView(
@@ -200,51 +186,39 @@ class CommunityScreenState extends State<CommunityScreen> {
                   bottom: TabBar(
                     indicatorSize: TabBarIndicatorSize.label,
                     labelColor: Theme.of(context).primaryColor,
-                    tabs: _userRole == 'sitter'
-                        ? const [Tab(text: 'Feed')]
-                        : const [Tab(text: 'Feed'), Tab(text: 'Find a Sitter')],
+                    tabs: const [
+                      Tab(text: 'Feed'),
+                      Tab(text: 'Find a Sitter'),
+                    ],
                   ),
                 ),
               ];
             },
             body: TabBarView(
-              children: _userRole == 'sitter'
-                  ? [
-                      // Sitter view: Only Feed tab
-                      FeedTabView(
-                        parentState: this,
-                        onSubTabChanged: (index) {
-                          setState(() {
-                            _currentSubTabIndex = index;
-                          });
-                        },
+              children: [
+                FeedTabView(
+                  parentState: this,
+                  onSubTabChanged: (index) {
+                    setState(() {
+                      _currentSubTabIndex = index;
+                    });
+                  },
+                ),
+                FindSitterTab(
+                  onSitterClick: (sitterId, startDate, endDate) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SitterDetailsScreen(
+                          sitterId: sitterId,
+                          startDate: startDate,
+                          endDate: endDate,
+                        ),
                       ),
-                    ]
-                  : [
-                      // Owner view: Feed + Find a Sitter tabs
-                      FeedTabView(
-                        parentState: this,
-                        onSubTabChanged: (index) {
-                          setState(() {
-                            _currentSubTabIndex = index;
-                          });
-                        },
-                      ),
-                      FindSitterTab(
-                        onSitterClick: (sitterId, startDate, endDate) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SitterDetailsScreen(
-                                sitterId: sitterId,
-                                startDate: startDate,
-                                endDate: endDate,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                    );
+                  },
+                ),
+              ],
             ),
           ),
         ),
@@ -261,55 +235,18 @@ class CommunityScreenState extends State<CommunityScreen> {
                 : const SizedBox.shrink();
           },
         ),
-        bottomNavigationBar: _userRole == 'sitter'
-            ? BottomNavigationBar(
-                currentIndex: 1,
-                type: BottomNavigationBarType.fixed,
-                selectedItemColor: const Color(0xFF2ECA6A),
-                unselectedItemColor: Colors.grey.shade600,
-                onTap: (index) {
-                  if (index == 0) {
-                    Get.offAll(() => const SitterDashboard());
-                  }
-                  if (index == 1) {
-                    Get.offAll(() => const CommunityScreen());
-                  }
-                  if (index == 2) {
-                    Get.to(() => const SitterCalendar());
-                  }
-                  if (index == 3) {
-                    Get.to(() => const SitterInbox());
-                  }
-                  if (index == 4) {
-                    Get.to(() => const SitterSettingScreen());
-                  }
-                },
-                items: const [
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.home_filled),
-                    label: 'Dashboard',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.people),
-                    label: 'Community',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.calendar_today_outlined),
-                    label: 'Calendar',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.chat_bubble_outline),
-                    label: 'Inbox',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.settings_outlined),
-                    label: 'Setting',
-                  ),
-                ],
-              )
-            : null,
       ),
     );
+
+    // ✅ Wrap with SitterMainNavigation if user is a sitter
+    if (_userRole == 'sitter') {
+      return SitterMainNavigation(
+        currentIndex: 1, // Community is at index 1 in the navigation bar
+        child: communityContent,
+      );
+    }
+
+    return communityContent;
   }
 }
 
@@ -380,8 +317,7 @@ class _FeedTabViewState extends State<FeedTabView>
   }
 
   Future<void> _deletePost(PostModel post) async {
-    bool confirm =
-        await Get.dialog(
+    bool confirm = await Get.dialog(
           AlertDialog(
             title: const Text("Delete Post?"),
             content: const Text(

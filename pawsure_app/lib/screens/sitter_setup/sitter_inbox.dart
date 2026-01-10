@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pawsure_app/screens/community/community_screen.dart';
 import 'sitter_dashboard.dart';
 import 'chat_screen.dart';
 import 'sitter_calendar.dart';
@@ -7,9 +8,7 @@ import 'sitter_setting_screen.dart';
 import 'package:pawsure_app/services/api_service.dart';
 import 'package:pawsure_app/services/auth_service.dart';
 
-
 // --- Data Models ---
-
 
 class SitterInboxItem {
   final int id;
@@ -23,7 +22,6 @@ class SitterInboxItem {
   final String status;
   final String? message;
 
-
   SitterInboxItem({
     required this.id,
     required this.pets,
@@ -36,7 +34,7 @@ class SitterInboxItem {
     this.message,
   });
 
- // ✅ Helper to get comma-separated names: "Coco, Max"
+  // ✅ Helper to get comma-separated names: "Coco, Max"
   String get petNames {
     if (pets.isEmpty) return 'Unknown Pet';
     return pets.map((p) => p['name']).join(', ');
@@ -53,9 +51,9 @@ class SitterInboxItem {
   //   final pet = json['pet'] as Map<String, dynamic>?;
   //   final owner = json['owner'] as Map<String, dynamic>?;
 
- factory SitterInboxItem.fromJson(Map<String, dynamic> json) {
+  factory SitterInboxItem.fromJson(Map<String, dynamic> json) {
     final owner = json['owner'] as Map<String, dynamic>?;
-    
+
     String primaryType = 'dog'; // Default
     List<Map<String, String>> parsedPets = [];
 
@@ -67,31 +65,25 @@ class SitterInboxItem {
           // Safely access properties
           final name = p['name']?.toString() ?? 'Unknown';
           final species = (p['species'] ?? 'dog').toString().toLowerCase();
-          return {
-            'name': name,
-            'type': species,
-          };
+          return {'name': name, 'type': species};
         }).toList();
-        
+
         // Set primary type from the first pet
         if (parsedPets.isNotEmpty) {
-           primaryType = parsedPets.first['type']!;
+          primaryType = parsedPets.first['type']!;
         }
       }
-    } 
+    }
     // ✅ 2. Fallback for 'pet' object (Old structure or specific endpoints)
     else if (json['pet'] != null && json['pet'] is Map) {
       final p = json['pet'];
       final name = p['name']?.toString() ?? 'Unknown';
       final species = (p['species'] ?? 'dog').toString().toLowerCase();
-      
-      parsedPets.add({
-        'name': name,
-        'type': species,
-      });
+
+      parsedPets.add({'name': name, 'type': species});
       primaryType = species;
     }
-   
+
     return SitterInboxItem(
       id: json['id'] as int,
       pets: parsedPets,
@@ -106,42 +98,35 @@ class SitterInboxItem {
   }
 }
 
-
-
-
 // ✅ RENAMED CLASS TO MATCH DASHBOARD
 class SitterInbox extends StatefulWidget {
   const SitterInbox({super.key});
-
 
   @override
   State<SitterInbox> createState() => _SitterInboxState();
 }
 
-
-class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStateMixin {
+class _SitterInboxState extends State<SitterInbox>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final Color _accentColor = const Color(0xFF1CCA5B);
-  
+
   // ✅ FIX: Use GetX singletons instead of creating new instances
   ApiService get _apiService => Get.find<ApiService>();
   AuthService get _authService => Get.find<AuthService>();
-  
-  int? _currentUserId;
 
+  int? _currentUserId;
 
   List<SitterInboxItem> _allBookings = [];
   bool _isLoading = true;
   String? _error;
 
-
   // Filtered lists
   List<SitterInboxItem> get _pendingRequests =>
       _allBookings.where((b) => b.status.toLowerCase() == 'pending').toList();
- 
+
   List<SitterInboxItem> get _confirmedBookings =>
       _allBookings.where((b) => b.status.toLowerCase() != 'pending').toList();
-
 
   @override
   void initState() {
@@ -150,7 +135,6 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
     _loadCurrentUser();
     _loadBookings();
   }
-
 
   Future<void> _loadCurrentUser() async {
     try {
@@ -168,47 +152,60 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
     }
   }
 
-
   // 2. UPDATE THE NAVIGATION FUNCTION
-  void _openChat(String ownerName, String petNames, String dates, bool isRequest, int bookingId) async {
+  void _openChat(
+    String ownerName,
+    String petNames,
+    String dates,
+    bool isRequest,
+    int bookingId,
+  ) async {
     // We need the current user ID for the socket.
     // If _currentUserId is null, fetch it quickly or grab from storage
     int myId = _currentUserId ?? 0;
     if (myId == 0) {
-       // Try fetching one last time
+      // Try fetching one last time
       final fetchedId = await _authService.getUserId();
       if (fetchedId != null) {
         myId = fetchedId;
         setState(() => _currentUserId = myId);
       } else {
         // Stop here if we still don't have an ID
-        Get.snackbar("Error", "Could not identify user. Please log in again.", backgroundColor: Colors.red, colorText: Colors.white);
+        Get.snackbar(
+          "Error",
+          "Could not identify user. Please log in again.",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
         return;
       }
     }
 
-
-    Get.to(() => ChatScreen(
-      ownerName: ownerName,
-      petName: petNames,
-      dates: dates,
-      isRequest: isRequest,
-      room: 'booking-$bookingId', // ✅ Generates unique room ID
-      currentUserId: myId,        // ✅ Passes required ID
-      bookingId: bookingId,
-    ));
+    Get.to(
+      () => ChatScreen(
+        ownerName: ownerName,
+        petName: petNames,
+        dates: dates,
+        isRequest: isRequest,
+        room: 'booking-$bookingId', // ✅ Generates unique room ID
+        currentUserId: myId, // ✅ Passes required ID
+        bookingId: bookingId,
+      ),
+    );
   }
+
   Future<void> _loadBookings() async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
-
     try {
       final bookingsJson = await _apiService.getSitterBookings();
       setState(() {
-        _allBookings = bookingsJson.map((json) => SitterInboxItem.fromJson(json)).toList();
+        _allBookings = bookingsJson
+            .map((json) => SitterInboxItem.fromJson(json))
+            .toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -219,7 +216,6 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
       debugPrint('❌ Error loading bookings: $e');
     }
   }
-
 
   Future<void> _handleAccept(int bookingId) async {
     try {
@@ -241,7 +237,6 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
     }
   }
 
-
   Future<void> _handleDecline(int bookingId) async {
     try {
       await _apiService.updateBookingStatus(bookingId, 'declined');
@@ -262,22 +257,21 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
     }
   }
 
-
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
 
-
   @override
   Widget build(BuildContext context) {
-
-    
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Inbox', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Inbox',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false, // No back button
@@ -301,80 +295,80 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('Error: $_error', textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadBookings,
-                        child: const Text('Retry'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Error: $_error', textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadBookings,
+                    child: const Text('Retry'),
                   ),
-                )
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    // Tab 1: Pending Requests
-                    _pendingRequests.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No pending requests',
-                              style: TextStyle(color: Colors.grey, fontSize: 16),
+                ],
+              ),
+            )
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                // Tab 1: Pending Requests
+                _pendingRequests.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No pending requests',
+                          style: TextStyle(color: Colors.grey, fontSize: 16),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _pendingRequests.length,
+                        itemBuilder: (context, index) {
+                          final request = _pendingRequests[index];
+                          return NewInboxCard(
+                            inbox: request,
+                            onTap: () => _openChat(
+                              request.ownerName,
+                              request.petNames,
+                              //request.petName,
+                              "${request.startDate} - ${request.endDate}",
+                              true,
+                              request.id,
                             ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _pendingRequests.length,
-                            itemBuilder: (context, index) {
-                              final request = _pendingRequests[index];
-                              return NewInboxCard(
-                                inbox: request,
-                                onTap: () => _openChat(
-                                  request.ownerName,
-                                  request.petNames,
-                                  //request.petName,
-                                  "${request.startDate} - ${request.endDate}",
-                                  true,
-                                  request.id,
-                                ),
-                                onAccept: () => _handleAccept(request.id),
-                                onDecline: () => _handleDecline(request.id),
-                              );
-                            },
-                          ),
+                            onAccept: () => _handleAccept(request.id),
+                            onDecline: () => _handleDecline(request.id),
+                          );
+                        },
+                      ),
 
-
-                    // Tab 2: Confirmed Bookings
-                    _confirmedBookings.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No confirmed bookings',
-                              style: TextStyle(color: Colors.grey, fontSize: 16),
+                // Tab 2: Confirmed Bookings
+                _confirmedBookings.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No confirmed bookings',
+                          style: TextStyle(color: Colors.grey, fontSize: 16),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _confirmedBookings.length,
+                        itemBuilder: (context, index) {
+                          final booking = _confirmedBookings[index];
+                          return ConfirmedBookingCard(
+                            inbox: booking,
+                            onTap: () => _openChat(
+                              booking.ownerName,
+                              booking.petNames,
+                              "${booking.startDate} - ${booking.endDate}",
+                              false,
+                              booking.id,
                             ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _confirmedBookings.length,
-                            itemBuilder: (context, index) {
-                              final booking = _confirmedBookings[index];
-                              return ConfirmedBookingCard(
-                                inbox: booking,
-                                onTap: () => _openChat(
-                                  booking.ownerName,
-                                  booking.petNames,
-                                  "${booking.startDate} - ${booking.endDate}",
-                                  false,
-                                  booking.id,
-                                ),
-                                onComplete: () => _loadBookings(), // Refresh after completing
-                              );
-                            },
-                          ),
-                  ],
-                ),
+                            onComplete: () =>
+                                _loadBookings(), // Refresh after completing
+                          );
+                        },
+                      ),
+              ],
+            ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 3, // Highlight "Inbox"
         type: BottomNavigationBarType.fixed,
@@ -386,7 +380,7 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
             Get.offAll(() => const SitterDashboard());
           }
           if (index == 1) {
-            // Navigate to Discover Screen
+            Get.offAll(() => const CommunityScreen());
           }
           if (index == 2) {
             Get.to(() => const SitterCalendar());
@@ -399,27 +393,36 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
           }
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), label: 'Discover'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'Calendar'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble), label: 'Inbox'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Setting'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_filled),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Community'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today_outlined),
+            label: 'Calendar',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble),
+            label: 'Inbox',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings_outlined),
+            label: 'Setting',
+          ),
         ],
       ),
     );
   }
 }
 
-
 // --- Component: New Request Card (with Accept/Decline) ---
-
 
 class NewInboxCard extends StatelessWidget {
   final SitterInboxItem inbox;
   final VoidCallback onTap;
   final VoidCallback? onAccept;
   final VoidCallback? onDecline;
-
 
   const NewInboxCard({
     super.key,
@@ -429,11 +432,10 @@ class NewInboxCard extends StatelessWidget {
     this.onDecline,
   });
 
-
   @override
   Widget build(BuildContext context) {
     final isDog = inbox.petType == 'dog';
-   
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -444,7 +446,11 @@ class NewInboxCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
         child: Column(
@@ -454,20 +460,38 @@ class NewInboxCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   backgroundColor: Colors.grey.shade100,
-                  child: Icon(isDog ? Icons.pets : Icons.cruelty_free, color: Colors.grey),
+                  child: Icon(
+                    isDog ? Icons.pets : Icons.cruelty_free,
+                    color: Colors.grey,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(inbox.petNames, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text("Owner: ${inbox.ownerName}", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                      Text(
+                        inbox.petNames,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        "Owner: ${inbox.ownerName}",
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
@@ -487,8 +511,17 @@ class NewInboxCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("${inbox.startDate} - ${inbox.endDate}", style: const TextStyle(fontSize: 13)),
-                Text("Est: RM${inbox.estimatedEarnings.toStringAsFixed(0)}", style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1CCA5B))),
+                Text(
+                  "${inbox.startDate} - ${inbox.endDate}",
+                  style: const TextStyle(fontSize: 13),
+                ),
+                Text(
+                  "Est: RM${inbox.estimatedEarnings.toStringAsFixed(0)}",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1CCA5B),
+                  ),
+                ),
               ],
             ),
             if (inbox.message != null && inbox.message!.isNotEmpty) ...[
@@ -514,7 +547,9 @@ class NewInboxCard extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.red),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     child: const Text('Decline'),
                   ),
@@ -526,7 +561,9 @@ class NewInboxCard extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1CCA5B),
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     child: const Text('Accept'),
                   ),
@@ -540,15 +577,12 @@ class NewInboxCard extends StatelessWidget {
   }
 }
 
-
 // --- Component: Confirmed Booking Card ---
-
 
 class ConfirmedBookingCard extends StatelessWidget {
   final SitterInboxItem inbox;
   final VoidCallback onTap;
   final VoidCallback? onComplete;
-
 
   const ConfirmedBookingCard({
     super.key,
@@ -556,7 +590,6 @@ class ConfirmedBookingCard extends StatelessWidget {
     required this.onTap,
     this.onComplete,
   });
-
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -589,9 +622,7 @@ class ConfirmedBookingCard extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
             child: const Text('Mark Complete'),
           ),
         ],
@@ -605,9 +636,7 @@ class ConfirmedBookingCard extends StatelessWidget {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        builder: (ctx) => const Center(child: CircularProgressIndicator()),
       );
 
       final apiService = Get.find<ApiService>();
@@ -615,7 +644,7 @@ class ConfirmedBookingCard extends StatelessWidget {
 
       if (context.mounted) {
         Navigator.pop(context); // Close loading
-        
+
         Get.snackbar(
           '✅ Service Completed',
           'Booking has been marked as completed. Owner will be notified!',
@@ -629,7 +658,7 @@ class ConfirmedBookingCard extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context); // Close loading
-        
+
         Get.snackbar(
           '❌ Error',
           e.toString().replaceAll('Exception: ', ''),
@@ -641,12 +670,11 @@ class ConfirmedBookingCard extends StatelessWidget {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final isDog = inbox.petType == 'dog';
     final statusColor = _getStatusColor(inbox.status);
-   
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -657,7 +685,11 @@ class ConfirmedBookingCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
         child: Column(
@@ -667,26 +699,45 @@ class ConfirmedBookingCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   backgroundColor: Colors.grey.shade100,
-                  child: Icon(isDog ? Icons.pets : Icons.cruelty_free, color: Colors.grey),
+                  child: Icon(
+                    isDog ? Icons.pets : Icons.cruelty_free,
+                    color: Colors.grey,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(inbox.petNames, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text("Owner: ${inbox.ownerName}", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                      Text(
+                        inbox.petNames,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        "Owner: ${inbox.ownerName}",
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    inbox.status.substring(0, 1).toUpperCase() + inbox.status.substring(1),
+                    inbox.status.substring(0, 1).toUpperCase() +
+                        inbox.status.substring(1),
                     style: TextStyle(
                       color: statusColor,
                       fontSize: 12,
@@ -700,11 +751,20 @@ class ConfirmedBookingCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("${inbox.startDate} - ${inbox.endDate}", style: const TextStyle(fontSize: 13)),
-                Text("RM${inbox.estimatedEarnings.toStringAsFixed(0)}", style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1CCA5B))),
+                Text(
+                  "${inbox.startDate} - ${inbox.endDate}",
+                  style: const TextStyle(fontSize: 13),
+                ),
+                Text(
+                  "RM${inbox.estimatedEarnings.toStringAsFixed(0)}",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1CCA5B),
+                  ),
+                ),
               ],
             ),
-            
+
             // ✅ MARK AS COMPLETED BUTTON (Show only if status is "accepted")
             if (inbox.status.toLowerCase() == 'accepted') ...[
               const SizedBox(height: 16),
@@ -715,10 +775,7 @@ class ConfirmedBookingCard extends StatelessWidget {
                   icon: const Icon(Icons.check_circle_outline, size: 20),
                   label: const Text(
                     'Mark as Completed',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
@@ -731,7 +788,7 @@ class ConfirmedBookingCard extends StatelessWidget {
                 ),
               ),
             ],
-            
+
             // Show status messages for completed/paid bookings
             if (inbox.status.toLowerCase() == 'completed') ...[
               const SizedBox(height: 12),
@@ -761,7 +818,7 @@ class ConfirmedBookingCard extends StatelessWidget {
                 ),
               ),
             ],
-            
+
             if (inbox.status.toLowerCase() == 'paid') ...[
               const SizedBox(height: 12),
               Container(
@@ -796,6 +853,3 @@ class ConfirmedBookingCard extends StatelessWidget {
     );
   }
 }
-
-
-

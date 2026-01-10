@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class ActivityLog {
   final int id;
   final int petId;

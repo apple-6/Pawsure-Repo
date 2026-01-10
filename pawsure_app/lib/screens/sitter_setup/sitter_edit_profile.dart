@@ -27,7 +27,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     "House Sitting",
     "Dog Walking",
     "Pet Daycare",
-    "Pet Taxi"
+    "Pet Taxi",
   ];
 
   @override
@@ -41,22 +41,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
       var existingService = widget.user.services.firstWhere(
         (s) => s.name == type,
         orElse: () => ServiceModel(
-            name: type,
-            isActive: false,
-            price: '0',
-            unit: _getDefaultUnit(type)),
+          name: type,
+          isActive: false,
+          price: '0',
+          unit: _getDefaultUnit(type),
+        ),
       );
-      _priceControllers[type] =
-          TextEditingController(text: existingService.price);
+      _priceControllers[type] = TextEditingController(
+        text: existingService.price,
+      );
       _activeStatus[type] = existingService.isActive;
     }
   }
 
   String _getDefaultUnit(String type) {
     if (type.contains("Walking")) return "/hour";
-    if (type.contains("Taxi")) return "/trip";   // For Pet Taxi
+    if (type.contains("Taxi")) return "/trip"; // For Pet Taxi
     if (type.contains("Daycare")) return "/day"; // For Daycare
-    return "/night";// Default others (Boarding, House Sitting) to /night
+    return "/night"; // Default others (Boarding, House Sitting) to /night
   }
 
   @override
@@ -87,7 +89,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       context: context,
       barrierDismissible: false,
       builder: (c) => const Center(
-          child: CircularProgressIndicator(color: Color(0xFF2ECA6A))),
+        child: CircularProgressIndicator(color: Color(0xFF2ECA6A)),
+      ),
     );
 
     try {
@@ -123,7 +126,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
       };
 
       final apiService = Get.find<ApiService>();
-      final updatedProfile = await apiService.updateSitterProfile(widget.user.id, payload);
+      final updatedProfile = await apiService.updateSitterProfile(
+        widget.user.id,
+        payload,
+      );
 
       // Create optimistic profile for UI (prevents flicker)
       final newProfile = UserProfile(
@@ -141,15 +147,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
       Navigator.of(context).pop(); // Close loader
       Navigator.pop(context, newProfile); // Return data
 
-      Get.snackbar("Success", "Profile updated successfully",
-          backgroundColor: Colors.green.withOpacity(0.1),
-          colorText: Colors.green[800]);
+      Get.snackbar(
+        "Success",
+        "Profile updated successfully",
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green[800],
+      );
     } catch (e) {
       Navigator.of(context).pop();
       debugPrint("Save Error: $e");
-      Get.snackbar("Error", "Failed to save: $e",
-          backgroundColor: Colors.red.withOpacity(0.1),
-          colorText: Colors.red[800]);
+      Get.snackbar(
+        "Error",
+        "Failed to save: $e",
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red[800],
+      );
     }
   }
 
@@ -161,8 +173,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text("Edit Profile",
-            style: TextStyle(color: Colors.black, fontSize: 16)),
+        title: const Text(
+          "Edit Profile",
+          style: TextStyle(color: Colors.black, fontSize: 16),
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
@@ -186,15 +200,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: brandColor,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
               elevation: 0,
             ),
             child: const Text(
               "Save Changes",
               style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
         ),
@@ -207,11 +223,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // --- SECTION 1: BASIC INFO ---
-              const Text("Basic Information",
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87)),
+              const Text(
+                "Basic Information",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
               const SizedBox(height: 15),
 
               Container(
@@ -221,22 +240,35 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4))
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
                   ],
                 ),
                 child: Column(
                   children: [
-                    _buildTextField("Display Name", _nameController,
-                        Icons.person_outline, true), // Required
+                    _buildTextField(
+                      "Display Name",
+                      _nameController,
+                      Icons.person_outline,
+                      true,
+                    ), // Required
                     const SizedBox(height: 20),
-                    _buildTextField("Location", _locationController,
-                        Icons.location_on_outlined, true), // Required
+                    _buildTextField(
+                      "Location",
+                      _locationController,
+                      Icons.location_on_outlined,
+                      true,
+                    ), // Required
                     const SizedBox(height: 20),
-                    _buildTextField("About Me", _bioController,
-                        Icons.info_outline, true,
-                        maxLines: 4), // Required
+                    _buildTextField(
+                      "About Me",
+                      _bioController,
+                      Icons.info_outline,
+                      true,
+                      maxLines: 4,
+                    ), // Required
                   ],
                 ),
               ),
@@ -244,16 +276,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
               const SizedBox(height: 30),
 
               // --- SECTION 2: SERVICES & RATES ---
-              const Text("Services & Rates",
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87)),
+              const Text(
+                "Services & Rates",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
               const SizedBox(height: 15),
 
               ..._serviceTypes.map((type) {
                 return _buildServiceRow(type);
-              }).toList(),
+              }),
 
               const SizedBox(height: 20),
             ],
@@ -265,8 +300,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   // --- UPDATED TEXT FIELD ---
   Widget _buildTextField(
-      String label, TextEditingController controller, IconData icon, bool isRequired,
-      {int maxLines = 1}) {
+    String label,
+    TextEditingController controller,
+    IconData icon,
+    bool isRequired, {
+    int maxLines = 1,
+  }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
@@ -280,9 +319,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
             children: isRequired
                 ? [
                     const TextSpan(
-                        text: ' *',
-                        style: TextStyle(
-                            color: Colors.red, fontWeight: FontWeight.bold))
+                      text: ' *',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ]
                 : [],
           ),
@@ -290,13 +332,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
         prefixIcon: Icon(icon, color: Colors.grey.shade400, size: 22),
         filled: true,
         fillColor: Colors.grey.shade50,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
 
         // 2. Normal Border (Clean)
         border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
 
         // 3. Error Border (Red and Thicker)
         errorBorder: OutlineInputBorder(
@@ -337,12 +382,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: isActive ? activeColor : Colors.transparent, width: 2),
+          color: isActive ? activeColor : Colors.transparent,
+          width: 2,
+        ),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 4))
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -357,8 +405,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(_getServiceIcon(serviceName),
-                    color: isActive ? activeColor : Colors.grey, size: 20),
+                child: Icon(
+                  _getServiceIcon(serviceName),
+                  color: isActive ? activeColor : Colors.grey,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 15),
               Expanded(
@@ -375,7 +426,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 scale: 0.8,
                 child: Switch(
                   value: isActive,
-                  activeColor: activeColor,
+                  activeThumbColor: activeColor,
                   activeTrackColor: activeColor.withOpacity(0.2),
                   inactiveThumbColor: Colors.white,
                   inactiveTrackColor: Colors.grey.shade200,
@@ -392,23 +443,31 @@ class _EditProfilePageState extends State<EditProfilePage> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _priceControllers[serviceName],
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Color(0xFF1F2937)),
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Color(0xFF1F2937),
+              ),
               decoration: InputDecoration(
                 prefixText: 'RM ',
                 suffixText: unit,
                 prefixStyle: const TextStyle(
-                    color: Colors.black54, fontWeight: FontWeight.normal),
+                  color: Colors.black54,
+                  fontWeight: FontWeight.normal,
+                ),
                 suffixStyle: const TextStyle(
-                    color: Colors.black54, fontWeight: FontWeight.normal),
+                  color: Colors.black54,
+                  fontWeight: FontWeight.normal,
+                ),
                 filled: true,
                 fillColor: Colors.grey.shade50,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: Colors.grey.shade300),
@@ -419,7 +478,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
               ),
             ),
-          ]
+          ],
         ],
       ),
     );
@@ -427,9 +486,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   IconData _getServiceIcon(String type) {
     if (type.contains("Walking")) return Icons.directions_walk;
-    if (type.contains("Taxi")) return Icons.local_taxi;   // Car icon
-    if (type.contains("Daycare")) return Icons.wb_sunny;  // Sun icon
-    if (type.contains("Sitting")) return Icons.chair;     // House Sitting
+    if (type.contains("Taxi")) return Icons.local_taxi; // Car icon
+    if (type.contains("Daycare")) return Icons.wb_sunny; // Sun icon
+    if (type.contains("Sitting")) return Icons.chair; // House Sitting
     return Icons.home; // Default (Pet Boarding)
   }
 }

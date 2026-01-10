@@ -252,21 +252,19 @@ class _RouteViewScreenState extends State<RouteViewScreen> {
                       value: widget.activity.formattedDuration,
                       color: Colors.orange,
                     ),
-                    if (widget.activity.distanceKm != null)
-                      _buildStatColumn(
-                        icon: Icons.straighten,
-                        label: 'Distance',
-                        value:
-                            '${widget.activity.distanceKm!.toStringAsFixed(2)} km',
-                        color: Colors.green,
-                      ),
-                    if (widget.activity.caloriesBurned != null)
-                      _buildStatColumn(
-                        icon: Icons.local_fire_department,
-                        label: 'Calories',
-                        value: widget.activity.caloriesBurned.toString(),
-                        color: Colors.red,
-                      ),
+                    _buildStatColumn(
+                      icon: Icons.straighten,
+                      label: 'Distance',
+                      value:
+                          '${widget.activity.distanceKm!.toStringAsFixed(2)} km',
+                      color: Colors.green,
+                    ),
+                    _buildStatColumn(
+                      icon: Icons.local_fire_department,
+                      label: 'Calories',
+                      value: widget.activity.caloriesBurned.toString(),
+                      color: Colors.red,
+                    ),
                   ],
                 ),
               ),

@@ -25,32 +25,20 @@ export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Get()
-  async findAll(@Query('tab') tab?: string) {
+  @UseGuards(JwtAuthGuard)
+  async findAll(@Request() req, @Query('tab') tab?: string) {
     console.log('🚀 GET /posts called with tab:', tab);
+    const userId = req.user?.id;
+    console.log('👤 Fetching for User ID:', userId);
     try {
-      const posts = await this.postsService.findAll(tab);
+      const posts = await this.postsService.findAll(tab, userId);
       console.log('✅ Posts service returned:', posts.length, 'posts');
       return posts;
     } catch (error) {
       console.log('❌ Posts service error:', error.message);
       throw new BadRequestException(`Failed to fetch posts: ${error.message}`);
     }
-  }*/
-
-  @Get()
-  @UseGuards(JwtAuthGuard)
-async findAll(@Request() req,@Query('tab') tab?: string ) {
-  console.log('🚀 GET /posts called with tab:', tab);
-  const userId = req.user?.id; 
-    console.log('👤 Fetching for User ID:', userId);
-  try {
-    const posts = await this.postsService.findAll(tab, userId);
-    console.log('✅ Posts service returned:', posts.length, 'posts');
-    return posts;
-  } catch (error) {
-    console.log('❌ Posts service error:', error.message);
-    throw new BadRequestException(`Failed to fetch posts: ${error.message}`);
-  }
+  } // Added missing closing brace here
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -65,8 +53,13 @@ async findAll(@Request() req,@Query('tab') tab?: string ) {
       }),
       fileFilter: (req, file, cb) => {
         const allowedMimes = [
-          'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-          'video/mp4', 'video/quicktime', 'video/x-msvideo',
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          'video/mp4',
+          'video/quicktime',
+          'video/x-msvideo',
         ];
         if (allowedMimes.includes(file.mimetype)) {
           cb(null, true);
@@ -94,7 +87,11 @@ async findAll(@Request() req,@Query('tab') tab?: string ) {
 
     let petIds = body.petIds;
     if (typeof petIds === 'string') {
-      try { petIds = JSON.parse(petIds); } catch (e) { petIds = [petIds]; }
+      try {
+        petIds = JSON.parse(petIds);
+      } catch (e) {
+        petIds = [petIds];
+      }
     }
 
     const uploadedFiles = files && files.length > 0 ? files : [];
@@ -118,17 +115,14 @@ async findAll(@Request() req,@Query('tab') tab?: string ) {
     }
   }
 
-  // ✅ NEW: Update Post Method
-  // Handles: PUT /posts/:id
   @Put(':id')
   @UseGuards(JwtAuthGuard)
   async update(
-    @Param('id') id: string, 
+    @Param('id') id: string,
     @Body() updatePostDto: any,
     @GetUser() user: any,
   ) {
     try {
-      // We pass user.id to ensure the user owns the post they are editing
       const updatedPost = await this.postsService.update(+id, updatePostDto, user.id);
       return {
         success: true,
@@ -140,16 +134,10 @@ async findAll(@Request() req,@Query('tab') tab?: string ) {
     }
   }
 
-  // ✅ NEW: Delete Post Method
-  // Handles: DELETE /posts/:id
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  async remove(
-    @Param('id') id: string,
-    @GetUser() user: any,
-  ) {
+  async remove(@Param('id') id: string, @GetUser() user: any) {
     try {
-      // We pass user.id to ensure the user owns the post they are deleting
       await this.postsService.remove(+id, user.id);
       return {
         success: true,

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart' hide CarouselController;
 import 'package:carousel_slider/carousel_slider.dart'; // 🆕 Import carousel
 import 'package:pawsure_app/models/post_model.dart';
-import 'community_screen.dart';
 import 'package:pawsure_app/screens/community/comment_model.dart';
 
 class PostCard extends StatefulWidget {
@@ -51,7 +50,7 @@ class _PostCardState extends State<PostCard> {
         // 🆕 Pass a callback that increments BOTH the model and the UI
         onCommentPosted: () {
           // 1. Update the Memory Model (This makes it persist like Likes)
-          widget.post.commentsCount++; 
+          widget.post.commentsCount++;
 
           // 2. Update the Local UI
           setState(() {
@@ -61,17 +60,18 @@ class _PostCardState extends State<PostCard> {
       ),
     );
   }
+
   // Handle the logic internally in the card for instant feedback
   // 1. UPDATE THIS METHOD
- void _handleLikePress() async {
+  void _handleLikePress() async {
     if (_isLikeAnimating) return;
 
     // --- KEY FIX: Update the Source Model directly ---
-    // This ensures that when ListView rebuilds this widget, 
+    // This ensures that when ListView rebuilds this widget,
     // it reads the updated values from the memory object.
     widget.post.isLiked = !widget.post.isLiked;
-    widget.post.likes = widget.post.isLiked 
-        ? widget.post.likes + 1 
+    widget.post.likes = widget.post.isLiked
+        ? widget.post.likes + 1
         : widget.post.likes - 1;
 
     // Update Local UI state to reflect changes immediately
@@ -89,8 +89,8 @@ class _PostCardState extends State<PostCard> {
       if (mounted) {
         // Revert model
         widget.post.isLiked = !widget.post.isLiked;
-        widget.post.likes = widget.post.isLiked 
-            ? widget.post.likes + 1 
+        widget.post.likes = widget.post.isLiked
+            ? widget.post.likes + 1
             : widget.post.likes - 1;
 
         // Revert UI
@@ -98,10 +98,10 @@ class _PostCardState extends State<PostCard> {
           _isLiked = widget.post.isLiked;
           _likesCount = widget.post.likes;
         });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to update like")),
-        );
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Failed to update like")));
       }
     } finally {
       if (mounted) setState(() => _isLikeAnimating = false);
@@ -224,10 +224,10 @@ class _PostCardState extends State<PostCard> {
                 ),
                 Flexible(child: Text('$_likesCount')),
                 const SizedBox(width: 16),
-               // --- 🆕 FIXED COMMENT BUTTON SECTION ---
+                // --- 🆕 FIXED COMMENT BUTTON SECTION ---
                 Flexible(
                   // removed 'const' here because onPressed uses a function
-                  child: IconButton( 
+                  child: IconButton(
                     // Wrapped Icon in IconButton so it can be clicked
                     icon: const Icon(
                       Icons.chat_bubble_outline,
@@ -237,8 +237,8 @@ class _PostCardState extends State<PostCard> {
                     onPressed: _handleCommentPress, // Connected the handler
                   ),
                 ),
-                // --- END FIX ---
 
+                // --- END FIX ---
                 const SizedBox(width: 4),
                 //const Flexible(child: Text('0')),
                 Flexible(child: Text('$_commentsCount')),

@@ -148,11 +148,11 @@ class VacancyPostCard extends StatelessWidget {
                     children: List.generate(petNames.length, (index) {
                       return GestureDetector(
                         onTap: () {
-                          if (post.pets != null && post.pets!.isNotEmpty) {
+                          if (post.pets.isNotEmpty) {
                             Get.to(
                               () => const PetProfileView(),
                               arguments: {
-                                'pet': post.pets![index],
+                                'pet': post.pets[index],
                                 'dateRange': "$startDate - $endDate",
                                 'estEarning': "RM ${_calculateTotalPay()}",
                               },

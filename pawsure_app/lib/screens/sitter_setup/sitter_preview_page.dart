@@ -17,8 +17,8 @@ class SitterPreviewPage extends StatelessWidget {
     return Scaffold(
       // ✅ CHANGE 1: Use a standard "Off-White/Grey" background.
       // This provides the best contrast for white cards.
-      backgroundColor: const Color(0xFFF3F4F6), 
-      
+      backgroundColor: const Color(0xFFF3F4F6),
+
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -247,21 +247,23 @@ class SitterPreviewPage extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   if (user.services.isEmpty)
-                    const Text("No services listed yet.",
-                        style: TextStyle(color: textGrey))
+                    const Text(
+                      "No services listed yet.",
+                      style: TextStyle(color: textGrey),
+                    )
                   else
                     ...user.services.where((s) => s.isActive).map((service) {
                       return Column(
                         children: [
                           _buildServiceRow(
                             service.name,
-                            "RM ${service.price}${service.unit}", 
-                            brandColor
+                            "RM ${service.price}${service.unit}",
+                            brandColor,
                           ),
                           const Divider(height: 24),
                         ],
                       );
-                    }).toList(),
+                    }),
                 ],
               ),
             ),

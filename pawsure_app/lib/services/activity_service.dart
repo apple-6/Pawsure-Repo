@@ -43,14 +43,14 @@ class ActivityService {
       final queryParams = <String, String>{};
 
       if (type != null) queryParams['type'] = type;
-      if (startDate != null)
+      if (startDate != null) {
         queryParams['startDate'] = startDate.toIso8601String();
+      }
       if (endDate != null) queryParams['endDate'] = endDate.toIso8601String();
 
       if (queryParams.isNotEmpty) {
         url +=
-            '?' +
-            queryParams.entries.map((e) => '${e.key}=${e.value}').join('&');
+            '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
       }
 
       debugPrint('📡 Request: $url');

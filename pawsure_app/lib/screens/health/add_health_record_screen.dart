@@ -302,7 +302,7 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                     padding: const EdgeInsets.all(16.0),
                     children: [
                       DropdownButtonFormField<HealthRecordType>(
-                        value: _selectedType,
+                        initialValue: _selectedType,
                         decoration: const InputDecoration(
                           labelText: 'Record Type',
                           border: OutlineInputBorder(),

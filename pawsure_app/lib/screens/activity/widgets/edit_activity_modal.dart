@@ -37,10 +37,10 @@ class _EditActivityModalState extends State<EditActivityModal> {
       text: widget.activity.durationMinutes.toString(),
     );
     _distanceController = TextEditingController(
-      text: widget.activity.distanceKm?.toString() ?? '',
+      text: widget.activity.distanceKm.toString() ?? '',
     );
     _caloriesController = TextEditingController(
-      text: widget.activity.caloriesBurned?.toString() ?? '',
+      text: widget.activity.caloriesBurned.toString() ?? '',
     );
     _selectedDate = widget.activity.activityDate;
     _selectedTime = TimeOfDay.fromDateTime(widget.activity.activityDate);

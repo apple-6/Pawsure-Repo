@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/services/booking_service.dart';
-import 'package:pawsure_app/services/api_service.dart';
 
 class BookingController extends GetxController {
   final BookingService _bookingService = BookingService();

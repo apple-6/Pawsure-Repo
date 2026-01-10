@@ -635,7 +635,7 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
           vertical: 15,
         ),
       ),
-      value: breeds.contains(_selectedBreed) ? _selectedBreed : null,
+      initialValue: breeds.contains(_selectedBreed) ? _selectedBreed : null,
       items: breeds
           .map(
             (String breed) =>
