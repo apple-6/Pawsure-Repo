@@ -44,6 +44,8 @@ class ProfileController extends GetxController {
         );
       } else {
         debugPrint('⚠️ No profile data available');
+        // If profile fetch fails/returns null, ensure we don't show old data
+        if (user.isNotEmpty) user.clear();
       }
     } catch (e) {
       debugPrint('❌ Error loading profile: $e');
