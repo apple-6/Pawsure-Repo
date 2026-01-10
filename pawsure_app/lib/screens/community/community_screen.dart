@@ -178,17 +178,20 @@ class CommunityScreenState extends State<CommunityScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.chat_bubble_outline),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => OwnerInbox(),
-                                ),
-                              );
-                            },
-                          ),
+                          // ✅ ADDED: Show chat icon only for owners
+                          _userRole == 'owner'
+                              ? IconButton(
+                                  icon: const Icon(Icons.chat_bubble_outline),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => OwnerInbox(),
+                                      ),
+                                    );
+                                  },
+                                )
+                              : const SizedBox.shrink(),
                         ],
                       ),
                     ),
