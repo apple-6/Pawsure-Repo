@@ -211,7 +211,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
             }
           }
 
-          String rawExp = data['experience']?.toString() ?? "1";
+          String rawExp = data['experience']?.toString() ?? "0";
 
           String yearsExp = rawExp.replaceAll(RegExp(r'[^0-9]'), '');
           if (yearsExp.isEmpty) yearsExp = "0";

@@ -393,7 +393,6 @@ class _SearchBarsRow extends StatelessWidget {
 // REMOVED: class _MapViewPlaceholder
 
 class SitterCard extends StatelessWidget {
-  // ... (No change)
   final Sitter sitter;
   final Function(String id) onClick;
 
@@ -409,9 +408,8 @@ class SitterCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(
-                0.1,
-              ), // Used withOpacity to fix the withValues issue
+              // Using withValues as requested previously
+              color: Colors.grey.withValues(alpha: 0.1),
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 2),
@@ -421,6 +419,7 @@ class SitterCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // --- Sitter Image ---
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(10),
@@ -439,21 +438,26 @@ class SitterCard extends StatelessWidget {
                 ),
               ),
             ),
+            
+            // --- Content ---
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 1. Name
                     Text(
                       sitter.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
+
+                    // 2. Rating & Reviews Row
                     Row(
                       children: [
                         const Icon(
@@ -479,24 +483,33 @@ class SitterCard extends StatelessWidget {
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 4),
+
+                    // 3. Experience (MOVED HERE - Below Rating)
                     Text(
-                      sitter.services,
+                      '${sitter.yearsExperience} Years Experience',
+                      style: const TextStyle(
+                        color: Color(0xFF059669), // Green color
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    // 4. Services
+                    Text(
+                      sitter.services.isEmpty
+                          ? 'No services listed'
+                          : sitter.services.replaceAll(', ', ' • '),
                       style: TextStyle(
                         color: Colors.grey.shade600,
-                        fontSize: 14,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'RM${sitter.price.toStringAsFixed(0)}/night',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Theme.of(context).primaryColor,
-                      ),
                     ),
                   ],
                 ),
