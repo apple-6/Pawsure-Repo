@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/constants/api_config.dart';
+import 'package:pawsure_app/screens/community/community_screen.dart';
 import 'package:pawsure_app/services/auth_service.dart';
 // Note: Ensure these imports point to your actual file locations
 import 'sitter_dashboard.dart';
@@ -281,6 +282,9 @@ class _SitterCalendarState extends State<SitterCalendar> {
           if (index == 0) {
             Get.offAll(() => const SitterDashboard());
           }
+          if (index == 1) {
+            Get.offAll(() => const CommunityScreen());
+          }
           if (index == 2) {
             Get.to(() => const SitterCalendar());
           }
@@ -296,10 +300,7 @@ class _SitterCalendarState extends State<SitterCalendar> {
             icon: Icon(Icons.home_filled),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            label: 'Discover',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Community'),
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today_outlined),
             label: 'Calendar',

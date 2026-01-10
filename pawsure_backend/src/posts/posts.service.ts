@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Post } from './posts.entity';
 import { PostMedia } from './post-media.entity';
-import { Like } from '../likes/likes.entity'; // ✅ Import your Like entity
+import { Pet } from '../pet/pet.entity';
+import { Like } from '../likes/likes.entity';
 
 @Injectable()
 export class PostsService {
@@ -12,54 +13,21 @@ export class PostsService {
   constructor(
     @InjectRepository(Post) private postRepo: Repository<Post>,
     @InjectRepository(PostMedia) private mediaRepo: Repository<PostMedia>,
+    @InjectRepository(Pet) private petRepo: Repository<Pet>,
   ) {}
 
   /**
-   * Fetches posts based on the selected tab.
-   * Handles filtering to separate social feed from job vacancies.
+   * Fetches posts based on the selected tab with like status.
    */
   async findAll(tab?: string, userId?: number) {
     try {
       this.logger.log(`🔍 Fetching posts with tab: ${tab || 'all'}, User: ${userId}`);
 
-  //     let where: any = {};
-
-  //     // Logic to separate Vacancies from the Social Feed
-  //     if (tab === 'vacancy') {
-  //       // ONLY show jobs
-  //       where.is_vacancy = true;
-  //       this.logger.log('💼 Filtering: Sitter Vacancies only');
-  //     } else if (tab === 'urgent') {
-  //       // ONLY show urgent social posts
-  //       where.is_urgent = true;
-  //       where.is_vacancy = false;
-  //       this.logger.log('⚡ Filtering: Urgent Social Posts only');
-  //     } else {
-  //       // DEFAULT (For You): Show social posts, hide job vacancies
-  //       where.is_vacancy = false;
-  //       this.logger.log('📱 Filtering: Standard Social Feed');
-  //     }
-
-  //     const posts = await this.postRepo.find({
-  //       where,
-  //       relations: ['user', 'post_media'],
-  //       order: { created_at: 'DESC' },
-  //     });
-
-  //     this.logger.log(`✅ Successfully fetched ${posts.length} posts`);
-  //     return posts;
-  //   } catch (error) {
-  //     this.logger.error(
-  //       `❌ Error fetching posts: ${error.message}`,
-  //       error.stack,
-  //     );
-  //     throw new Error(`Failed to load posts: ${error.message}`);
-  //   }
-  // }
-  // 1. Start QueryBuilder
+      // 1. Initialize QueryBuilder
       const query = this.postRepo.createQueryBuilder('post')
         .leftJoinAndSelect('post.user', 'user') // Join Author
         .leftJoinAndSelect('post.post_media', 'media') // Join Media
+        .leftJoinAndSelect('post.pets', 'pets') // Join Pets
         .orderBy('post.created_at', 'DESC');
 
       // 2. Apply Filters (Tab Logic)
@@ -75,42 +43,36 @@ export class PostsService {
         this.logger.log('📱 Filtering: Standard Social Feed');
       }
 
-      // 3. Get Total Likes Count
-      // This maps the count of the 'likes' relation to a property 'likesCount' on the Post object
+      // 3. Load counts for likes and comments
       query.loadRelationCountAndMap('post.likesCount', 'post.likes');
-
       query.loadRelationCountAndMap('post.commentsCount', 'post.comments');
 
       // 4. Check if Current User Liked the Post
-      // We use addSelect with a subquery. If count > 0, it returns "1", else "0".
       if (userId) {
         query.addSelect((subQuery) => {
           return subQuery
             .select('COUNT(l.id)', 'count')
-            .from(Like, 'l') // querying the 'likes' table
-            //.where('l.post_id = post.id')
+            .from(Like, 'l')
             .where('l.postId = post.id')
-            //.andWhere('l.user_id = :userId', { userId });
             .andWhere('l.userId = :userId', { userId });
-        }, 'is_liked_raw'); // This alias 'is_liked_raw' will be in the raw results
+        }, 'is_liked_raw');
       }
 
       // 5. Execute Query
-      // getRawAndEntities gives us the clean Post objects AND the raw data (including our subquery result)
       const { entities, raw } = await query.getRawAndEntities();
 
-      // 6. Merge Data
-      // We need to map the "is_liked_raw" string from raw data into a boolean on the entity
+      // 6. Merge Raw Data (isLiked) with Entities
       const postsWithLikeStatus = entities.map((post) => {
-        // Find the raw data row corresponding to this post
-        const rawData = raw.find((r) => r.post_id === post.id);
+        // Match raw data to entity by post ID
+        const rawData = raw.find((r) => 
+            r.post_id === post.id || r.id === post.id || (r.post_id && parseInt(r.post_id) === post.id)
+        );
         
-        // Check our alias. Note: Database drivers might return string "1" or number 1.
-        const isLikedCount = rawData ? parseInt(rawData.is_liked_raw) : 0;
+        const isLikedCount = rawData && rawData.is_liked_raw ? parseInt(rawData.is_liked_raw) : 0;
 
         return {
           ...post,
-          isLiked: isLikedCount > 0, // ✅ Convert to boolean for Frontend
+          isLiked: isLikedCount > 0,
         };
       });
 
@@ -125,71 +87,123 @@ export class PostsService {
 
   /**
    * Creates a new post or vacancy.
-   * Extracts vacancy-specific fields from the request body.
    */
   async create(body: any, files: Express.Multer.File[], userId: number) {
     try {
       this.logger.log(`📝 Creating post for user ${userId}`);
 
-      // Parse booleans correctly (Multipart-form sends everything as strings)
       const isVacancy = body.is_vacancy === 'true' || body.is_vacancy === true;
       const isUrgent = body.is_urgent === 'true' || body.is_urgent === true;
+      const ratePerNight = body.rate_per_night ? parseFloat(body.rate_per_night) : null;
 
-      // Validate required fields for vacancies
-      if (isVacancy) {
-        if (!body.start_date || !body.end_date) {
-          throw new Error('start_date and end_date are required for vacancy posts');
+      if (isVacancy && (!body.start_date || !body.end_date)) {
+        throw new Error('start_date and end_date are required for vacancy posts');
+      }
+
+      let petIds: number[] = [];
+      const rawPetIds = body.pet_id || body.petIds; 
+
+      if (rawPetIds) {
+        if (Array.isArray(rawPetIds)) {
+          petIds = rawPetIds.map(id => Number(id));
+        } else if (typeof rawPetIds === 'string') {
+          petIds = rawPetIds.split(',').map(id => Number(id.trim()));
         }
       }
 
-      // Create post object with proper typing
-      const postData: Partial<Post> = {
+      let selectedPets: Pet[] = [];
+      if (petIds.length > 0) {
+        selectedPets = await this.petRepo.findBy({ id: In(petIds) });
+      }
+
+      const newPost = this.postRepo.create({
         content: body.content,
         is_urgent: isUrgent,
         is_vacancy: isVacancy,
-        userId: userId,  // ✅ Use camelCase property name (maps to user_id column)
-        // For vacancies, dates are required. For social posts, they're optional
+        rate_per_night: ratePerNight,
+        userId: userId,
         start_date: body.start_date ? new Date(body.start_date) : undefined,
         end_date: body.end_date ? new Date(body.end_date) : undefined,
-        pet_id: body.petId || null,
-      };
-
-      // Save the post
-      const savedPost = await this.postRepo.save(postData);
-      this.logger.log(`✅ Post created with ID: ${savedPost.id} (IsVacancy: ${isVacancy})`);
-
-      // Handle media uploads
-      if (files && files.length > 0) {
-        this.logger.log(`📁 Saving ${files.length} media files`);
-
-        const mediaRecords = files.map((file) => {
-          const mediaType = file.mimetype.startsWith('image/')
-            ? 'image'
-            : 'video';
-          return {
-            media_url: `http://localhost:3000/uploads/post-media/${file.filename}`,
-            post_id: savedPost.id,
-            media_type: mediaType,
-          };
-        });
-
-        await this.mediaRepo.save(mediaRecords);
-        this.logger.log(`✅ Saved ${mediaRecords.length} media files`);
-      }
-
-      // Return the post with relations loaded
-      const fullPost = await this.postRepo.findOne({
-        where: { id: savedPost.id },
-        relations: ['user', 'post_media'],
+        pets: selectedPets,
       });
 
-      return fullPost;
+      const savedPost = await this.postRepo.save(newPost);
+
+      if (files && files.length > 0) {
+        const mediaRecords = files.map((file) => ({
+          media_url: `http://localhost:3000/uploads/post-media/${file.filename}`,
+          post_id: savedPost.id,
+          media_type: file.mimetype.startsWith('image/') ? 'image' : 'video',
+        }));
+        await this.mediaRepo.save(mediaRecords);
+      }
+
+      return await this.postRepo.findOne({
+        where: { id: savedPost.id },
+        relations: ['user', 'post_media', 'pets'],
+      });
+
     } catch (error) {
-      this.logger.error(
-        `❌ Error creating post: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`❌ Error creating post: ${error.message}`);
       throw new Error(`Failed to create post: ${error.message}`);
+    }
+  }
+
+  /**
+   * Updates an existing post.
+   */
+  async update(id: number, body: any, userId: number) {
+    try {
+      const post = await this.postRepo.findOne({
+        where: { id },
+        relations: ['pets'],
+      });
+
+      if (!post) throw new NotFoundException(`Post with ID ${id} not found`);
+      if (post.userId !== userId) throw new UnauthorizedException('Permission denied');
+
+      if (body.pet_id || body.petIds) {
+        let petIds: number[] = [];
+        const rawPetIds = body.pet_id || body.petIds;
+        if (Array.isArray(rawPetIds)) {
+          petIds = rawPetIds.map(Number);
+        } else {
+          petIds = String(rawPetIds).split(',').map(id => Number(id.trim()));
+        }
+        post.pets = await this.petRepo.findBy({ id: In(petIds) });
+      }
+
+      post.content = body.content ?? post.content;
+      post.rate_per_night = body.rate_per_night ? parseFloat(body.rate_per_night) : post.rate_per_night;
+      post.start_date = body.start_date ? new Date(body.start_date) : post.start_date;
+      post.end_date = body.end_date ? new Date(body.end_date) : post.end_date;
+      post.is_urgent = body.is_urgent !== undefined ? (body.is_urgent === 'true' || body.is_urgent === true) : post.is_urgent;
+
+      const updatedPost = await this.postRepo.save(post);
+      return await this.postRepo.findOne({
+        where: { id: updatedPost.id },
+        relations: ['user', 'post_media', 'pets'],
+      });
+    } catch (error) {
+      this.logger.error(`❌ Update Error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Removes a post.
+   */
+  async remove(id: number, userId: number) {
+    try {
+      const post = await this.postRepo.findOne({ where: { id } });
+      if (!post) throw new NotFoundException(`Post not found`);
+      if (post.userId !== userId) throw new UnauthorizedException('Permission denied');
+
+      await this.postRepo.remove(post);
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`❌ Delete Error: ${error.message}`);
+      throw error;
     }
   }
 }

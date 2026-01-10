@@ -5,9 +5,13 @@ import { PostsController } from './posts.controller';
 import { PostsService } from './posts.service';
 import { Post } from './posts.entity';
 import { PostMedia } from './post-media.entity';
+import { Pet } from 'src/pet/pet.entity'; // This import is already there, good!
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Post, PostMedia])],
+  imports: [
+    // Add Pet here!
+    TypeOrmModule.forFeature([Post, PostMedia, Pet])
+  ],
   controllers: [PostsController],
   providers: [PostsService],
   exports: [PostsService],

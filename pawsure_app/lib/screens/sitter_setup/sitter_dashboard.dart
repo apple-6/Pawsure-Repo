@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // <--- Import GetX
 import 'package:pawsure_app/models/pet_model.dart';
+import 'package:pawsure_app/screens/community/community_screen.dart';
 import 'package:pawsure_app/screens/sitter_setup/view_pet_profile.dart';
 import 'sitter_calendar.dart';
 import 'sitter_inbox.dart';
@@ -55,7 +56,7 @@ class SitterDashboard extends StatelessWidget {
             Get.offAll(() => const SitterDashboard());
           }
           if (index == 1) {
-            // Navigate to Discover Screen
+            Get.offAll(() => const CommunityScreen());
           }
           if (index == 2) {
             Get.to(() => const SitterCalendar());
@@ -72,10 +73,7 @@ class SitterDashboard extends StatelessWidget {
             icon: Icon(Icons.home_filled),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            label: 'Discover',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Community'),
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today_outlined),
             label: 'Calendar',

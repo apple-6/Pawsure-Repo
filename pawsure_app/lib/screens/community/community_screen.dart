@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/models/post_model.dart';
 import 'package:pawsure_app/screens/community/create_vacancy_modal.dart';
-import 'dart:convert';
+import 'package:pawsure_app/screens/sitter_setup/chat_screen.dart';
+import 'package:pawsure_app/services/auth_service.dart';
 import 'post_card.dart';
 import 'create_post_modal.dart';
 import 'find_sitter_tab.dart';
@@ -10,7 +14,10 @@ import 'sitter_details.dart';
 import 'vacancy_post_card.dart';
 import 'owner_inbox.dart';
 import 'package:pawsure_app/services/api_service.dart';
-import 'package:pawsure_app/services/auth_service.dart';
+import 'package:pawsure_app/screens/sitter_setup/sitter_dashboard.dart';
+import 'package:pawsure_app/screens/sitter_setup/sitter_calendar.dart';
+import 'package:pawsure_app/screens/sitter_setup/sitter_inbox.dart';
+import 'package:pawsure_app/screens/sitter_setup/sitter_setting_screen.dart';
 
 // --- POST MODEL ---
 class Post {
@@ -74,49 +81,48 @@ class Post {
 // --- COMMUNITY SCREEN ---
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
-  
 
   @override
-  State<CommunityScreen> createState() => CommunityScreenState(); // Removed underscore to allow access
+  State<CommunityScreen> createState() => CommunityScreenState();
 }
 
 class CommunityScreenState extends State<CommunityScreen> {
   final ApiService _apiService = ApiService();
   final String baseUrl = "http://localhost:3000";
-  int _currentSubTabIndex = 0; // 0: For You, 1: Urgent, 2: Vacancy
+  int _currentSubTabIndex = 0;
+  String? _userRole;
 
-  // Change Post to PostModel here
-  // Future<List<PostModel>> fetchFilteredPosts(String tab) async {
-  //   try {
-  //     final response = await http.get(
-  //       Uri.parse('$baseUrl/posts?tab=$tab'),
-  //       headers: {'Content-Type': 'application/json'},
-  //     );
+  @override
+  void initState() {
+    super.initState();
+    debugPrint(
+      "✅ CommunityScreen initialized - Parent is: ${widget.runtimeType}",
+    );
+    _getUserRole();
+  }
 
-  //     if (response.statusCode == 200) {
-  //       List<dynamic> data = json.decode(response.body);
-  //       // Ensure you are using PostModel.fromJson here
-  //       return data.map((map) => PostModel.fromJson(map)).toList();
-  //     } else {
-  //       throw Exception('Failed to load posts');
-  //     }
-  //   } catch (e) {
-  //     debugPrint("Error fetching posts: $e");
-  //     return [];
-  //   }
-  // }
+  Future<void> _getUserRole() async {
+    try {
+      final authService = Get.find<AuthService>();
+      final role = await authService.getUserRole();
+      debugPrint("🔍 User Role Fetched from Storage: $role");
+      if (mounted) {
+        setState(() {
+          _userRole = role;
+        });
+        debugPrint("✅ User Role Set in State: $_userRole");
+      }
+    } catch (e) {
+      debugPrint("❌ Error fetching user role: $e");
+    }
+  }
 
   Future<List<PostModel>> fetchFilteredPosts(String tab) async {
     try {
-      // ✅ Use apiService.getPosts() instead of http.get()
-      // This automatically adds the 'Authorization: Bearer <token>' header
       final List<dynamic> data = await _apiService.getPosts(tab: tab);
-
-      // Map the dynamic list to your PostModel list
       return data.map((map) => PostModel.fromJson(map)).toList();
     } catch (e) {
       debugPrint("Error fetching posts: $e");
-      // Optional: Rethrow if you want the UI to show an error state
       return [];
     }
   }
@@ -134,7 +140,6 @@ class CommunityScreenState extends State<CommunityScreen> {
       isScrollControlled: true,
       builder: (context) {
         if (_currentSubTabIndex == 2) {
-          // REPLACE THE PLACEHOLDER WITH YOUR ACTUAL MODAL
           return CreateVacancyModal(onVacancyCreated: _handlePostCreated);
         } else {
           return CreatePostModal(onPostCreated: _handlePostCreated);
@@ -145,8 +150,15 @@ class CommunityScreenState extends State<CommunityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("🔨 CommunityScreen BUILD - _userRole = $_userRole");
+
+    // ✅ ADDED: Determine number of tabs based on user role
+    // Owners: 2 tabs (Feed, Find a Sitter)
+    // Sitters: 1 tab (Feed only)
+    final int tabCount = _userRole == 'sitter' ? 1 : 2;
+
     return DefaultTabController(
-      length: 2,
+      length: tabCount,
       child: Scaffold(
         body: SafeArea(
           child: NestedScrollView(
@@ -166,17 +178,20 @@ class CommunityScreenState extends State<CommunityScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.chat_bubble_outline),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => OwnerInbox(),
-                                ),
-                              );
-                            },
-                          ),
+                          // ✅ ADDED: Show chat icon only for owners
+                          _userRole == 'owner'
+                              ? IconButton(
+                                  icon: const Icon(Icons.chat_bubble_outline),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => OwnerInbox(),
+                                      ),
+                                    );
+                                  },
+                                )
+                              : const SizedBox.shrink(),
                         ],
                       ),
                     ),
@@ -188,39 +203,51 @@ class CommunityScreenState extends State<CommunityScreen> {
                   bottom: TabBar(
                     indicatorSize: TabBarIndicatorSize.label,
                     labelColor: Theme.of(context).primaryColor,
-                    tabs: const [
-                      Tab(text: 'Feed'),
-                      Tab(text: 'Find a Sitter'),
-                    ],
+                    tabs: _userRole == 'sitter'
+                        ? const [Tab(text: 'Feed')]
+                        : const [Tab(text: 'Feed'), Tab(text: 'Find a Sitter')],
                   ),
                 ),
               ];
             },
             body: TabBarView(
-              children: [
-                FeedTabView(
-                  parentState: this,
-                  onSubTabChanged: (index) {
-                    setState(() {
-                      _currentSubTabIndex = index;
-                    });
-                  },
-                ),
-                FindSitterTab(
-                  onSitterClick: (sitterId, startDate, endDate) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SitterDetailsScreen(
-                          sitterId: sitterId,
-                          startDate: startDate,
-                          endDate: endDate,
-                        ),
+              children: _userRole == 'sitter'
+                  ? [
+                      // Sitter view: Only Feed tab
+                      FeedTabView(
+                        parentState: this,
+                        onSubTabChanged: (index) {
+                          setState(() {
+                            _currentSubTabIndex = index;
+                          });
+                        },
                       ),
-                    );
-                  },
-                ),
-              ],
+                    ]
+                  : [
+                      // Owner view: Feed + Find a Sitter tabs
+                      FeedTabView(
+                        parentState: this,
+                        onSubTabChanged: (index) {
+                          setState(() {
+                            _currentSubTabIndex = index;
+                          });
+                        },
+                      ),
+                      FindSitterTab(
+                        onSitterClick: (sitterId, startDate, endDate) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SitterDetailsScreen(
+                                sitterId: sitterId,
+                                startDate: startDate,
+                                endDate: endDate,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
             ),
           ),
         ),
@@ -237,6 +264,53 @@ class CommunityScreenState extends State<CommunityScreen> {
                 : const SizedBox.shrink();
           },
         ),
+        bottomNavigationBar: _userRole == 'sitter'
+            ? BottomNavigationBar(
+                currentIndex: 1,
+                type: BottomNavigationBarType.fixed,
+                selectedItemColor: const Color(0xFF2ECA6A),
+                unselectedItemColor: Colors.grey.shade600,
+                onTap: (index) {
+                  if (index == 0) {
+                    Get.offAll(() => const SitterDashboard());
+                  }
+                  if (index == 1) {
+                    Get.offAll(() => const CommunityScreen());
+                  }
+                  if (index == 2) {
+                    Get.to(() => const SitterCalendar());
+                  }
+                  if (index == 3) {
+                    Get.to(() => const SitterInbox());
+                  }
+                  if (index == 4) {
+                    Get.to(() => const SitterSettingScreen());
+                  }
+                },
+                items: const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.home_filled),
+                    label: 'Dashboard',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.people),
+                    label: 'Community',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.calendar_today_outlined),
+                    label: 'Calendar',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.chat_bubble_outline),
+                    label: 'Inbox',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.settings_outlined),
+                    label: 'Setting',
+                  ),
+                ],
+              )
+            : null,
       ),
     );
   }
@@ -244,7 +318,7 @@ class CommunityScreenState extends State<CommunityScreen> {
 
 // --- FEED TAB VIEW ---
 class FeedTabView extends StatefulWidget {
-  final CommunityScreenState parentState; // Changed type to public version
+  final CommunityScreenState parentState;
   final Function(int) onSubTabChanged;
 
   const FeedTabView({
@@ -260,6 +334,8 @@ class FeedTabView extends StatefulWidget {
 class _FeedTabViewState extends State<FeedTabView>
     with SingleTickerProviderStateMixin {
   late TabController _subTabController;
+
+  Null get currentUserId => null;
 
   @override
   void initState() {
@@ -306,39 +382,94 @@ class _FeedTabViewState extends State<FeedTabView>
     );
   }
 
-  // 1. PLACE THE METHOD HERE
-  void _handleBooking(PostModel post) async {
-    // Show a confirmation dialog before proceeding
-    bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Apply for Job"),
-        content: Text(
-          "Are you sure you want to apply to pet sit for ${post.userName}?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
+  Future<void> _deletePost(PostModel post) async {
+    bool confirm =
+        await Get.dialog(
+          AlertDialog(
+            title: const Text("Delete Post?"),
+            content: const Text(
+              "Are you sure you want to remove this vacancy? This action cannot be undone.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () => Get.back(result: true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text("Delete"),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Apply"),
-          ),
-        ],
-      ),
-    );
+        ) ??
+        false;
 
-    if (confirm == true) {
-      // Execute the logic to save to the 'bookings' table
-      debugPrint("Booking confirmed for Post ID: ${post.id}");
-      // Add your http.post logic here
+    if (!confirm) return;
+
+    try {
+      final authService = Get.find<AuthService>();
+      final token = await authService.getToken();
+      String baseUrl = Platform.isAndroid
+          ? 'http://10.0.2.2:3000'
+          : 'http://127.0.0.1:3000';
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/posts/${post.id}'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        Get.snackbar(
+          "Success",
+          "Post deleted successfully",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+
+        widget.parentState.setState(() {});
+      } else {
+        Get.snackbar(
+          "Error",
+          "Failed to delete post",
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        "Connection failed",
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
+  void _handleChat(PostModel post) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatScreen(
+          ownerName: post.userName,
+          petName: post.petNames.join(", "),
+          dates:
+              "${post.createdAt.day}/${post.createdAt.month}/${post.createdAt.year}",
+          isRequest: false,
+          room: 'booking-${post.id}',
+          currentUserId: int.tryParse(post.userId.toString()) ?? 0,
+          bookingId: int.tryParse(post.id.toString()) ?? 0,
+        ),
+      ),
+    );
+  }
+
   Widget _buildDynamicPostList(String tab) {
+    final authService = Get.find<AuthService>();
+
     return FutureBuilder<List<PostModel>>(
-      // 1. Use updated PostModel type
       future: widget.parentState.fetchFilteredPosts(tab),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -355,58 +486,88 @@ class _FeedTabViewState extends State<FeedTabView>
         }
 
         final posts = snapshot.data!;
-        return RefreshIndicator(
-          onRefresh: () async => widget.parentState.setState(() {}),
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16.0),
-            itemCount: posts.length,
-            itemBuilder: (context, index) {
-              final post = posts[index];
 
-              // IF WE ARE IN THE VACANCY TAB
-              if (tab == 'vacancy') {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: VacancyPostCard(
-                    post: post,
-                    onApply: () =>
-                        _handleBooking(post), // Passes post to booking handler
-                  ),
-                );
-              }
+        return FutureBuilder<Map<String, dynamic>>(
+          future: Future.wait([
+            authService.getUserRole(),
+            authService.getUserId(),
+          ]).then((values) => {'role': values[0], 'id': values[1]}),
+          builder: (context, authSnapshot) {
+            if (!authSnapshot.hasData) return const SizedBox();
 
-              // IF WE ARE IN 'FOR YOU' OR 'URGENT'
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: PostCard(
-                  post: post,
-                  onLike: (id) => _handleLike(id), // Pass the handler
-                  onComment: (id) {},
-                  onShare: (id) {},
-                ),
-              );
-            }, // Fixed closing brace for itemBuilder
-          ),
+            final String? currentUserRole = authSnapshot.data!['role'];
+            final String? currentUserId = authSnapshot.data!['id']?.toString();
+
+            final bool isSitter = currentUserRole == 'sitter';
+
+            return RefreshIndicator(
+              onRefresh: () async => widget.parentState.setState(() {}),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16.0),
+                itemCount: posts.length,
+                itemBuilder: (context, index) {
+                  final post = posts[index];
+
+                  final bool isMyPost =
+                      currentUserId != null &&
+                      currentUserId == post.userId.toString();
+
+                  debugPrint(
+                    "Post by: ${post.userId} | Me: $currentUserId | Match: $isMyPost",
+                  );
+
+                  final bool canManagePost = !isSitter && isMyPost;
+
+                  if (tab == 'vacancy') {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: VacancyPostCard(
+                        post: post,
+                        isUserSitter: isSitter,
+                        showMenuOptions: canManagePost,
+                        onApply: () => _handleChat(post),
+                        onDelete: (p) => _deletePost(p),
+                        onEdit: (p) {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (context) => CreateVacancyModal(
+                              postToEdit: p,
+                              onVacancyCreated: () =>
+                                  widget.parentState.setState(() {}),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: PostCard(
+                      post: post,
+                      onLike: (id) => _handleLike(id),
+                      onComment: (id) {},
+                      onShare: (id) {},
+                    ),
+                  );
+                },
+              ),
+            );
+          },
         );
       },
     );
   }
 
-   void _handleLike(String postId) async {
+  void _handleLike(String postId) async {
     try {
-      final apiService = ApiService(); 
-      // Capture the server response
+      final apiService = ApiService();
       final result = await apiService.toggleLike(postId);
-      
-      // OPTIONAL: You can force a setState here if you want to 
-      // strictly sync with backend data, but the Optimistic update 
-      // in Step 1 is usually smoother.
       debugPrint("New Like Status from Server: ${result['isLiked']}");
-      
     } catch (e) {
       debugPrint("Error liking post: $e");
-      throw e; // Important: Throw so PostCard catches it and reverts
+      rethrow;
     }
   }
-  
 }

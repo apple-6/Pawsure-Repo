@@ -1,5 +1,4 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'package:pawsure_app/models/pet_model.dart';
 
 class PostModel {
   final String id;
@@ -7,7 +6,7 @@ class PostModel {
   final String userName;
   final String profilePicture;
   final String content;
-  final List<String> mediaUrls; // This name must match PostCard
+  final List<String> mediaUrls;
   final String? location;
   final bool isUrgent;
   bool isLiked;
@@ -15,11 +14,14 @@ class PostModel {
   final DateTime createdAt;
   int commentsCount;
 
-  // Vacancy fields for the new Sitter Vacancy logic
+  // Updated Vacancy fields for Multi-Pet support
   final bool isVacancy;
   final DateTime? startDate;
   final DateTime? endDate;
-  final String? petId;
+  final List<String> petIds; // Changed from String? petId
+  final List<String> petNames; // Added to display tags (e.g., "Buddy", "Luna")
+  final double ratePerNight;
+  final List<Pet> pets;
 
   PostModel({
     required this.id,
@@ -36,51 +38,38 @@ class PostModel {
     this.isVacancy = false,
     this.startDate,
     this.endDate,
-    this.petId,
+    this.petIds = const [],
+    this.petNames = const [],
+    this.ratePerNight = 0.0,
+    this.pets = const [],
     this.commentsCount = 0,
   });
 
-  /// Fix localhost URLs for Android emulator
-  static String _fixImageUrl(String url) {
-    if (url.isEmpty) return url;
-    
-    // On Android emulator, replace localhost with 10.0.2.2
-    if (!kIsWeb && Platform.isAndroid) {
-      return url
-          .replaceAll('http://localhost:', 'http://10.0.2.2:')
-          .replaceAll('https://localhost:', 'https://10.0.2.2:');
-    }
-    return url;
-  }
-
   factory PostModel.fromJson(Map<String, dynamic> json) {
-    // 1. Handle nested user data from your NestJS/Prisma backend
+    // 1. Handle nested user data
     final userData = json['user'] ?? json['owner'] ?? {};
 
-    // 2. Extract media: Checks both potential API keys
+    // 2. Extract media
     final List<dynamic> rawMedia =
         json['post_media'] ?? json['mediaUrls'] ?? [];
+
+    // 3. Extract Pets (Mapped from the @ManyToMany relation in TypeORM)
+    final List<dynamic> rawPets = json['pets'] ?? [];
 
     return PostModel(
       id: json['id'].toString(),
       userId: (json['userId'] ?? userData['id'] ?? '').toString(),
       userName: userData['name'] ?? 'Unknown User',
-      profilePicture: _fixImageUrl(
+      profilePicture:
           userData['profile_picture'] ??
-          "https://cdn-icons-png.flaticon.com/512/194/194279.png"),
+          "https://cdn-icons-png.flaticon.com/512/194/194279.png",
       content: json['content'] ?? '',
 
-      // 3. Mapping the images correctly so they show up in your Carousel
-      // Also fix localhost URLs for Android emulator
+      // Media mapping logic
       mediaUrls: rawMedia
           .map((m) {
-            String url;
-            if (m is String) {
-              url = m;
-            } else {
-              url = (m['url'] ?? m['media_url'] ?? '').toString();
-            }
-            return _fixImageUrl(url);
+            if (m is String) return m;
+            return (m['url'] ?? m['media_url'] ?? '').toString();
           })
           .where((url) => url.isNotEmpty)
           .toList()
@@ -91,9 +80,9 @@ class PostModel {
       //likes: json['likes_count'] ?? json['likes'] ?? 0,
       likes: json['likesCount'] ?? json['likes_count'] ?? json['likes'] ?? 0,
       isLiked: json['isLiked'] ?? false,
-      createdAt: DateTime.tryParse(json['created_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
 
-      // Vacancy fields mapping
+      // Vacancy Mapping
       isVacancy: json['is_vacancy'] ?? false,
       startDate: json['start_date'] != null
           ? DateTime.tryParse(json['start_date'])
@@ -101,7 +90,16 @@ class PostModel {
       endDate: json['end_date'] != null
           ? DateTime.tryParse(json['end_date'])
           : null,
-      petId: json['petId']?.toString(),
+
+      // Multi-Pet Mapping
+      petIds: rawPets.map((p) => p['id'].toString()).toList(),
+      petNames: rawPets.map((p) => p['name'].toString()).toList(),
+      // Inside PostModel.fromJson
+      pets: rawPets.map((p) => Pet.fromJson(p)).toList(),
+      ratePerNight: json['rate_per_night'] != null
+          ? double.tryParse(json['rate_per_night'].toString()) ?? 0.0
+          : 0.0,
+      //petId: json['petId']?.toString(),
       commentsCount: json['commentsCount'] ?? json['comments_count'] ?? 0,
     );
   }
