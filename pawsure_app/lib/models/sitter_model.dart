@@ -33,6 +33,8 @@ class ServiceModel {
 class UserProfile {
   final int id;
   String name;
+  String email; 
+  String phone;
   String location;
   String bio;
   int experienceYears;
@@ -44,6 +46,8 @@ class UserProfile {
   UserProfile({
     required this.id,
     required this.name,
+    required this.email, 
+    required this.phone,
     required this.location,
     required this.bio,
     required this.experienceYears,
@@ -58,8 +62,9 @@ class UserProfile {
       // ✅ MAP USER ID to 'id'
       // The backend response for a Sitter object usually has 'userId' field
       id: json['userId'] ?? 0, 
-      
-      name: json['user']?['name'] ?? 'Unknown',
+      name: json['user']?['name'] ?? '',
+      email: json['user']?['email'] ?? '', 
+      phone: json['user']?['phone_number'] ?? '',
       location: json['address'] ?? json['location'] ?? '',
       bio: json['bio'] ?? '',
       experienceYears: json['experienceYears'] ?? 0,
