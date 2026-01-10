@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/constants/api_config.dart';
+import 'package:pawsure_app/screens/community/community_screen.dart';
 import 'package:pawsure_app/services/auth_service.dart';
 // Note: Ensure these imports point to your actual file locations
 import 'sitter_dashboard.dart';
@@ -178,6 +179,13 @@ class _SitterCalendarState extends State<SitterCalendar> {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
+  // ✅ NEW: Check if a date is in the past
+  bool _isPastDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return date.isBefore(today);
+  }
+
   DateInfo _getDateStatus(DateTime date) {
     final key = DateFormat('yyyy-MM-dd').format(date);
     if (_dateStatuses.containsKey(key)) return _dateStatuses[key]!;
@@ -189,6 +197,11 @@ class _SitterCalendarState extends State<SitterCalendar> {
   }
 
   void _handleDateClick(DateTime date) {
+    // ✅ NEW: Prevent clicking on past dates
+    if (_isPastDate(date)) {
+      return;
+    }
+
     if (_isEditMode) {
       setState(() {
         if (_selectedDates.any((d) => _isSameDay(d, date))) {
@@ -281,6 +294,9 @@ class _SitterCalendarState extends State<SitterCalendar> {
           if (index == 0) {
             Get.offAll(() => const SitterDashboard());
           }
+          if (index == 1) {
+            Get.offAll(() => const CommunityScreen());
+          }
           if (index == 2) {
             Get.to(() => const SitterCalendar());
           }
@@ -296,10 +312,7 @@ class _SitterCalendarState extends State<SitterCalendar> {
             icon: Icon(Icons.home_filled),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            label: 'Discover',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Community'),
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today_outlined),
             label: 'Calendar',
@@ -424,23 +437,34 @@ class _SitterCalendarState extends State<SitterCalendar> {
     final statusInfo = _getDateStatus(date);
     final isSelected = _selectedDates.any((d) => _isSameDay(d, date));
     final isToday = _isSameDay(date, DateTime.now());
+    final isPast = _isPastDate(date); // ✅ NEW: Check if date is past
 
-    // FIXED: Use .withValues(alpha: ...) instead of .withOpacity(...)
-    Color bgColor = isSelected
-        ? _accentColor.withValues(alpha: 0.15)
-        : (statusInfo.status == DateStatus.booked
-              ? _accentColor
-              : (statusInfo.status == DateStatus.unavailable
-                    ? Colors.grey.shade200
-                    : Colors.transparent));
+    // ✅ UPDATED: Grey out past dates
+    Color bgColor;
+    if (isPast) {
+      bgColor = Colors.grey.shade300;
+    } else if (isSelected) {
+      bgColor = _accentColor.withValues(alpha: 0.15);
+    } else if (statusInfo.status == DateStatus.booked) {
+      bgColor = _accentColor;
+    } else if (statusInfo.status == DateStatus.unavailable) {
+      bgColor = Colors.grey.shade200;
+    } else {
+      bgColor = Colors.transparent;
+    }
 
-    Color textColor = isSelected
-        ? _accentColor
-        : (statusInfo.status == DateStatus.booked
-              ? Colors.white
-              : (statusInfo.status == DateStatus.unavailable
-                    ? Colors.grey.shade400
-                    : Colors.black87));
+    Color textColor;
+    if (isPast) {
+      textColor = Colors.grey.shade500;
+    } else if (isSelected) {
+      textColor = _accentColor;
+    } else if (statusInfo.status == DateStatus.booked) {
+      textColor = Colors.white;
+    } else if (statusInfo.status == DateStatus.unavailable) {
+      textColor = Colors.grey.shade400;
+    } else {
+      textColor = Colors.black87;
+    }
 
     return GestureDetector(
       onTap: () => _handleDateClick(date),
@@ -449,7 +473,7 @@ class _SitterCalendarState extends State<SitterCalendar> {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(10),
-          border: isSelected || isToday
+          border: (isSelected || isToday) && !isPast
               ? Border.all(color: _accentColor, width: isSelected ? 2 : 1)
               : null,
         ),
@@ -458,7 +482,7 @@ class _SitterCalendarState extends State<SitterCalendar> {
           style: TextStyle(
             color: textColor,
             fontWeight: FontWeight.w600,
-            decoration: statusInfo.status == DateStatus.unavailable
+            decoration: (statusInfo.status == DateStatus.unavailable || isPast)
                 ? TextDecoration.lineThrough
                 : null,
           ),
@@ -466,10 +490,6 @@ class _SitterCalendarState extends State<SitterCalendar> {
       ),
     );
   }
-
-  // (Remaining UI helper methods like _buildMonthControls, _buildLegend, _buildCalendarGrid go here...)
-  // Note: Inside _showWeeklySettingsSheet and _buildBulkEditBar,
-  // also update .withOpacity to .withValues(alpha: 0.1) as indicated in your diagnostics.
 
   Widget _buildBulkEditBar() {
     return Container(
@@ -603,9 +623,6 @@ class _SitterCalendarState extends State<SitterCalendar> {
     );
   }
 
-  // (Include _buildMonthControls, _buildLegend, _buildWeeklySettingsButton, _buildCalendarGrid, _changeMonth, _legendItem)
-  // These were omitted here for brevity but are required for the full UI.
-
   void _changeMonth(int offset) {
     setState(() {
       _currentDate = DateTime(
@@ -678,6 +695,7 @@ class _SitterCalendarState extends State<SitterCalendar> {
         _legendItem(_accentColor, "Booked"),
         const SizedBox(width: 16),
         _legendItem(Colors.grey.shade300, "Unavailable"),
+        const SizedBox(width: 16),
       ],
     );
   }

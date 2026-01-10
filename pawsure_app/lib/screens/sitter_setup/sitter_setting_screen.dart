@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/screens/auth/login_screen.dart';
+import 'package:pawsure_app/screens/community/community_screen.dart';
 import 'package:pawsure_app/screens/home/home_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pawsure_app/constants/api_config.dart';
@@ -97,9 +98,8 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          builder: (context) =>
+              const Center(child: CircularProgressIndicator()),
         );
 
         // Clear SharedPreferences
@@ -126,7 +126,6 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
             (route) => false,
           );
         }
-
       } catch (e) {
         // Close loading dialog if it's showing
         if (context.mounted) {
@@ -150,23 +149,22 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
     try {
       // 1. Show loading indicator briefly (optional, for UX)
       setState(() => isLoading = true);
-      
+
       // 2. Update Local Storage
       // This tells the app: "Next time I open, show me the Owner Dashboard"
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_role', 'owner'); 
+      await prefs.setString('user_role', 'owner');
 
       // 3. Navigate directly to Owner Dashboard
       // Make sure to import your OwnerDashboard file at the top!
       Get.offAll(() => const MainNavigation());
       
       Get.snackbar(
-        "Switched to Owner Mode", 
+        "Switched to Owner Mode",
         "You can now book other sitters!",
         backgroundColor: Colors.green.withOpacity(0.1),
         colorText: Colors.green[800],
       );
-
     } catch (e) {
       Get.snackbar("Error", "Failed to switch mode: $e");
     } finally {
@@ -193,7 +191,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
             children: [
               // Display specific error if available, or generic message
               Text(
-                errorMessage ?? "Failed to load profile data.", 
+                errorMessage ?? "Failed to load profile data.",
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.grey),
               ),
@@ -221,6 +219,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
         currentIndex: 4,
         onTap: (index) {
           if (index == 0) Get.to(() => const SitterDashboard());
+          if (index == 1) Get.to(() => const CommunityScreen());
           if (index == 2) Get.to(() => const SitterCalendar());
           if (index == 3) Get.to(() => const SitterInbox());
         },
@@ -229,10 +228,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
             icon: Icon(Icons.home_filled),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            label: 'Discover',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Community'),
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today_outlined),
             label: 'Calendar',
@@ -442,7 +438,8 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                           iconColor: Colors.blue,
                           title: "My Performance",
                           subtitle: "View booking history & stats",
-                          onTap: () => Get.to(() => const SitterPerformancePage()),
+                          onTap: () =>
+                              Get.to(() => const SitterPerformancePage()),
                         ),
                         _buildDivider(),
                         _buildMenuItem(
@@ -463,7 +460,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                           iconColor: Colors.orange,
                           title: "Switch to Owner Mode",
                           subtitle: "Book sitters for your own pets",
-                          onTap:_checkAndSwitchToOwner,
+                          onTap: _checkAndSwitchToOwner,
                         ),
                         _buildDivider(),
                         _buildMenuItem(
