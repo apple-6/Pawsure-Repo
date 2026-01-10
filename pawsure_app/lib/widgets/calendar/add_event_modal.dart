@@ -403,7 +403,8 @@ class _AddEventModalState extends State<AddEventModal> {
     });
 
     try {
-      final dateTime = DateTime(
+      // 🔧 STEP 1: Create DateTime in LOCAL timezone (user's input)
+      final localDateTime = DateTime(
         _selectedDate.year,
         _selectedDate.month,
         _selectedDate.day,
@@ -411,10 +412,18 @@ class _AddEventModalState extends State<AddEventModal> {
         _selectedTime.minute,
       );
 
+      // 🔧 STEP 2: Convert to UTC before sending to backend
+      final dateTimeUtc = localDateTime.toUtc();
+
+      debugPrint('📅 Add Event DateTime Conversion:');
+      debugPrint('   Local Input: $localDateTime');
+      debugPrint('   UTC Output: $dateTimeUtc');
+      debugPrint('   ISO String: ${dateTimeUtc.toIso8601String()}');
+
       // ✅ Build payload with pet_ids array
       final payload = {
         'title': _titleController.text.trim(),
-        'dateTime': dateTime.toIso8601String(),
+        'dateTime': dateTimeUtc.toIso8601String(), // ✅ Sends with 'Z' suffix
         'eventType': _selectedType.toJson(),
         'pet_ids': _selectedPetIds.toList(), // ✅ Multi-pet support
         'status': 'upcoming',
@@ -431,6 +440,8 @@ class _AddEventModalState extends State<AddEventModal> {
       final calendarController = Get.find<CalendarController>();
       await calendarController.loadAllOwnerEvents();
       await calendarController.loadAllUpcomingEvents();
+
+      if (!mounted) return;
 
       Navigator.pop(context);
 

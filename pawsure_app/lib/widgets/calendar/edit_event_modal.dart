@@ -35,8 +35,7 @@ class _EditEventModalState extends State<EditEventModal> {
     );
     _notesController = TextEditingController(text: widget.event.notes ?? '');
 
-    // ✅ CRITICAL FIX: Convert to Local Time so picker shows correct date/time
-    // Without this, it shows UTC time (often hours earlier or previous day)
+    // ✅ Convert to Local Time
     final localDateTime = widget.event.dateTime.toLocal();
 
     _selectedDate = localDateTime;
@@ -53,7 +52,7 @@ class _EditEventModalState extends State<EditEventModal> {
     super.dispose();
   }
 
-  // ✅ FIX: Applied "Await Result" pattern for delete confirmation
+  // ✅ Applied "Await Result" pattern for delete confirmation
   Future<void> _confirmDelete() async {
     if (_isLoading) return;
 
@@ -133,7 +132,8 @@ class _EditEventModalState extends State<EditEventModal> {
     });
 
     try {
-      final dateTime = DateTime(
+      // Create DateTime in local timezone first
+      final localDateTime = DateTime(
         _selectedDate.year,
         _selectedDate.month,
         _selectedDate.day,
@@ -141,9 +141,12 @@ class _EditEventModalState extends State<EditEventModal> {
         _selectedTime.minute,
       );
 
+      // Convert to UTC before sending to backend
+      final dateTimeUtc = localDateTime.toUtc();
+
       final updatedEvent = widget.event.copyWith(
         title: _titleController.text.trim(),
-        dateTime: dateTime,
+        dateTime: dateTimeUtc,
         eventType: _selectedType,
         status: _selectedStatus,
         location: _locationController.text.trim().isEmpty
@@ -161,7 +164,7 @@ class _EditEventModalState extends State<EditEventModal> {
           _selectedStatus == EventStatus.completed &&
           widget.event.status != EventStatus.completed;
 
-      // 1. Update logic (Don't trigger dialog inside controller)
+      // 1. Update logic (Don't trigger dialog inside controller automatically)
       await controller.updateEvent(updatedEvent, triggerHealthDialog: false);
 
       if (!mounted) return;
@@ -178,11 +181,11 @@ class _EditEventModalState extends State<EditEventModal> {
         colorText: Colors.green[900],
       );
 
-      // 4. Manually trigger health dialog if needed
+      // 4. Manually trigger health dialog if needed (Using new safe logic)
       if (shouldTriggerHealth) {
-        // Delay slightly to let the modal close animation finish
         await Future.delayed(const Duration(milliseconds: 300));
-        controller.showHealthRecordDialog(updatedEvent);
+        // ✅ Use the robust logic from controller
+        await controller.handleHealthDialogLogic(updatedEvent);
       }
     } catch (e) {
       debugPrint('❌ Error saving event: $e');
