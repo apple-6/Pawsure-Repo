@@ -28,9 +28,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
     homeController = Get.find<HomeController>();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // ✅ Reset to today when screen opens
+      controller.resetToToday();
       // ✅ UPDATED: Load all owner events instead of per-pet
       controller.loadAllOwnerEvents();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Check if we received navigation arguments
+    final args = Get.arguments as Map<String, dynamic>?;
+
+    if (args != null && args['event'] != null) {
+      // ✅ User clicked an event - jump to that date
+      final event = args['event'] as EventModel;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.jumpToEventDate(event);
+      });
+    } else {
+      // ✅ Normal navigation - reset to today
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.resetToToday();
+      });
+    }
   }
 
   @override

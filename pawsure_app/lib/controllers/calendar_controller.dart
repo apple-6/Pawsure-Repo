@@ -146,6 +146,28 @@ class CalendarController extends GetxController {
     focusedDay.value = day;
   }
 
+  // Reset calendar to today's date
+  void resetToToday() {
+    final today = DateTime.now();
+    selectedDay.value = DateTime(today.year, today.month, today.day);
+    focusedDay.value = DateTime(today.year, today.month, today.day);
+    debugPrint('📅 Calendar reset to today: ${selectedDay.value}');
+  }
+
+  // Jump to specific event's date
+  void jumpToEventDate(EventModel event) {
+    final eventDate = DateTime(
+      event.dateTime.year,
+      event.dateTime.month,
+      event.dateTime.day,
+    );
+
+    selectedDay.value = eventDate;
+    focusedDay.value = eventDate;
+
+    debugPrint('📅 Calendar jumped to event date: $eventDate');
+  }
+
   Future<void> markAsComplete(EventModel event) async {
     try {
       debugPrint('✅ Marking event ${event.id} as completed...');
@@ -360,32 +382,28 @@ class CalendarController extends GetxController {
     }
   }
 
-  /// ✅ CRITICAL FIX: Added overrideDialogCheck parameter
-  /// This allows the modal to force showing the dialog even if the modal
-  /// itself is still animating close.
-  Future<void> handleHealthDialogLogic(
-    EventModel event, {
-    bool overrideDialogCheck = false, // 🔧 NEW PARAMETER
-  }) async {
-    // 1. Safety Checks
-    // Only check isDialogOpen if we aren't overriding it
-    if (!overrideDialogCheck && (Get.isDialogOpen ?? false)) {
-      debugPrint(
-        '⚠️ Dialog already open, skipping (override: $overrideDialogCheck)',
-      );
-      return;
+  // Centralized health dialog logic (bonus fix for edit modal)
+  Future<void> handleHealthDialogLogic(EventModel event) async {
+    if (!hasShownDialogFor(event.id)) {
+      markDialogShown(event.id);
+
+      if (!(Get.isDialogOpen ?? false)) {
+        showHealthRecordDialog(event);
+      }
     }
+  }
 
-    if (_eventsWithDialogShown.contains(event.id)) {
-      debugPrint('⚠️ Dialog already shown for ${event.id}, skipping');
-      return;
-    }
+  // Helper to mark dialog as shown
+  void markDialogShown(int eventId) {
+    _eventsWithDialogShown.add(eventId);
+    debugPrint('📝 Marked event $eventId as shown');
+  }
 
-    // 2. Mark as shown IMMEDIATELY
-    _eventsWithDialogShown.add(event.id);
-    debugPrint('📝 Marked event ${event.id} as shown');
+  bool hasShownDialogFor(int eventId) =>
+      _eventsWithDialogShown.contains(eventId);
 
-    // 3. Show dialog and WAIT for user choice
+  // Helper to actually show the dialog and handle navigation
+  Future<void> showHealthRecordDialog(EventModel event) async {
     debugPrint('📢 Showing dialog...');
     bool? shouldNavigate = false;
 
@@ -410,10 +428,10 @@ class CalendarController extends GetxController {
       },
     );
 
-    // 4. Ensure dialog is closed by waiting a tiny bit
+    // Ensure dialog is closed by waiting a tiny bit
     await Future.delayed(const Duration(milliseconds: 300));
 
-    // 5. Navigate ONLY if confirmed (Dialog is 100% gone now)
+    // Navigate ONLY if confirmed (Dialog is 100% gone now)
     if (shouldNavigate == true) {
       debugPrint('🏥 Navigating to form...');
       await Get.toNamed(
@@ -429,9 +447,6 @@ class CalendarController extends GetxController {
       debugPrint('✅ Returned from form');
     }
   }
-
-  bool hasShownDialogFor(int eventId) =>
-      _eventsWithDialogShown.contains(eventId);
 
   void resetState() {
     events.clear();

@@ -181,10 +181,11 @@ class _EditEventModalState extends State<EditEventModal> {
         colorText: Colors.green[900],
       );
 
-      // 4. Manually trigger health dialog if needed (Using new safe logic)
+      // 4. Manually trigger health dialog if needed
+      // After saving event
       if (shouldTriggerHealth) {
         await Future.delayed(const Duration(milliseconds: 300));
-        // ✅ Use the robust logic from controller
+        // ✅ Use centralized method instead of manual checks
         await controller.handleHealthDialogLogic(updatedEvent);
       }
     } catch (e) {

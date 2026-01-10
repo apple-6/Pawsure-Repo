@@ -165,8 +165,17 @@ class _EventListItem extends StatelessWidget {
         .join(', ');
 
     return InkWell(
+      // 🔧 FIX: Navigate to calendar with event argument
       onTap: () {
-        Get.toNamed('/calendar');
+        debugPrint('🎯 Tapped on upcoming event: ${event.title}');
+        debugPrint('   Event date: ${event.dateTime}');
+
+        Get.toNamed(
+          '/calendar',
+          arguments: {
+            'event': event, // 🔧 Pass the event
+          },
+        );
       },
       borderRadius: BorderRadius.circular(12),
       child: Container(
