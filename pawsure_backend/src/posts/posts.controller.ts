@@ -11,6 +11,7 @@ import {
   UploadedFiles,
   Query,
   BadRequestException,
+  Request,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -34,6 +35,21 @@ export class PostsController {
       console.log('❌ Posts service error:', error.message);
       throw new BadRequestException(`Failed to fetch posts: ${error.message}`);
     }
+  }*/
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+async findAll(@Request() req,@Query('tab') tab?: string ) {
+  console.log('🚀 GET /posts called with tab:', tab);
+  const userId = req.user?.id; 
+    console.log('👤 Fetching for User ID:', userId);
+  try {
+    const posts = await this.postsService.findAll(tab, userId);
+    console.log('✅ Posts service returned:', posts.length, 'posts');
+    return posts;
+  } catch (error) {
+    console.log('❌ Posts service error:', error.message);
+    throw new BadRequestException(`Failed to fetch posts: ${error.message}`);
   }
 
   @Post()

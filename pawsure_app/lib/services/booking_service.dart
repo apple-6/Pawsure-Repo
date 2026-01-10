@@ -15,7 +15,8 @@ class BookingService {
     required DateTime endDate,
     required double totalAmount,
     required String sitterId,
-    required int petId,
+    //required int petId,
+    required List<String> petIds,
     required String dropOffTime,
     required String pickUpTime,
     String? message,
@@ -24,6 +25,11 @@ class BookingService {
     try {
       final authService = Get.find<AuthService>();
       final token = await authService.getToken();
+
+      final List<int> formattedPetIds = petIds
+          .map((id) => int.tryParse(id) ?? -1) // Safety check
+          .where((id) => id != -1)
+          .toList();
 
       final response = await http.post(
         Uri.parse('$apiBaseUrl/bookings'),
@@ -36,7 +42,8 @@ class BookingService {
           'end_date': DateFormat('yyyy-MM-dd').format(endDate),
           'total_amount': totalAmount,
           'sitterId': int.parse(sitterId),
-          'petId': petId,
+          //'petId': petId,
+          'petIds': formattedPetIds,
           'drop_off_time': dropOffTime,
           'pick_up_time': pickUpTime,
           'message': message,

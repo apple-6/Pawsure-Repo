@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:pawsure_app/screens/auth/login_screen.dart';
 import 'package:pawsure_app/models/role.dart';
 import '../../services/auth_service.dart';
+import '../../controllers/profile_controller.dart'; // 🆕 Added for reloading profile
 import '../../main_navigation.dart';
 import '../sitter_setup/sitter_setup_screen.dart';
 
@@ -56,6 +57,12 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
           backgroundColor: Colors.green,
         ),
       );
+
+      // 🆕 RELOAD ProfileController with the NEW user's data
+      if (Get.isRegistered<ProfileController>()) {
+        final profileController = Get.find<ProfileController>();
+        await profileController.loadProfile();
+      }
 
       // Navigate based on role
       if (role == 'sitter') {

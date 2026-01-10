@@ -1,8 +1,8 @@
+//pawsure_app/lib/controllers/booking_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/services/booking_service.dart';
 import 'package:pawsure_app/services/api_service.dart';
-
 
 class BookingController extends GetxController {
   final BookingService _bookingService = BookingService();
@@ -10,7 +10,7 @@ class BookingController extends GetxController {
   // State Variables
   var userBookings = <dynamic>[].obs;
   var isLoadingBookings = false.obs;
-  var isCreatingBooking = false.obs; 
+  var isCreatingBooking = false.obs;
 
   @override
   void onInit() {
@@ -22,15 +22,14 @@ class BookingController extends GetxController {
   Future<void> fetchMyBookings() async {
     try {
       isLoadingBookings.value = true;
-      
+
       final data = await _bookingService.fetchMyBookings();
-      
+
       debugPrint("📡 BookingController: Loaded ${data.length} bookings.");
       userBookings.assignAll(data);
-      
     } catch (e) {
       debugPrint("❌ BookingController Error: $e");
-      userBookings.clear(); 
+      userBookings.clear();
     } finally {
       isLoadingBookings.value = false;
     }
@@ -42,7 +41,8 @@ class BookingController extends GetxController {
     required DateTime endDate,
     required double totalAmount,
     required String sitterId,
-    required int petId,
+    //required int petId,
+    required List<String> petIds,
     required String dropOffTime,
     required String pickUpTime,
     String? message,
@@ -56,7 +56,7 @@ class BookingController extends GetxController {
         endDate: endDate,
         totalAmount: totalAmount,
         sitterId: sitterId,
-        petId: petId,
+        petIds: petIds,
         dropOffTime: dropOffTime,
         pickUpTime: pickUpTime,
         message: message,
@@ -64,8 +64,8 @@ class BookingController extends GetxController {
       );
 
       await fetchMyBookings();
-      
-      return true; 
+
+      return true;
     } catch (e) {
       Get.snackbar(
         "Booking Failed",
@@ -74,7 +74,7 @@ class BookingController extends GetxController {
         backgroundColor: Colors.redAccent.withOpacity(0.1),
         colorText: Colors.red,
       );
-      return false; 
+      return false;
     } finally {
       isCreatingBooking.value = false;
     }
@@ -85,7 +85,7 @@ class BookingController extends GetxController {
     try {
       isLoadingBookings.value = true;
       // FIX: Call the service, NOT _apiService directly
-      final data = await _bookingService.fetchOwnerBookings(); 
+      final data = await _bookingService.fetchOwnerBookings();
       userBookings.assignAll(data);
     } catch (e) {
       debugPrint("❌ Error fetching owner bookings: $e");
@@ -99,17 +99,25 @@ class BookingController extends GetxController {
     try {
       // FIX: Call the service, NOT _apiService directly
       await _bookingService.updateBookingStatus(bookingId, 'cancelled');
-      
+
       // Refresh list
       await fetchOwnerBookings();
-      
-      Get.snackbar("Success", "Booking cancelled", backgroundColor: Colors.grey, colorText: Colors.white);
+
+      Get.snackbar(
+        "Success",
+        "Booking cancelled",
+        backgroundColor: Colors.grey,
+        colorText: Colors.white,
+      );
       return true;
     } catch (e) {
-      Get.snackbar("Error", "Failed to cancel", backgroundColor: Colors.red, colorText: Colors.white);
+      Get.snackbar(
+        "Error",
+        "Failed to cancel",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
       return false;
     }
   }
-
-
 }

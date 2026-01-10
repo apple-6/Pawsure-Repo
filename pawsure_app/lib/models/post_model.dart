@@ -9,9 +9,10 @@ class PostModel {
   final List<String> mediaUrls;
   final String? location;
   final bool isUrgent;
-  final bool isLiked;
-  final int likes;
+  bool isLiked;
+  int likes; //remove final
   final DateTime createdAt;
+  int commentsCount;
 
   // Updated Vacancy fields for Multi-Pet support
   final bool isVacancy;
@@ -41,6 +42,7 @@ class PostModel {
     this.petNames = const [],
     this.ratePerNight = 0.0,
     this.pets = const [],
+    this.commentsCount = 0,
   });
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
@@ -75,7 +77,8 @@ class PostModel {
 
       location: json['location_name'] ?? json['location'],
       isUrgent: json['is_urgent'] ?? false,
-      likes: json['likes_count'] ?? json['likes'] ?? 0,
+      //likes: json['likes_count'] ?? json['likes'] ?? 0,
+      likes: json['likesCount'] ?? json['likes_count'] ?? json['likes'] ?? 0,
       isLiked: json['isLiked'] ?? false,
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
 
@@ -96,6 +99,8 @@ class PostModel {
       ratePerNight: json['rate_per_night'] != null
           ? double.tryParse(json['rate_per_night'].toString()) ?? 0.0
           : 0.0,
+      //petId: json['petId']?.toString(),
+      commentsCount: json['commentsCount'] ?? json['comments_count'] ?? 0,
     );
   }
 }

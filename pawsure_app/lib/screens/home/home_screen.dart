@@ -6,7 +6,7 @@ import '../../controllers/navigation_controller.dart';
 import '../../widgets/home/status_card.dart';
 import '../../widgets/home/sos_button.dart';
 import '../../widgets/home/upcoming_events_card.dart';
-import 'package:pawsure_app/widgets/home/quick_actions.dart'; // From sprint4-main
+import 'package:pawsure_app/widgets/home/quick_actions.dart';
 import 'booking_card.dart';
 import '../../controllers/booking_controller.dart';
 
@@ -109,26 +109,26 @@ class HomeScreen extends StatelessWidget {
                   // Divider
                   const PopupMenuDivider(),
                   // Add Pet option
-                  const PopupMenuItem<String>(
-                    value: 'add_pet',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.add_circle_outline,
-                          size: 20,
-                          color: Color(0xFF22C55E),
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'Add New Pet',
-                          style: TextStyle(
-                            color: Color(0xFF22C55E),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  // const PopupMenuItem<String>(
+                  //   value: 'add_pet',
+                  //   child: Row(
+                  //     children: [
+                  //       Icon(
+                  //         Icons.add_circle_outline,
+                  //         size: 20,
+                  //         color: Color(0xFF22C55E),
+                  //       ),
+                  //       SizedBox(width: 12),
+                  //       Text(
+                  //         'Add New Pet',
+                  //         style: TextStyle(
+                  //           color: Color(0xFF22C55E),
+                  //           fontWeight: FontWeight.w500,
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
                 ],
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -260,19 +260,19 @@ class HomeScreen extends StatelessWidget {
                   petName: pet.name,
                   petType: pet.species ?? 'Pet',
                   currentMood: controller.currentMood.value,
-                  streak: controller.currentStreak.value, // 🔥 Real-time streak from API
+                  streak: controller.currentStreak.value,
                   progress: controller.dailyProgress,
                   goals: controller.dailyGoals,
                 ),
 
                 const SizedBox(height: 24),
 
-                // 🆕 Daily Activity Progress Card (Your Feature)
+                // Daily Activity Progress Card
                 _buildDailyActivityCard(controller),
 
                 const SizedBox(height: 24),
 
-                // 🆕 Quick Actions (From Sprint4-Main)
+                // Quick Actions
                 const QuickActions(),
 
                 const SizedBox(height: 24),
@@ -281,9 +281,8 @@ class HomeScreen extends StatelessWidget {
                 UpcomingEventsCard(petId: pet.id),
                 const SizedBox(height: 24),
 
-                // Bookings Section (Updated UI from Sprint4-Main)
+                // ✅ UPDATED: Bookings Section - Show ALL bookings
                 Obx(() {
-                  // We wrap the entire logic in the Obx so the whole container can react
                   return Container(
                     width: double.infinity,
                     margin: const EdgeInsets.only(top: 12),
@@ -303,21 +302,48 @@ class HomeScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          "My Bookings",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              "My Bookings",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            // ✅ Show total count
+                            if (!bookingController.isLoadingBookings.value)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.deepPurple.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${bookingController.userBookings.length}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.deepPurple,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                        
+
                         // ⚠️ UNPAID BOOKINGS WARNING
                         if (!bookingController.isLoadingBookings.value) ...[
                           (() {
                             final unpaidCount = bookingController.userBookings
                                 .where((b) {
-                                  final status = b['status']?.toString().toLowerCase() ?? '';
+                                  final status =
+                                      b['status']?.toString().toLowerCase() ??
+                                      '';
                                   final isPaid = b['is_paid'] == true;
                                   return status == 'completed' && !isPaid;
                                 })
@@ -325,12 +351,18 @@ class HomeScreen extends StatelessWidget {
 
                             if (unpaidCount > 0) {
                               return Container(
-                                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                                margin: const EdgeInsets.only(
+                                  top: 12,
+                                  bottom: 8,
+                                ),
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
                                   color: Colors.orange.shade50,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.orange.shade200, width: 2),
+                                  border: Border.all(
+                                    color: Colors.orange.shade200,
+                                    width: 2,
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
@@ -357,7 +389,7 @@ class HomeScreen extends StatelessWidget {
                             return const SizedBox.shrink();
                           })(),
                         ],
-                        
+
                         const SizedBox(height: 16),
 
                         // Logic for Loading, Empty, or List
@@ -368,61 +400,44 @@ class HomeScreen extends StatelessWidget {
                               child: CircularProgressIndicator(),
                             ),
                           )
-                        else ...[
-                          // Filter bookings logic retained from your code
-                          (() {
-                            final filteredBookings = bookingController
-                                .userBookings
-                                .where((booking) {
-                                  final bId = booking['pet']?['id'];
-                                  final sId = controller.selectedPet.value?.id;
-                                  return bId.toString() == sId.toString();
-                                })
-                                .toList();
-
-                            if (filteredBookings.isEmpty) {
-                              return Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 20,
+                        else if (bookingController.userBookings.isEmpty)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 32,
+                                    color: Colors.grey[300],
                                   ),
-                                  child: Column(
-                                    children: [
-                                      Icon(
-                                        Icons.calendar_today_outlined,
-                                        size: 32,
-                                        color: Colors.grey[300],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      const Text(
-                                        "No bookings scheduled for this pet.",
-                                        style: TextStyle(
-                                          color: Colors.grey,
-                                          fontSize: 14,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }
-
-                            return Column(
-                              children: filteredBookings
-                                  .map(
-                                    (booking) => BookingCard(
-                                      booking: booking,
-                                      onPaymentComplete: () {
-                                        // Refresh bookings after payment
-                                        bookingController.fetchMyBookings();
-                                      },
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    "No bookings yet.",
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 14,
                                     ),
-                                  )
-                                  .toList(),
-                            );
-                          })(),
-                        ],
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          // ✅ REMOVED FILTERING - Show ALL bookings
+                          Column(
+                            children: bookingController.userBookings
+                                .map(
+                                  (booking) => BookingCard(
+                                    booking: booking,
+                                    onPaymentComplete: () {
+                                      bookingController.fetchMyBookings();
+                                    },
+                                  ),
+                                )
+                                .toList(),
+                          ),
                       ],
                     ),
                   );
@@ -442,7 +457,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // 🆕 Daily Activity Progress Card Widget
+  // Daily Activity Progress Card Widget
   Widget _buildDailyActivityCard(HomeController controller) {
     return Obx(() {
       final progress = controller.calculateDailyProgress();
@@ -550,10 +565,9 @@ class HomeScreen extends StatelessWidget {
                       const SizedBox(height: 4),
                       TextButton(
                         onPressed: () {
-                          // Navigate to Activity tab
                           final navController =
                               Get.find<NavigationController>();
-                          navController.changePage(2); // Activity tab index
+                          navController.changePage(2);
                         },
                         child: const Text('Track Activity'),
                       ),

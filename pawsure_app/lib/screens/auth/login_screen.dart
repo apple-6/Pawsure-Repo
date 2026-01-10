@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // ← ADD THIS IMPORT
 import '../sitter_setup/sitter_dashboard.dart';
 import '../../services/auth_service.dart';
+import '../../controllers/profile_controller.dart'; // 🆕 Added for reloading profile
 import 'register_screen.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_setup_screen.dart';
 import '../../models/role.dart';
@@ -394,14 +395,19 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
 
-        // Navigate to home
-        Get.offAllNamed('/home');
-      } 
-      if (role == 'sitter') {
-        // ✅ SITTER: Go to Sitter Dashboard
-        Get.offAll(() => const SitterDashboard());
-      } else {
-        Get.offAllNamed('/home');
+        // 🆕 RELOAD ProfileController with the NEW user's data
+        if (Get.isRegistered<ProfileController>()) {
+          final profileController = Get.find<ProfileController>();
+          await profileController.loadProfile();
+        }
+
+        // Navigate based on role
+        if (role == 'sitter') {
+          // ✅ SITTER: Go to Sitter Dashboard
+          Get.offAll(() => const SitterDashboard());
+        } else {
+          Get.offAllNamed('/home');
+        }
       }
     } catch (e) {
       setState(() => _isLoading = false);

@@ -15,6 +15,7 @@ import { Comment } from '../comments/comments.entity';
 import { Like } from '../likes/likes.entity';
 import { Pet } from '../pet/pet.entity'; // Make sure this path is correct
 
+
 @Entity('posts')
 export class Post {
   @PrimaryGeneratedColumn()

@@ -3,12 +3,9 @@ import 'package:get/get.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/screens/auth/login_screen.dart';
+import 'package:pawsure_app/screens/home/home_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pawsure_app/constants/api_config.dart';
-import 'package:pawsure_app/services/storage_service.dart';
-import 'package:pawsure_app/controllers/health_controller.dart';
-import 'package:pawsure_app/controllers/home_controller.dart';
-import 'package:pawsure_app/controllers/profile_controller.dart';
 
 // Navigation Imports
 import 'sitter_calendar.dart';
@@ -18,7 +15,6 @@ import 'sitter_preview_page.dart';
 import 'sitter_edit_profile.dart';
 import 'sitter_performance_page.dart';
 import '../../models/sitter_model.dart';
-import '../../services/api_service.dart';
 
 class SitterSettingScreen extends StatefulWidget {
   const SitterSettingScreen({super.key});
@@ -96,54 +92,86 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
 
     if (shouldLogout == true) {
       try {
-        // --- TOKEN CLEARING ---
-        // If you rely on SharedPreferences mostly, use this:
+        // Show loading indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+
+        // Clear SharedPreferences
         final prefs = await SharedPreferences.getInstance();
-        await prefs.clear(); // Clears UserID, Token, etc.
+        await prefs.clear();
 
-        final storageService = Get.find<StorageService>();
-        await storageService.deleteToken();
-
-        // --- RESET GETX CONTROLLERS ---
-        // These checks are safe (they won't crash if the controller isn't found)
-        // Ensure you import these Controllers at the top if they are in different files.
-        if (Get.isRegistered<HealthController>()) {
-          Get.find<HealthController>().resetState();
-        }
-        if (Get.isRegistered<HomeController>()) {
-          Get.find<HomeController>().resetState();
-        }
-        if (Get.isRegistered<ProfileController>()) {
-          Get.find<ProfileController>().resetState();
+        // Clear user data state
+        if (mounted) {
+          setState(() {
+            currentUser = null;
+          });
         }
 
-        // Clear all dependencies from memory
-        Get.deleteAll(force: true);
+        // Close loading dialog
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
 
-        // Navigate to Login
-        Get.offAll(() => LoginScreen()); 
+        // Navigate to login and remove all previous routes
+        // Use Navigator instead of Get to avoid controller issues
+        if (context.mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => LoginScreen()),
+            (route) => false,
+          );
+        }
 
-        Get.snackbar(
-          'Success',
-          'You have been logged out',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.withOpacity(0.1),
-          colorText: Colors.green[800],
-          duration: const Duration(seconds: 2),
-        );
       } catch (e) {
-        debugPrint('❌ Error during logout: $e');
-        Get.snackbar(
-          'Error',
-          'Failed to logout: ${e.toString()}',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withOpacity(0.1),
-          colorText: Colors.red[800],
-        );
+        // Close loading dialog if it's showing
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
+
+        // Show error message
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to logout: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
 
+  Future<void> _checkAndSwitchToOwner() async {
+    try {
+      // 1. Show loading indicator briefly (optional, for UX)
+      setState(() => isLoading = true);
+      
+      // 2. Update Local Storage
+      // This tells the app: "Next time I open, show me the Owner Dashboard"
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_role', 'owner'); 
+
+      // 3. Navigate directly to Owner Dashboard
+      // Make sure to import your OwnerDashboard file at the top!
+      Get.offAll(() => const HomeScreen());
+      
+      Get.snackbar(
+        "Switched to Owner Mode", 
+        "You can now book other sitters!",
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green[800],
+      );
+
+    } catch (e) {
+      Get.snackbar("Error", "Failed to switch mode: $e");
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -156,16 +184,25 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
       );
     }
 
-    if (errorMessage != null && currentUser == null) {
+    if (currentUser == null) {
       return Scaffold(
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(errorMessage!, textAlign: TextAlign.center),
+              // Display specific error if available, or generic message
+              Text(
+                errorMessage ?? "Failed to load profile data.", 
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey),
+              ),
               const SizedBox(height: 10),
               ElevatedButton(
                 onPressed: _fetchUserData,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: brandColor,
+                  foregroundColor: Colors.white,
+                ),
                 child: const Text("Retry"),
               ),
             ],
@@ -301,7 +338,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        currentUser!.name,
+                                        currentUser?.name ?? "Sitter",
                                         style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
@@ -425,7 +462,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                           iconColor: Colors.orange,
                           title: "Switch to Owner Mode",
                           subtitle: "Book sitters for your own pets",
-                          onTap: () {},
+                          onTap:_checkAndSwitchToOwner,
                         ),
                         _buildDivider(),
                         _buildMenuItem(

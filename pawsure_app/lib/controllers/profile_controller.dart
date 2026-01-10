@@ -1,3 +1,4 @@
+//pawsure_app/lib/controllers/profile_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/services/auth_service.dart';
@@ -43,6 +44,8 @@ class ProfileController extends GetxController {
         );
       } else {
         debugPrint('⚠️ No profile data available');
+        // If profile fetch fails/returns null, ensure we don't show old data
+        if (user.isNotEmpty) user.clear();
       }
     } catch (e) {
       debugPrint('❌ Error loading profile: $e');

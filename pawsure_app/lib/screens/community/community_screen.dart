@@ -15,6 +15,8 @@ import 'find_sitter_tab.dart';
 import 'sitter_details.dart';
 import 'vacancy_post_card.dart';
 import 'owner_inbox.dart';
+import 'package:pawsure_app/services/api_service.dart';
+import 'package:pawsure_app/services/auth_service.dart';
 
 // --- POST MODEL ---
 class Post {
@@ -78,32 +80,49 @@ class Post {
 // --- COMMUNITY SCREEN ---
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
+  
 
   @override
   State<CommunityScreen> createState() => CommunityScreenState(); // Removed underscore to allow access
 }
 
 class CommunityScreenState extends State<CommunityScreen> {
+  final ApiService _apiService = ApiService();
   final String baseUrl = "http://localhost:3000";
   int _currentSubTabIndex = 0; // 0: For You, 1: Urgent, 2: Vacancy
 
   // Change Post to PostModel here
+  // Future<List<PostModel>> fetchFilteredPosts(String tab) async {
+  //   try {
+  //     final response = await http.get(
+  //       Uri.parse('$baseUrl/posts?tab=$tab'),
+  //       headers: {'Content-Type': 'application/json'},
+  //     );
+
+  //     if (response.statusCode == 200) {
+  //       List<dynamic> data = json.decode(response.body);
+  //       // Ensure you are using PostModel.fromJson here
+  //       return data.map((map) => PostModel.fromJson(map)).toList();
+  //     } else {
+  //       throw Exception('Failed to load posts');
+  //     }
+  //   } catch (e) {
+  //     debugPrint("Error fetching posts: $e");
+  //     return [];
+  //   }
+  // }
+
   Future<List<PostModel>> fetchFilteredPosts(String tab) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/posts?tab=$tab'),
-        headers: {'Content-Type': 'application/json'},
-      );
+      // ✅ Use apiService.getPosts() instead of http.get()
+      // This automatically adds the 'Authorization: Bearer <token>' header
+      final List<dynamic> data = await _apiService.getPosts(tab: tab);
 
-      if (response.statusCode == 200) {
-        List<dynamic> data = json.decode(response.body);
-        // Ensure you are using PostModel.fromJson here
-        return data.map((map) => PostModel.fromJson(map)).toList();
-      } else {
-        throw Exception('Failed to load posts');
-      }
+      // Map the dynamic list to your PostModel list
+      return data.map((map) => PostModel.fromJson(map)).toList();
     } catch (e) {
       debugPrint("Error fetching posts: $e");
+      // Optional: Rethrow if you want the UI to show an error state
       return [];
     }
   }
@@ -471,7 +490,7 @@ class _FeedTabViewState extends State<FeedTabView>
                     padding: const EdgeInsets.only(bottom: 16.0),
                     child: PostCard(
                       post: post,
-                      onLike: (id) {},
+                      onLike: (id) => _handleLike(id), // Pass the handler
                       onComment: (id) {},
                       onShare: (id) {},
                     ),
@@ -484,4 +503,22 @@ class _FeedTabViewState extends State<FeedTabView>
       },
     );
   }
+
+   void _handleLike(String postId) async {
+    try {
+      final apiService = ApiService(); 
+      // Capture the server response
+      final result = await apiService.toggleLike(postId);
+      
+      // OPTIONAL: You can force a setState here if you want to 
+      // strictly sync with backend data, but the Optimistic update 
+      // in Step 1 is usually smoother.
+      debugPrint("New Like Status from Server: ${result['isLiked']}");
+      
+    } catch (e) {
+      debugPrint("Error liking post: $e");
+      throw e; // Important: Throw so PostCard catches it and reverts
+    }
+  }
+  
 }
