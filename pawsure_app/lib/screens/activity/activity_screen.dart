@@ -2,8 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/activity_controller.dart';
-import 'package:pawsure_app/controllers/home_controller.dart'; // 🆕 IMPORTED
+import 'package:pawsure_app/controllers/home_controller.dart';
 import 'package:pawsure_app/controllers/pet_controller.dart';
+import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/screens/activity/widgets/activity_stats_card.dart';
 import 'package:pawsure_app/screens/activity/widgets/activity_list_item.dart';
 import 'package:pawsure_app/screens/activity/widgets/add_activity_modal.dart';
@@ -18,31 +19,122 @@ class ActivityScreen extends StatelessWidget {
     final ActivityController controller = Get.find<ActivityController>();
     final PetController petController = Get.find<PetController>();
 
+    // Brand colors & Styles matching Home Screen
+    const brandColor = Color(0xFF22C55E);
+    const backgroundColor = Color(0xFFF9FAFB);
+
     return Scaffold(
+      backgroundColor: backgroundColor, // ✅ Consistent off-white background
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text('Activity Tracker'),
+        backgroundColor: backgroundColor, // ✅ Flat AppBar matching background
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: const Text(
+          'Activity Tracker',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+            color: Colors.black,
+          ),
+        ),
         actions: [
-          // Pet Selector
+          // ✅ Pet Selector (Matches Home Screen "Pill" style)
           Obx(() {
             if (petController.pets.isNotEmpty) {
-              return PopupMenuButton(
-                icon: const Icon(Icons.pets),
-                onSelected: (pet) => petController.selectPet(pet),
+              final selectedPet = petController.selectedPet.value;
+              final emoji = selectedPet?.species?.toLowerCase() == 'dog'
+                  ? '🐕'
+                  : '🐈';
+
+              return PopupMenuButton<Pet>(
+                tooltip: 'Switch Pet',
+                offset: const Offset(0, 45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                onSelected: (Pet pet) {
+                  petController.selectPet(pet);
+                },
+                // The Trigger Button (Capsule Style)
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  margin: const EdgeInsets.only(right: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6), // Matching Home Screen grey
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(emoji, style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 8),
+                      Text(
+                        selectedPet?.name ?? 'Select',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF374151),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: Color(0xFF6B7280),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+                // Dropdown Items
                 itemBuilder: (context) => petController.pets
                     .map(
-                      (pet) => PopupMenuItem(
+                      (pet) => PopupMenuItem<Pet>(
                         value: pet,
                         child: Row(
                           children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color:
+                                    petController.selectedPet.value?.id ==
+                                        pet.id
+                                    ? brandColor.withOpacity(0.1)
+                                    : const Color(0xFFF3F4F6),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  pet.species?.toLowerCase() == 'dog'
+                                      ? '🐕'
+                                      : '🐈',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                pet.name,
+                                style: TextStyle(
+                                  fontWeight:
+                                      petController.selectedPet.value?.id ==
+                                          pet.id
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ),
                             if (petController.selectedPet.value?.id == pet.id)
                               const Icon(
-                                Icons.check,
+                                Icons.check_circle,
                                 size: 20,
-                                color: Colors.green,
+                                color: brandColor,
                               ),
-                            const SizedBox(width: 8),
-                            Text(pet.name),
                           ],
                         ),
                       ),
@@ -91,7 +183,11 @@ class ActivityScreen extends StatelessWidget {
                 children: [
                   const Text(
                     'Recent Activities',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                   ),
                   TextButton.icon(
                     onPressed: () =>
@@ -164,7 +260,6 @@ class ActivityScreen extends StatelessWidget {
           // Start GPS Tracking Button
           FloatingActionButton.extended(
             heroTag: 'gps',
-            // 🆕 FIX: Await GPS screen result, then refresh Home data
             onPressed: () async {
               await Get.to(() => const GPSTrackingScreen());
               if (Get.isRegistered<HomeController>()) {
@@ -179,14 +274,13 @@ class ActivityScreen extends StatelessWidget {
           // Manual Add Button
           FloatingActionButton(
             heroTag: 'manual',
-            // 🆕 FIX: Await Modal result, then refresh Home data
             onPressed: () async {
               await _showAddActivityModal(context);
               if (Get.isRegistered<HomeController>()) {
                 Get.find<HomeController>().refreshHomeData();
               }
             },
-            backgroundColor: Colors.green,
+            backgroundColor: brandColor, // Consistent Green
             child: const Icon(Icons.add),
           ),
         ],
@@ -194,21 +288,30 @@ class ActivityScreen extends StatelessWidget {
     );
   }
 
+  // ✅ UPDATED: Cleaner Filter Chips
   Widget _buildFilterChip(ActivityController controller, String label) {
     final isSelected = controller.selectedFilter.value == label;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
-        label: Text(label),
+        label: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.orange.shade900 : Colors.black87,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
         selected: isSelected,
         onSelected: (_) => controller.setFilter(label),
+        backgroundColor: Colors.white,
         selectedColor: Colors.orange.withOpacity(0.2),
         checkmarkColor: Colors.orange,
+        shape: const StadiumBorder(side: BorderSide.none), // Cleaner look
+        elevation: 0,
       ),
     );
   }
 
-  // 🆕 FIX: Changed to return Future<void> so we can await it
   Future<void> _showAddActivityModal(BuildContext context) async {
     await showModalBottomSheet(
       context: context,
