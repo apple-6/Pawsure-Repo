@@ -134,6 +134,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
         services: updatedServices,
         experienceYears: widget.user.experienceYears,
         staysCompleted: widget.user.staysCompleted,
+        email: widget.user.email,
+        phone: widget.user.phone,
       );
 
       Navigator.of(context).pop(); // Close loader

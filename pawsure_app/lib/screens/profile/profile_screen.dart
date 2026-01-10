@@ -351,7 +351,7 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         _buildMenuDivider(),
                         _buildMenuItem(
-                          icon: Icons.notifications,
+                          icon: Icons.swap_horiz,
                           iconBg: const Color(0xFFFEF3C7),
                           iconColor: const Color(0xFFF59E0B),
                           title: 'Switch to Sitter Mode',
