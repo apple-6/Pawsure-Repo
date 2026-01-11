@@ -33,7 +33,7 @@ class _Step3VerificationState extends State<Step3Verification> {
   Future<void> _pickIdDocument() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'], // Configure allowed file types
+      allowedExtensions: ['jpg', 'jpeg', 'png'], // Configure allowed file types
     );
 
     if (result != null) {
@@ -92,54 +92,80 @@ class _Step3VerificationState extends State<Step3Verification> {
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         
-        // --- MODIFIED FILE UPLOAD CONTAINER ---
-        Container(
-          // ... (existing decoration) ...
-          width: double.infinity,
-            height: 140,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Show a checkmark or file icon if uploaded, otherwise show the upload icon
-              Icon(
-                _selectedDocumentPath != null ? Icons.check_circle : Icons.upload_rounded, 
-                size: 36, 
-                color: _selectedDocumentPath != null ? const Color(0xFF1CCA5B) : Colors.grey.shade500
-              ),
-              const SizedBox(height: 8),
-              
-              // Show file name or instructions
-              Text(
-                _selectedDocumentPath != null 
-                    ? File(_selectedDocumentPath!).path.split('/').last // Show file name
-                    : "Upload a photo of your ID card or driver's license",
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: _selectedDocumentPath != null ? Colors.black87 : Colors.grey.shade600, 
-                    fontWeight: _selectedDocumentPath != null ? FontWeight.w600 : FontWeight.normal,
+        GestureDetector(
+              onTap: _pickIdDocument, // Allow tapping the whole box to change
+              child: Container(
+                width: double.infinity,
+                height: 200, // Made slightly taller for better preview
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              
-              // --- MODIFIED ELEVATED BUTTON ---
-              ElevatedButton(
-                onPressed: _pickIdDocument, // Call the file picking function
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1CCA5B),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                // ClipRRect ensures the image respects the rounded corners
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: _selectedDocumentPath != null
+                      ? Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            // 1. The Image Preview
+                            Image.file(
+                              File(_selectedDocumentPath!),
+                              fit: BoxFit.cover,
+                            ),
+                            // 2. A subtle overlay to make the "Change" button readable
+                            Container(color: Colors.black26),
+                            // 3. The "Change" Icon/Button in the center
+                            Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.edit, color: Colors.white, size: 30),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "Tap to Change",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      shadows: [
+                                        Shadow(blurRadius: 4, color: Colors.black.withOpacity(0.5))
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.upload_rounded, size: 36, color: Colors.grey.shade500),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Upload a photo of your ID card\nor driver's license",
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.grey.shade600,
+                                  ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 12),
+                            ElevatedButton(
+                              onPressed: _pickIdDocument,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1CCA5B),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Take Photo or Upload'),
+                            ),
+                          ],
+                        ),
                 ),
-                child: Text(_selectedDocumentPath != null ? 'Change File' : 'Take Photo or Upload'),
               ),
-            ],
-          ),
-        ),
+            ),
 
         // --- MODIFIED HIDDEN VALIDATOR ---
         Offstage(

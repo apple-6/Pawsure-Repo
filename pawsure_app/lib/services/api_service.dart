@@ -1803,4 +1803,28 @@ class ApiService {
       rethrow;
     }
   }
+
+  /// GET /sitters/:sitterId - Fetch specific sitter details (including stats)
+  Future<Map<String, dynamic>?> getSitterDetails(int sitterId) async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/sitters/$sitterId');
+      
+      final headers = await _getHeaders();
+      
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/sitters/$sitterId'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        debugPrint('⚠️ Failed to load sitter stats: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching sitter stats: $e');
+      return null;
+    }
+  }
 }

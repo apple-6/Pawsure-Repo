@@ -349,6 +349,8 @@ class _AddActivityModalState extends State<AddActivityModal> {
     );
   }
 
+  // Only showing the _submitActivity method - rest of the file stays the same
+
   void _submitActivity() {
     if (_formKey.currentState!.validate()) {
       final pet = _petController.selectedPet.value;
@@ -357,13 +359,22 @@ class _AddActivityModalState extends State<AddActivityModal> {
         return;
       }
 
-      final activityDateTime = DateTime(
+      // 🔧 STEP 1: Create DateTime in LOCAL timezone (user's input)
+      final localDateTime = DateTime(
         _selectedDate.year,
         _selectedDate.month,
         _selectedDate.day,
         _selectedTime.hour,
         _selectedTime.minute,
       );
+
+      // 🔧 STEP 2: Convert to UTC before sending to backend
+      final activityDateUtc = localDateTime.toUtc();
+
+      debugPrint('📅 Add Activity DateTime Conversion:');
+      debugPrint('   Local Input: $localDateTime');
+      debugPrint('   UTC Output: $activityDateUtc');
+      debugPrint('   ISO String: ${activityDateUtc.toIso8601String()}');
 
       final payload = {
         'activity_type': _selectedType.name,
@@ -380,7 +391,8 @@ class _AddActivityModalState extends State<AddActivityModal> {
         'calories_burned': _caloriesController.text.isNotEmpty
             ? int.parse(_caloriesController.text)
             : null,
-        'activity_date': activityDateTime.toIso8601String(),
+        'activity_date': activityDateUtc
+            .toIso8601String(), // ✅ Sends with 'Z' suffix
       };
 
       _activityController.createActivity(pet.id, payload);

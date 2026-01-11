@@ -47,6 +47,31 @@ class ActivityLog {
       return 0;
     }
 
+    // ✅ CRITICAL FIX: Always parse as UTC
+    DateTime parseActivityDate(dynamic dateValue) {
+      try {
+        final dateTimeStr = dateValue.toString();
+
+        // Ensure UTC parsing by adding 'Z' if not present
+        String utcDateStr = dateTimeStr;
+        if (!utcDateStr.endsWith('Z') && !utcDateStr.contains('+')) {
+          utcDateStr = '${utcDateStr}Z';
+        }
+
+        // Parse as UTC
+        final parsedDateTime = DateTime.parse(utcDateStr).toUtc();
+
+        debugPrint(
+          '📅 Parsed activity_date: $dateTimeStr → UTC: $parsedDateTime',
+        );
+
+        return parsedDateTime;
+      } catch (e) {
+        debugPrint('⚠️ Error parsing activity_date: $e, using fallback');
+        return DateTime.now().toUtc();
+      }
+    }
+
     return ActivityLog(
       id: json['id'] is int
           ? json['id']
@@ -70,7 +95,7 @@ class ActivityLog {
                 ? json['calories_burned']
                 : int.tryParse(json['calories_burned'].toString()) ?? 0)
           : 0,
-      activityDate: DateTime.parse(json['activity_date'].toString()),
+      activityDate: parseActivityDate(json['activity_date']), // ✅ Now in UTC
       routeData: json['route_data'] != null
           ? (json['route_data'] as List)
                 .map((e) => RoutePoint.fromJson(e as Map<String, dynamic>))
@@ -182,7 +207,6 @@ class ActivityStats {
   }
 }
 
-// 🔧 FIX: RESTORED ENUM FOR GPS & MODAL SCREENS
 enum ActivityType {
   walk,
   run,
