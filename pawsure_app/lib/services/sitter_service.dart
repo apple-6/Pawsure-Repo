@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:get/get.dart';
+import 'package:pawsure_app/services/auth_service.dart';
 import 'package:pawsure_app/constants/api_endpoints.dart';
 import 'package:pawsure_app/screens/community/sitter_model.dart';
 import 'package:pawsure_app/constants/api_config.dart';
