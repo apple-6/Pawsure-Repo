@@ -110,8 +110,10 @@ class ApiService {
       // Remove Content-Type for multipart - it will be set automatically
       headers.remove('Content-Type');
 
-      final request =
-          http.MultipartRequest('POST', Uri.parse('$apiBaseUrl/pets'));
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$apiBaseUrl/pets'),
+      );
 
       // Add headers (including auth token)
       request.headers.addAll(headers);
@@ -1021,6 +1023,77 @@ class ApiService {
     }
   }
 
+  Future<void> updatePost({
+    required String postId,
+    required String content,
+    required bool isUrgent,
+    required List<String> existingMediaUrls,
+    required List<String> newMediaPaths,
+  }) async {
+    // 1. Get Token safely
+    final authService = Get.find<AuthService>();
+    String? token = await authService.getToken();
+
+    // Debugging: Print exactly what we have
+    print("DEBUG: Raw Token: '$token'");
+
+    if (token == null || token.isEmpty || token == "null") {
+      throw Exception("User is not logged in (Token is null)");
+    }
+
+    // 2. Clean the token (Remove extra quotes if they exist)
+    token = token.replaceAll('"', '').trim();
+
+    // 3. Handle Base URL for Android vs iOS/Web
+    String baseUrl = kIsWeb ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+
+    final uri = Uri.parse('$baseUrl/posts/$postId');
+
+    var request = http.MultipartRequest('PUT', uri);
+
+    // 4. Set Headers CAREFULLY
+    request.headers.addAll({
+      'Authorization': 'Bearer $token', // Ensure only ONE "Bearer "
+      'Content-Type': 'multipart/form-data',
+    });
+
+    request.fields['content'] = content;
+    request.fields['isUrgent'] = isUrgent.toString();
+    request.fields['existingMedia'] = jsonEncode(existingMediaUrls);
+
+    // Add files
+    for (var path in newMediaPaths) {
+      if (path.isNotEmpty) {
+        var file = await http.MultipartFile.fromPath('media', path);
+        request.files.add(file);
+      }
+    }
+
+    print("DEBUG: Sending Update Request to $uri");
+
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('✅ Post updated successfully');
+      } else {
+        print('❌ Failed to update. Status: ${response.statusCode}');
+        print('❌ Body: ${response.body}');
+        throw Exception('Failed to update post: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error updating post: $e');
+      rethrow;
+    }
+  }
+
+  // Helper placeholder if you don't have one
+  Future<String?> _getToken() async {
+    // implementation to get token from storage
+    return "YOUR_TEST_TOKEN";
+  }
+
   // ========================================================================
   // CHAT API
   // ========================================================================
@@ -1052,7 +1125,9 @@ class ApiService {
 
   /// PATCH /sitters/user/:userId - Update sitter profile by USER ID
   Future<UserProfile> updateSitterProfile(
-      int userId, Map<String, dynamic> payload) async {
+    int userId,
+    Map<String, dynamic> payload,
+  ) async {
     try {
       // ✅ Calls the new endpoint: /sitters/user/23
       debugPrint('🔄 API: PATCH $apiBaseUrl/sitters/user/$userId');
@@ -1095,7 +1170,8 @@ class ApiService {
       debugPrint('📦 API Response: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
         return jsonList.cast<Map<String, dynamic>>();
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please log in again.');
@@ -1240,7 +1316,9 @@ class ApiService {
       debugPrint('📦 API Response: ${response.statusCode}');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        return jsonDecode(response.body); // Returns { isLiked: bool, likesCount: int }
+        return jsonDecode(
+          response.body,
+        ); // Returns { isLiked: bool, likesCount: int }
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed');
       }
@@ -1252,9 +1330,12 @@ class ApiService {
     }
   }
 
- Map<String, dynamic> _flattenCommentData(Map<String, dynamic> json, String postId) {
+  Map<String, dynamic> _flattenCommentData(
+    Map<String, dynamic> json,
+    String postId,
+  ) {
     final user = json['user'] ?? {};
-    
+
     // Check if 'post' is an object or just an ID
     String responsePostId = postId;
     if (json['post'] != null && json['post'] is Map) {
@@ -1268,8 +1349,14 @@ class ApiService {
       'userName': user['name'] ?? 'Unknown',
       'content': json['content'] ?? '',
       'likesCount': json['likesCount'] ?? 0,
-      'createdAt': json['created_at'] ?? json['createdAt'] ?? DateTime.now().toIso8601String(), 
-      'updatedAt': json['updated_at'] ?? json['updatedAt'] ?? DateTime.now().toIso8601String(),
+      'createdAt':
+          json['created_at'] ??
+          json['createdAt'] ??
+          DateTime.now().toIso8601String(),
+      'updatedAt':
+          json['updated_at'] ??
+          json['updatedAt'] ??
+          DateTime.now().toIso8601String(),
     };
   }
 
@@ -1277,19 +1364,19 @@ class ApiService {
     try {
       final headers = await _getHeaders();
       // 🆕 UPDATED: Added print to verify the exact URL being called
-      debugPrint('🔍 API: GET $apiBaseUrl/comments/post/$postId'); 
-      
+      debugPrint('🔍 API: GET $apiBaseUrl/comments/post/$postId');
+
       final response = await http.get(
         Uri.parse('$apiBaseUrl/comments/post/$postId'),
         headers: headers,
       );
 
       // 🆕 UPDATED: Print status code and body to debug the error
-      debugPrint('📦 API Response Code: ${response.statusCode}'); 
-      
+      debugPrint('📦 API Response Code: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        
+
         return data.map((json) {
           final flatData = _flattenCommentData(json, postId);
           return CommentModel.fromJson(flatData);
@@ -1309,7 +1396,9 @@ class ApiService {
     try {
       final headers = await _getHeaders();
       // 🆕 UPDATED: Log the payload being sent
-      debugPrint('➕ API: POST $apiBaseUrl/comments/post/$postId with content: $content');
+      debugPrint(
+        '➕ API: POST $apiBaseUrl/comments/post/$postId with content: $content',
+      );
 
       final response = await http.post(
         Uri.parse('$apiBaseUrl/comments/post/$postId'),
@@ -1411,7 +1500,10 @@ class ApiService {
   }
 
   /// GET /pets/:petId/mood/history?days=30 - Get mood history
-  Future<List<Map<String, dynamic>>> getMoodHistory(int petId, {int days = 30}) async {
+  Future<List<Map<String, dynamic>>> getMoodHistory(
+    int petId, {
+    int days = 30,
+  }) async {
     try {
       debugPrint('📊 API: GET $apiBaseUrl/pets/$petId/mood/history?days=$days');
 
@@ -1473,33 +1565,32 @@ class ApiService {
   }
 
   Future<void> createReview({
-  required int bookingId,
-  required double rating,
-  required String comment,
-}) async {
-  try {
-    debugPrint('⭐ API: POST $apiBaseUrl/reviews');
-    
-    final headers = await _getHeaders(); // Uses your existing helper
-    final response = await http.post(
-      Uri.parse('$apiBaseUrl/reviews'),
-      headers: headers,
-      body: jsonEncode({
-        'bookingId': bookingId,
-        'rating': rating,
-        'comment': comment,
-      }),
-    );
+    required int bookingId,
+    required double rating,
+    required String comment,
+  }) async {
+    try {
+      debugPrint('⭐ API: POST $apiBaseUrl/reviews');
 
-    debugPrint('📦 API Response: ${response.statusCode}');
+      final headers = await _getHeaders(); // Uses your existing helper
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/reviews'),
+        headers: headers,
+        body: jsonEncode({
+          'bookingId': bookingId,
+          'rating': rating,
+          'comment': comment,
+        }),
+      );
 
-    if (response.statusCode != 201 && response.statusCode != 200) {
-      throw Exception('Failed to submit review: ${response.body}');
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        throw Exception('Failed to submit review: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error submitting review: $e');
+      rethrow;
     }
-  } catch (e) {
-    debugPrint('❌ Error submitting review: $e');
-    rethrow;
   }
 }
-}
-
