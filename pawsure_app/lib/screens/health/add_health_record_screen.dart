@@ -1,4 +1,6 @@
 // pawsure_app/lib/screens/health/add_health_record_screen.dart
+// 🔧 FIX #2: Support multiple pets from calendar events
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
@@ -37,11 +39,11 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _clinicController = TextEditingController();
 
-  // 🔧 FIX: Track submission state properly
   bool _submitting = false;
   bool _hasSubmittedSuccessfully = false;
 
-  int? _petId;
+  // 🔧 FIX: Support multiple pets
+  List<int> _petIds = [];
   bool _prefilledFromEvent = false;
 
   @override
@@ -56,8 +58,17 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
     if (args != null) {
       _prefilledFromEvent = true;
 
-      _petId = args['petId'] as int?;
-      debugPrint('   ✓ Pet ID: $_petId');
+      // 🔧 CRITICAL FIX: Accept both 'petIds' (array from calendar) and 'petId' (singular)
+      if (args['petIds'] != null) {
+        final petIdsArg = args['petIds'];
+        if (petIdsArg is List) {
+          _petIds = petIdsArg.cast<int>();
+          debugPrint('   ✓ Pet IDs (array): $_petIds');
+        }
+      } else if (args['petId'] != null) {
+        _petIds = [args['petId'] as int];
+        debugPrint('   ✓ Pet ID (single): $_petIds');
+      }
 
       if (args['prefillDate'] != null) {
         _selectedDate = args['prefillDate'] as DateTime;
@@ -68,8 +79,6 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
         final title = args['prefillTitle'] as String;
         _descriptionController.text = title;
         debugPrint('   ✓ Description prefilled: "$title"');
-      } else {
-        debugPrint('   ✗ No prefillTitle in arguments');
       }
 
       if (args['prefillLocation'] != null) {
@@ -77,15 +86,11 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
         if (location.isNotEmpty) {
           _clinicController.text = location;
           debugPrint('   ✓ Clinic prefilled: "$location"');
-        } else {
-          debugPrint('   ✗ prefillLocation is empty');
         }
-      } else {
-        debugPrint('   ✗ No prefillLocation in arguments');
       }
 
       debugPrint('📋 Final form state after prefill:');
-      debugPrint('   Pet ID: $_petId');
+      debugPrint('   Pet IDs: $_petIds');
       debugPrint('   Date: $_selectedDate');
       debugPrint('   Description: "${_descriptionController.text}"');
       debugPrint('   Clinic: "${_clinicController.text}"');
@@ -93,9 +98,10 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
       debugPrint('⚠️ No arguments - manual entry mode');
     }
 
-    if (_petId == null && controller.selectedPet.value != null) {
-      _petId = controller.selectedPet.value!.id;
-      debugPrint('📌 Using pet from controller: $_petId');
+    // Fallback to selected pet if no pets specified
+    if (_petIds.isEmpty && controller.selectedPet.value != null) {
+      _petIds = [controller.selectedPet.value!.id];
+      debugPrint('📌 Using pet from controller: $_petIds');
     }
   }
 
@@ -131,7 +137,6 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
   }
 
   Future<void> _submit() async {
-    // 🔧 FIX: Prevent duplicate submissions with comprehensive check
     if (_submitting || _hasSubmittedSuccessfully) {
       debugPrint(
         '⚠️ Already ${_submitting ? "submitting" : "submitted"}, ignoring duplicate click',
@@ -142,9 +147,8 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
-    int? petId = _petId;
-
-    if (petId == null) {
+    // 🔧 FIX: Validate we have at least one pet
+    if (_petIds.isEmpty) {
       if (controller.selectedPet.value == null) {
         Get.snackbar(
           'Error',
@@ -155,10 +159,9 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
         );
         return;
       }
-      petId = controller.selectedPet.value!.id;
+      _petIds = [controller.selectedPet.value!.id];
     }
 
-    // 🔧 FIX: Set BOTH flags to prevent any possibility of duplicate submission
     setState(() {
       _submitting = true;
       _hasSubmittedSuccessfully = true;
@@ -180,17 +183,32 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
         payload['clinic'] = clinic;
       }
 
-      debugPrint('💾 Saving health record...');
+      debugPrint('💾 Saving health record for ${_petIds.length} pet(s)...');
       debugPrint('📤 Payload: $payload');
+      debugPrint('📤 Pet IDs: $_petIds');
 
-      await controller.addNewHealthRecord(payload, petId);
+      // 🔧 CRITICAL FIX: Loop through all pets and create individual records
+      int successCount = 0;
+      List<String> errors = [];
+
+      for (final petId in _petIds) {
+        try {
+          debugPrint('   💉 Creating record for pet ID: $petId');
+          await controller.addNewHealthRecord(payload, petId);
+          successCount++;
+          debugPrint('   ✅ Success for pet ID: $petId');
+        } catch (e) {
+          debugPrint('   ❌ Failed for pet ID: $petId - $e');
+          errors.add('Pet $petId: $e');
+        }
+      }
 
       if (!mounted) {
         debugPrint('⚠️ Widget disposed, aborting');
         return;
       }
 
-      debugPrint('✅ Health record saved successfully!');
+      debugPrint('✅ Health records saved: $successCount/${_petIds.length}');
 
       // 🔧 FIX: Close screen FIRST, before showing any messages
       Get.back();
@@ -198,38 +216,45 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
       // Small delay before showing snackbar
       await Future.delayed(const Duration(milliseconds: 100));
 
-      Get.snackbar(
-        'Success',
-        'Health record added successfully!',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.1),
-        colorText: Colors.green[900],
-        duration: const Duration(seconds: 2),
-      );
-
-      // Switch to records tab after going back
-      await Future.delayed(const Duration(milliseconds: 100));
-      try {
-        if (Get.isRegistered<NavigationController>()) {
-          final navController = Get.find<NavigationController>();
-          navController.changePage(1); // Health tab
-          debugPrint('✅ Switched to Health tab');
-
-          await Future.delayed(const Duration(milliseconds: 100));
-          if (Get.isRegistered<HealthController>()) {
-            final healthController = Get.find<HealthController>();
-            healthController.tabController.animateTo(1); // Records tab
-            debugPrint('✅ Switched to Records tab');
-          }
-        }
-      } catch (e) {
-        debugPrint('⚠️ Could not switch tabs: $e');
+      // Show appropriate success/error message
+      if (successCount == _petIds.length) {
+        Get.snackbar(
+          'Success',
+          _petIds.length > 1
+              ? 'Health records added for ${_petIds.length} pets!'
+              : 'Health record added successfully!',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green[900],
+          duration: const Duration(seconds: 2),
+        );
+      } else if (successCount > 0) {
+        Get.snackbar(
+          'Partial Success',
+          'Saved $successCount/${_petIds.length} records. Some failed.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange.withOpacity(0.1),
+          colorText: Colors.orange[900],
+          duration: const Duration(seconds: 3),
+        );
+      } else {
+        Get.snackbar(
+          'Error',
+          'Failed to save any records: ${errors.join(", ")}',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red[900],
+          duration: const Duration(seconds: 3),
+        );
       }
+
+      // 🔧 CRITICAL FIX #3: DO NOT switch tabs automatically
+      // Let the user stay where they were (calendar or wherever)
+      // If they want to view the records, they can navigate manually
     } catch (e, stackTrace) {
       debugPrint('❌ Error saving health record: $e');
       debugPrint('Stack trace: $stackTrace');
 
-      // 🔧 FIX: Reset flags on error so user can retry
       if (mounted) {
         setState(() {
           _submitting = false;
@@ -250,8 +275,23 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 🔧 FIX: Check if any operation is in progress or completed
     final isDisabled = _submitting || _hasSubmittedSuccessfully;
+
+    // 🔧 NEW: Get pet names for display
+    String petDisplayText = 'Unknown';
+    if (_petIds.isNotEmpty) {
+      final petNames = _petIds
+          .map((id) {
+            try {
+              final pet = controller.pets.firstWhere((p) => p.id == id);
+              return pet.name;
+            } catch (e) {
+              return 'Pet #$id';
+            }
+          })
+          .join(', ');
+      petDisplayText = petNames;
+    }
 
     return WillPopScope(
       onWillPop: () async {
@@ -280,19 +320,48 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     color: Colors.blue.withOpacity(0.1),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.info_outline, color: Colors.blue[700]),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Form pre-filled from calendar event',
-                            style: TextStyle(
-                              color: Colors.blue[700],
-                              fontWeight: FontWeight.w500,
+                        Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.blue[700]),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Form pre-filled from calendar event',
+                                style: TextStyle(
+                                  color: Colors.blue[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
+                        // 🔧 NEW: Show which pets will receive this record
+                        if (_petIds.length > 1) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.pets,
+                                color: Colors.blue[700],
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Will create record for: $petDisplayText',
+                                  style: TextStyle(
+                                    color: Colors.blue[900],
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -384,7 +453,6 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      // 🔧 FIX: Disable button once operation starts or completes
                       onPressed: isDisabled ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
@@ -401,9 +469,10 @@ class _AddHealthRecordScreenState extends State<AddHealthRecordScreen> {
                               ),
                             )
                           : Text(
-                              // 🔧 FIX: Show different text after successful submission
                               _hasSubmittedSuccessfully
                                   ? 'Saving...'
+                                  : _petIds.length > 1
+                                  ? 'Save for ${_petIds.length} Pets'
                                   : 'Save Health Record',
                               style: const TextStyle(
                                 fontSize: 16,

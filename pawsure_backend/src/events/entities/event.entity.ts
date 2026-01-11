@@ -1,13 +1,5 @@
 // pawsure_backend/src/events/entities/event.entity.ts
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  CreateDateColumn,
-  UpdateDateColumn,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Pet } from '../../pet/pet.entity';
 
 export enum EventType {
@@ -33,36 +25,32 @@ export class Event {
   @Column()
   title: string;
 
-  @Column({ type: 'timestamp' })
+  // ✅ CRITICAL FIX: Use 'timestamp with time zone'
+  @Column({ type: 'timestamptz' })
   dateTime: Date;
 
-  @Column({
-    type: 'enum',
-    enum: EventType,
-    default: EventType.OTHER,
-  })
+  @Column({ type: 'enum', enum: EventType })
   eventType: EventType;
 
-  @Column({
-    type: 'enum',
-    enum: EventStatus,
-    default: EventStatus.UPCOMING,
-  })
+  @Column({ type: 'enum', enum: EventStatus, default: EventStatus.UPCOMING })
   status: EventStatus;
 
-  @Column({ type: 'text', nullable: true })
-  location: string;
+  @Column({ nullable: true })
+  location?: string;
 
   @Column({ type: 'text', nullable: true })
-  notes: string;
+  notes?: string;
 
-  // Ideally, use the relation to manage this, but having the ID column explicitly is helpful for APIs
-  @Column()
-  petId: number;
+  // ✅ NEW: Array of pet IDs for multi-pet events
+  @Column('int', { array: true, default: () => 'ARRAY[]::integer[]' })
+  pet_ids: number[];
 
-  @ManyToOne(() => Pet, (pet) => pet.events, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'petId' })
-  pet: Pet;
+  // ✅ KEEP: Single petId for backward compatibility (deprecated)
+  @Column({ nullable: true })
+  petId?: number;
+
+  @ManyToOne(() => Pet, { onDelete: 'CASCADE' })
+  pet?: Pet;
 
   @CreateDateColumn()
   created_at: Date;

@@ -356,7 +356,7 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFFF59E0B),
                           title: 'Switch to Sitter Mode',
                           subtitle: 'Become a pet sitter',
-                          onTap: () => _showComingSoon('Notifications'),
+                          onTap: () => profileController.handleSitterSwitch(),
                         ),
                         _buildMenuDivider(),
                         _buildMenuItem(

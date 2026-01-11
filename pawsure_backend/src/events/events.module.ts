@@ -1,12 +1,12 @@
-// pawsure_backend/src/events/events.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventsService } from './events.service';
-import { EventsController } from './events.controller'; // 👈 FIXED: Correct path
+import { EventsController } from './events.controller';
 import { Event } from './entities/event.entity';
+import { Pet } from '../pet/pet.entity'; // ✅ Import Pet Entity
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Event])], 
+  imports: [TypeOrmModule.forFeature([Event, Pet])], // ✅ Add Pet here
   controllers: [EventsController],
   providers: [EventsService],
   exports: [EventsService],

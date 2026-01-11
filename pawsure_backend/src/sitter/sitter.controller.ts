@@ -30,6 +30,18 @@ import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 @Controller('sitters')
 export class SitterController {
   constructor(private readonly sitterService: SitterService) {}
+  
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  async register(
+    @Body() createSitterDto: CreateSitterDto,
+    @Request() req,
+  ) {
+    // We reuse your existing service create method.
+    // We pass 'null' for the file because this registration step is JSON-only.
+    // Ensure your SitterService.create handles 'file' being optional/null.
+    return await this.sitterService.create(createSitterDto, req.user.id, undefined);
+  }
 
   @Post('setup')
   @UseGuards(JwtAuthGuard)

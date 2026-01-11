@@ -14,6 +14,7 @@ class Sitter {
   final String imageUrl;
   final List<DateTime> availableDates;
   final List<DateTime> unavailableDates;
+  final String yearsExperience;
 
   const Sitter({
     required this.id,
@@ -26,6 +27,7 @@ class Sitter {
     required this.imageUrl,
     this.availableDates = const [],
     this.unavailableDates = const [],
+    required this.yearsExperience,
   });
 
   factory Sitter.fromJson(Map<String, dynamic> json) {
@@ -61,7 +63,16 @@ class Sitter {
       imageUrl: galleryImage ?? profileImage ?? _fallbackImage,
       availableDates: parsedAvailableDates,
       unavailableDates: parsedUnavailableDates,
+      yearsExperience: _parseExperience(json['experience']),
     );
+  }
+
+  static String _parseExperience(dynamic value) {
+    if (value == null) return "0";
+    String str = value.toString();
+    // Extract only digits (e.g., "5 years" -> "5")
+    String digits = str.replaceAll(RegExp(r'[^0-9]'), ''); 
+    return digits.isEmpty ? "0" : digits;
   }
 
   static List<Sitter> fromJsonList(List<dynamic> data) {
@@ -136,11 +147,7 @@ class Sitter {
 
   /// Parses services from either 'experience' string or 'services' List
   static String _parseServices(dynamic experience, dynamic services) {
-    // First try experience (simple string)
-    if (experience != null && experience is String && experience.isNotEmpty) {
-      return experience;
-    }
-    
+  
     // Then try services (could be List or String)
     if (services != null) {
       // Handle List of service objects: [{"name": "Pet Boarding", ...}]
@@ -181,6 +188,7 @@ List<Sitter> mockSitters = [
       DateTime.now().add(const Duration(days: 7)),
       DateTime.now().add(const Duration(days: 8)),
     ],
+    yearsExperience: '5',
   ),
   Sitter(
     id: '2',
@@ -196,6 +204,7 @@ List<Sitter> mockSitters = [
       DateTime.now().add(const Duration(days: 1)),
       DateTime.now().add(const Duration(days: 2)),
     ],
+    yearsExperience: '5',
   ),
   Sitter(
     id: '3',
@@ -208,5 +217,7 @@ List<Sitter> mockSitters = [
     imageUrl:
         'https://images.unsplash.com/photo-1629851722839-2e987c264a4c?w=400&auto=format&fit=crop',
     availableDates: [DateTime.now().add(const Duration(days: 14))],
+    yearsExperience: '5',
   ),
+  
 ];

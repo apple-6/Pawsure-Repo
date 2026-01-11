@@ -19,7 +19,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   late CalendarController controller;
   late HomeController homeController;
 
-  // 🔧 FIX: Add calendar format state
   CalendarFormat _calendarFormat = CalendarFormat.week;
 
   @override
@@ -29,10 +28,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
     homeController = Get.find<HomeController>();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (homeController.selectedPet.value != null) {
-        controller.loadEvents(homeController.selectedPet.value!.id);
-      }
+      // ✅ Reset to today when screen opens
+      controller.resetToToday();
+      // ✅ UPDATED: Load all owner events instead of per-pet
+      controller.loadAllOwnerEvents();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Check if we received navigation arguments
+    final args = Get.arguments as Map<String, dynamic>?;
+
+    if (args != null && args['event'] != null) {
+      // ✅ User clicked an event - jump to that date
+      final event = args['event'] as EventModel;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.jumpToEventDate(event);
+      });
+    } else {
+      // ✅ Normal navigation - reset to today
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.resetToToday();
+      });
+    }
   }
 
   @override
@@ -40,42 +61,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Calendar'),
-        actions: [
-          Obx(() {
-            if (homeController.pets.isNotEmpty) {
-              return PopupMenuButton(
-                icon: const Icon(Icons.pets),
-                onSelected: (petId) {
-                  final pet = homeController.pets.firstWhere(
-                    (p) => p.id == petId,
-                  );
-                  homeController.selectPet(pet);
-                  controller.loadEvents(petId);
-                },
-                itemBuilder: (context) => homeController.pets
-                    .map(
-                      (pet) => PopupMenuItem(
-                        value: pet.id,
-                        child: Row(
-                          children: [
-                            if (homeController.selectedPet.value?.id == pet.id)
-                              const Icon(
-                                Icons.check,
-                                size: 20,
-                                color: Colors.green,
-                              ),
-                            const SizedBox(width: 8),
-                            Text(pet.name),
-                          ],
-                        ),
-                      ),
-                    )
-                    .toList(),
-              );
-            }
-            return const SizedBox.shrink();
-          }),
-        ],
+        // ✅ REMOVED: Pet selector dropdown - no longer needed
       ),
       body: Obx(() {
         if (controller.isLoadingEvents.value) {
@@ -84,7 +70,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
         return Column(
           children: [
-            // 🔧 FIXED: Wrap calendar in Container with key for rebuild
             Container(
               key: ValueKey(_calendarFormat),
               child: Obx(
@@ -99,7 +84,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     if (!mounted) return;
                     controller.selectDay(selectedDay);
                   },
-                  // 🔧 FIX: Use stateful calendar format
                   calendarFormat: _calendarFormat,
                   onFormatChanged: (format) {
                     if (!mounted) return;
@@ -126,7 +110,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       shape: BoxShape.circle,
                     ),
                   ),
-                  // 🔧 FIX: Safe event loader with null checks
                   eventLoader: (day) {
                     try {
                       return controller.getEventsForDay(day);
@@ -160,7 +143,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       }
                     },
                   ),
-                  // 🔧 FIX: Add header style for better month view
                   headerStyle: const HeaderStyle(
                     formatButtonVisible: true,
                     titleCentered: true,
@@ -213,23 +195,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _showAddEventModal(BuildContext context, DateTime selectedDate) {
-    if (homeController.selectedPet.value == null) {
-      Get.snackbar(
-        'No Pet Selected',
-        'Please select a pet first',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-
+    // ✅ REMOVED: Pet validation check - not needed anymore
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => AddEventModal(
-        petId: homeController.selectedPet.value!.id,
-        initialDate: selectedDate,
-      ),
+      builder: (context) => AddEventModal(initialDate: selectedDate),
     );
   }
 
@@ -305,7 +276,21 @@ class _EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<CalendarController>();
+    final homeController = Get.find<HomeController>();
     final isPending = event.status == EventStatus.pending;
+
+    // ✅ NEW: Get pet names for this event
+    final petNames = event.petIds
+        .map((petId) {
+          try {
+            final pet = homeController.pets.firstWhere((p) => p.id == petId);
+            return pet.name;
+          } catch (e) {
+            return 'Pet #$petId';
+          }
+        })
+        .toList()
+        .join(', ');
 
     return InkWell(
       onTap: onTap,
@@ -354,6 +339,27 @@ class _EventCard extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 8),
+
+                // ✅ NEW: Show pet names
+                if (petNames.isNotEmpty) ...[
+                  Row(
+                    children: [
+                      Icon(Icons.pets, size: 14, color: Colors.grey[600]),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          petNames,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                ],
 
                 Row(
                   children: [
