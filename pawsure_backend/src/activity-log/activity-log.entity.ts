@@ -32,7 +32,8 @@ export class ActivityLog {
   @Column({ type: 'int', nullable: true })
   calories_burned: number;
 
-  @Column({ type: 'timestamp' })
+  // ✅ CRITICAL FIX: Use 'timestamptz' instead of 'timestamp'
+  @Column({ type: 'timestamptz' })
   activity_date: Date;
 
   @Column({ type: 'jsonb', nullable: true })
@@ -44,7 +45,6 @@ export class ActivityLog {
   @UpdateDateColumn()
   updated_at: Date;
 
-  // 🔧 FIX: Added explicit column for pet_id
   @Column({ name: 'pet_id' })
   petId: number;
 

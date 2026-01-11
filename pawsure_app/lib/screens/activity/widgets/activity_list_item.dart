@@ -64,9 +64,10 @@ class ActivityListItem extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
+                          // ✅ CRITICAL FIX: Convert UTC to local before formatting
                           DateFormat(
                             'MMM d, yyyy • h:mm a',
-                          ).format(activity.activityDate),
+                          ).format(activity.activityDate.toLocal()),
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey[600],

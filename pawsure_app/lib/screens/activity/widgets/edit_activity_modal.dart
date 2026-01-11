@@ -1,4 +1,3 @@
-//pawsure_app\lib\screens\activity\widgets\edit_activity_modal.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -29,6 +28,14 @@ class _EditActivityModalState extends State<EditActivityModal> {
   @override
   void initState() {
     super.initState();
+
+    // ✅ CRITICAL FIX: Convert UTC to LOCAL for display
+    final localDateTime = widget.activity.activityDate.toLocal();
+
+    debugPrint('🔧 Edit Activity Modal Init:');
+    debugPrint('   Activity Date (UTC): ${widget.activity.activityDate}');
+    debugPrint('   Converted to Local: $localDateTime');
+
     _titleController = TextEditingController(text: widget.activity.title);
     _descriptionController = TextEditingController(
       text: widget.activity.description,
@@ -42,8 +49,10 @@ class _EditActivityModalState extends State<EditActivityModal> {
     _caloriesController = TextEditingController(
       text: widget.activity.caloriesBurned?.toString() ?? '',
     );
-    _selectedDate = widget.activity.activityDate;
-    _selectedTime = TimeOfDay.fromDateTime(widget.activity.activityDate);
+
+    // ✅ Use LOCAL time for pickers
+    _selectedDate = localDateTime;
+    _selectedTime = TimeOfDay.fromDateTime(localDateTime);
   }
 
   @override
@@ -363,13 +372,22 @@ class _EditActivityModalState extends State<EditActivityModal> {
 
   void _updateActivity() {
     if (_formKey.currentState!.validate()) {
-      final activityDateTime = DateTime(
+      // 🔧 STEP 1: Create DateTime in LOCAL timezone (what user sees in pickers)
+      final localDateTime = DateTime(
         _selectedDate.year,
         _selectedDate.month,
         _selectedDate.day,
         _selectedTime.hour,
         _selectedTime.minute,
       );
+
+      // 🔧 STEP 2: Convert to UTC before sending to backend
+      final activityDateUtc = localDateTime.toUtc();
+
+      debugPrint('📅 Edit Activity DateTime Conversion:');
+      debugPrint('   Local Input: $localDateTime');
+      debugPrint('   UTC Output: $activityDateUtc');
+      debugPrint('   ISO String: ${activityDateUtc.toIso8601String()}');
 
       final payload = {
         'title': _titleController.text.isNotEmpty
@@ -385,7 +403,8 @@ class _EditActivityModalState extends State<EditActivityModal> {
         'calories_burned': _caloriesController.text.isNotEmpty
             ? int.parse(_caloriesController.text)
             : null,
-        'activity_date': activityDateTime.toIso8601String(),
+        'activity_date': activityDateUtc
+            .toIso8601String(), // ✅ Sends with 'Z' suffix
       };
 
       _activityController.updateActivity(widget.activity.id, payload);
