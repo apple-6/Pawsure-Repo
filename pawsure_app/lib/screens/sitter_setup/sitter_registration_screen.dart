@@ -33,7 +33,6 @@ class _SitterRegistrationScreenState extends State<SitterRegistrationScreen> {
   // 2. Central State Data
   final Map<String, dynamic> _formData = {
     'address': '',
-    'phoneNumber': '', // Added this based on your snippet
     'ratePerNight': '0',
     'bio': '',
     'experience': '',
@@ -97,7 +96,6 @@ class _SitterRegistrationScreenState extends State<SitterRegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 5. List of Screen Widgets
     final List<Widget> steps = [
       Step1BasicInfo(formKey: _formKeys[0], formData: _formData),
       Step2Environment(formKey: _formKeys[1], formData: _formData),
@@ -106,29 +104,87 @@ class _SitterRegistrationScreenState extends State<SitterRegistrationScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Step ${_currentStep + 1} of ${steps.length}"),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: _prevStep,
-        ),
-        titleTextStyle: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
-      ),
       backgroundColor: Colors.white,
+      // ❌ REMOVED: appBar: AppBar(...), 
+      // ✅ ADDED: SafeArea to draw custom header
+      body: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            
+            // --- 1. HEADER (Matches your photo) ---
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Back Button (Left aligned)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.black),
+                      onPressed: _prevStep,
+                    ),
+                  ),
+                  
+                  // Title "Become a Sitter" (If needed, or leave empty like photo)
+                  // Your photo has "Become a Sitter" at top left, let's keep it simple
+                  // or align it like the design. 
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: EdgeInsets.only(left: 48.0), // Push past arrow
+                      child: Text(
+                        "Become a Sitter",
+                        style: TextStyle(fontSize: 18, color: Colors.black87),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
-      body: Column(
-        children: [
-          // 1. The Progress Bar at the top
-          SitterProgressBar(currentStep: _currentStep),
-          
-          // 2. The Current Step Content
-          // We use Expanded so the step content takes all remaining space
-          Expanded(
-            child: steps[_currentStep],
-          ),
-        ],
+            const SizedBox(height: 20),
+
+            // --- 2. PAW ICON & TITLE ---
+            Container(
+              width: 60,
+              height: 60,
+              decoration: const BoxDecoration(
+                color: Color(0xFF2ECA6A), // Green brand color
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.pets, color: Colors.white, size: 32),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Become a PawSure Sitter!",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF333333),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Step ${_currentStep + 1} of 4",
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // --- 3. PROGRESS BAR ---
+            SitterProgressBar(currentStep: _currentStep),
+            
+            // --- 4. STEP CONTENT ---
+            Expanded(
+              child: steps[_currentStep],
+            ),
+          ],
+        ),
       ),
 
       bottomNavigationBar: Padding(

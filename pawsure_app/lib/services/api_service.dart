@@ -1567,6 +1567,39 @@ class ApiService {
 }
 
 // ========================================================================
+  // SITTER PROFILE API (Current User)
+  // ========================================================================
+
+  /// GET /sitters/my-profile - Fetch the logged-in user's sitter profile
+  /// This replaces the crashing '/sitters/me' call
+  Future<UserProfile?> getMySitterProfile() async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/sitters/my-profile');
+      final headers = await _getHeaders();
+
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/sitters/my-profile'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return UserProfile.fromJson(data);
+      } else if (response.statusCode == 404) {
+        // Profile not found - User needs to register as sitter
+        return null;
+      } else {
+        throw Exception('Failed to load profile: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error in getMySitterProfile: $e');
+      return null;
+    }
+  }
+
+// ========================================================================
   // SITTER CHECK & REGISTRATION API (Added for Switch Mode)
   // ========================================================================
 

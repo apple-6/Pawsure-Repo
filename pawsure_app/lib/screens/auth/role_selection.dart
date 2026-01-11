@@ -51,13 +51,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account created successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
       // 🆕 RELOAD ProfileController with the NEW user's data
       if (Get.isRegistered<ProfileController>()) {
         final profileController = Get.find<ProfileController>();
