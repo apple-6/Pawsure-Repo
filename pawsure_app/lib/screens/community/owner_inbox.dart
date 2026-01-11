@@ -40,6 +40,14 @@ class OwnerInboxItem {
     // 1. Logic to extract Sitter Name correctly
     // The name is usually inside sitter['user']['name']
     String parsedSitterName = 'Waiting for Sitter...';
+
+    String displayPetName = 'Unknown Pet';
+    String displayPetType = 'dog';
+
+    if (pet != null) {
+      displayPetName = pet['name'] ?? 'Unknown Pet';
+      displayPetType = (pet['species'] ?? 'dog').toString().toLowerCase();
+    }
     
     if (sitter != null) {
       if (sitter['user'] != null && sitter['user']['name'] != null) {
@@ -52,7 +60,7 @@ class OwnerInboxItem {
 
     return OwnerInboxItem(
       id: json['id'] as int,
-      petName: pet?['name'] ?? 'Unknown Pet',
+      petName: displayPetName,
       sitterName: parsedSitterName,
       petType: (pet?['species'] ?? 'dog').toString().toLowerCase(),
       startDate: json['start_date'] ?? '',
