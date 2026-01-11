@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
-import 'package:pawsure_app/controllers/health_controller.dart';  
+import 'package:pawsure_app/controllers/health_controller.dart';
+import 'package:pawsure_app/constants/api_config.dart';
 
 class AIScanTab extends StatefulWidget {
   const AIScanTab({super.key});
@@ -17,37 +18,94 @@ class _AIScanTabState extends State<AIScanTab> {
 
   final HealthController healthController = Get.find<HealthController>();
 
-  // 1. Function to Pick and Upload Image
-  Future<void> _handleScan(BuildContext context) async {
+  // 1. Show Image Source Selection
+  void _showImageSourceSelection(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Take a Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _processImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _processImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // 2. Process Image (Pick & Upload)
+  Future<void> _processImage(ImageSource source) async {
     final picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    XFile? image;
+    
+    try {
+      debugPrint("📷 Picking image from $source...");
+      image = await picker.pickImage(source: source);
+    } catch (e) {
+      debugPrint("❌ Error picking image: $e");
+      _showError("Error picking image: $e");
+      return;
+    }
 
-    if (image == null) return;
+    if (image == null) {
+      debugPrint("⚠️ Image selection cancelled.");
+      return;
+    }
 
+    debugPrint("✅ Image picked: ${image.path}");
     setState(() => _isScanning = true);
 
     try {
-      var uri = Uri.parse('http://localhost:3000/ai/scan'); 
+      final url = '${ApiConfig.baseUrl}/ai/scan';
+      debugPrint("🚀 Sending image to AI service at: $url");
+
+      var uri = Uri.parse(url); 
       var request = http.MultipartRequest('POST', uri);
       request.files.add(await http.MultipartFile.fromPath('image', image.path));
 
+      debugPrint("⏳ Sending request...");
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
+      debugPrint("📩 Response received: ${response.statusCode}");
+      debugPrint("📄 Body: ${response.body}");
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final result = jsonDecode(response.body);
         _showResultDialog(result['prediction'], result['confidence']);
       } else {
+        debugPrint("❌ Server Error: ${response.statusCode}");
         _showError("Server Error: ${response.statusCode}");
       }
     } catch (e) {
-      _showError("Could not connect to backend. Is NestJS running?");
+      debugPrint("❌ Connection Error: $e");
+      _showError("Could not connect to backend at ${ApiConfig.baseUrl}. Is NestJS running?");
     } finally {
-      setState(() => _isScanning = false);
+      if (mounted) {
+        setState(() => _isScanning = false);
+      }
     }
   }
 
-  // 2. Confirmation Dialog for Laptop Demo
+  // 3. Confirmation Dialog for Laptop Demo
   void _confirmDelete(int id) {
     showDialog(
       context: context,
@@ -71,11 +129,11 @@ class _AIScanTabState extends State<AIScanTab> {
     );
   }
 
-  // 3. Delete from Database Logic
+  // 4. Delete from Database Logic
   Future<void> _deleteScan(int id) async {
     try {
       final response = await http.delete(
-        Uri.parse('http://localhost:3000/ai/scan/$id'),
+        Uri.parse('${ApiConfig.baseUrl}/ai/scan/$id'),
       );
 
       if (response.statusCode == 200) {
@@ -89,7 +147,7 @@ class _AIScanTabState extends State<AIScanTab> {
     }
   }
 
-  // 4. Save AI Result to Database
+  // 5. Save AI Result to Database
   Future<void> _saveAiScan(String result, String confidence) async {
     final int? petId = healthController.selectedPet.value?.id; 
 
@@ -100,7 +158,7 @@ class _AIScanTabState extends State<AIScanTab> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3000/ai/save/$petId'),
+        Uri.parse('${ApiConfig.baseUrl}/ai/save/$petId'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "result": result,
@@ -117,7 +175,7 @@ class _AIScanTabState extends State<AIScanTab> {
     }
   }
 
-  // 5. Show the AI Result Dialog
+  // 6. Show the AI Result Dialog
   void _showResultDialog(String label, String confidence) {
     showDialog(
       context: context,
@@ -170,11 +228,17 @@ class _AIScanTabState extends State<AIScanTab> {
 
     if (petId == null) return [];
 
-    final response = await http.get(Uri.parse('http://localhost:3000/ai/history/$petId'));
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to load history');
+    try {
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/ai/history/$petId'));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        // Only throw if meaningful, or return empty
+        return [];
+      }
+    } catch (e) {
+      // Return empty list on connection error to avoid breaking UI loop
+      return [];
     }
   }
 
@@ -191,7 +255,7 @@ class _AIScanTabState extends State<AIScanTab> {
           children: [
             Row(
               children: [
-                _buildActionCard('Analyze Poop', Icons.analytics_outlined, Colors.orange, () => _handleScan(context)),
+                _buildActionCard('Analyze Poop', Icons.analytics_outlined, Colors.orange, () => _showImageSourceSelection(context)),
                 const SizedBox(width: 16),
                 _buildActionCard('Check Gait', Icons.directions_walk_outlined, Colors.teal, () {}),
               ],
