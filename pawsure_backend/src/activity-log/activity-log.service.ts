@@ -16,7 +16,6 @@ export class ActivityLogService {
   ) {}
 
   async create(petId: number, dto: CreateActivityLogDto, userId: number): Promise<ActivityLog> {
-    // Verify pet ownership
     const pet = await this.petRepository.findOne({ 
       where: { id: petId }, 
       relations: ['owner'] 
@@ -30,70 +29,81 @@ export class ActivityLogService {
       throw new ForbiddenException('Not your pet');
     }
 
+    // ✅ CRITICAL FIX: Parse as UTC explicitly
+    const activityDateUtc = new Date(dto.activity_date);
+    
+    console.log('📥 Received activity_date:', dto.activity_date);
+    console.log('📅 Parsed as Date:', activityDateUtc.toISOString());
+
     const activity = this.activityLogRepository.create({
       ...dto,
       pet: { id: petId },
-      activity_date: new Date(dto.activity_date),
+      activity_date: activityDateUtc, // ✅ Store UTC
     });
 
-    return this.activityLogRepository.save(activity);
+    const saved = await this.activityLogRepository.save(activity);
+
+    console.log('✅ Created activity:', {
+      id: saved.id,
+      title: saved.title,
+      activity_date: saved.activity_date.toISOString(),
+    });
+
+    return saved;
   }
 
-async findAllByPet(
-  petId: number,
-  userId: number,
-  filters?: { type?: string; startDate?: string; endDate?: string },
-): Promise<ActivityLog[]> {
-  // Verify ownership
-  const pet = await this.petRepository.findOne({ 
-    where: { id: petId }, 
-    relations: ['owner'] 
-  });
-  
-  if (!pet) {
-    throw new NotFoundException('Pet not found');
-  }
-  
-  if (pet.owner.id !== userId) {
-    throw new ForbiddenException('Not your pet');
-  }
+  async findAllByPet(
+    petId: number,
+    userId: number,
+    filters?: { type?: string; startDate?: string; endDate?: string },
+  ): Promise<ActivityLog[]> {
+    const pet = await this.petRepository.findOne({ 
+      where: { id: petId }, 
+      relations: ['owner'] 
+    });
+    
+    if (!pet) {
+      throw new NotFoundException('Pet not found');
+    }
+    
+    if (pet.owner.id !== userId) {
+      throw new ForbiddenException('Not your pet');
+    }
 
-  const query: any = { pet: { id: petId } };
+    const query: any = { pet: { id: petId } };
 
-  if (filters?.type) {
-    query.activity_type = filters.type;
+    if (filters?.type) {
+      query.activity_type = filters.type;
+    }
+
+    if (filters?.startDate && filters?.endDate) {
+      query.activity_date = Between(
+        new Date(filters.startDate), 
+        new Date(filters.endDate)
+      );
+    }
+
+    return this.activityLogRepository.find({
+      where: query,
+      order: { activity_date: 'DESC' },
+      select: [
+        'id',
+        'petId',
+        'activity_type',
+        'title',
+        'description',
+        'duration_minutes',
+        'distance_km',
+        'calories_burned',
+        'activity_date',
+        'route_data',
+        'created_at',
+        'updated_at',
+      ],
+    });
   }
-
-  if (filters?.startDate && filters?.endDate) {
-    query.activity_date = Between(
-      new Date(filters.startDate), 
-      new Date(filters.endDate)
-    );
-  }
-
-  // 🔧 FIX: Explicitly select petId
-  return this.activityLogRepository.find({
-    where: query,
-    order: { activity_date: 'DESC' },
-    select: [
-      'id',
-      'petId',  // ← ADD THIS
-      'activity_type',
-      'title',
-      'description',
-      'duration_minutes',
-      'distance_km',
-      'calories_burned',
-      'activity_date',
-      'route_data',
-      'created_at',
-      'updated_at',
-    ],
-  });
-}
 
   async getStats(petId: number, userId: number, period: 'day' | 'week' | 'month') {
-    // Verify ownership
     const pet = await this.petRepository.findOne({ 
       where: { id: petId }, 
       relations: ['owner'] 
@@ -171,10 +181,23 @@ async findAllByPet(
     Object.assign(activity, dto);
 
     if (dto.activity_date) {
-      activity.activity_date = new Date(dto.activity_date);
+      // ✅ CRITICAL FIX: Parse as UTC
+      const activityDateUtc = new Date(dto.activity_date);
+      
+      console.log('📥 Update received activity_date:', dto.activity_date);
+      console.log('📅 Parsed as Date:', activityDateUtc.toISOString());
+      
+      activity.activity_date = activityDateUtc;
     }
 
-    return this.activityLogRepository.save(activity);
+    const saved = await this.activityLogRepository.save(activity);
+
+    console.log('✅ Updated activity:', {
+      id: saved.id,
+      activity_date: saved.activity_date.toISOString(),
+    });
+
+    return saved;
   }
 
   async remove(id: number, userId: number): Promise<void> {
