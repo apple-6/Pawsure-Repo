@@ -12,6 +12,7 @@ async function bootstrap() {
       origin: '*', // Allows all origins (good for development)
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
       allowedHeaders: '*',
+      credentials: true,
   });
 
   // 🔧 Serve static files from the 'uploads' directory

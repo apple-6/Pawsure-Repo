@@ -229,36 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-
-                      // Divider
-                      Row(
-                        children: <Widget>[
-                          Expanded(child: Divider(color: Colors.grey[300])),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8.0),
-                            child: Text(
-                              'or login with',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          Expanded(child: Divider(color: Colors.grey[300])),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Social Login Icons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildSocialButton(Icons.g_mobiledata, Colors.red),
-                          _buildSocialButton(Icons.facebook, Colors.blue),
-                          _buildSocialButton(Icons.apple, Colors.black),
-                        ],
-                      ),
+              
                       const SizedBox(height: 24),
 
                       // Login Button
@@ -337,26 +308,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSocialButton(IconData icon, Color color) {
-    return InkWell(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Social login coming soon')),
-        );
-      },
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.grey[300]!),
-        ),
-        child: Icon(icon, color: color, size: 28),
       ),
     );
   }
