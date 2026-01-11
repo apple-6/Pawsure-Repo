@@ -48,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
           SizedBox(
             height: size.height,
             width: size.width,
-            child: Image.asset('assets/images/dog_auth.png', fit: BoxFit.cover),
+            child: Image.asset('assets/images/cat_login.png', fit: BoxFit.cover),
           ),
 
           // Decorative top-right green shape with logo
