@@ -33,15 +33,44 @@ class OwnerInboxItem {
   });
 
   factory OwnerInboxItem.fromJson(Map<String, dynamic> json) {
-    final pet = json['pet'] as Map<String, dynamic>?;
+    final petsList = json['pets'] as List<dynamic>?;
     // Owners see the SITTER'S name
     final sitter = json['sitter'] as Map<String, dynamic>?;
 
+    // 1. Logic to extract Sitter Name correctly
+    // The name is usually inside sitter['user']['name']
+    String parsedSitterName = 'Waiting for Sitter...';
+
+    String displayPetName = 'Unknown Pet';
+    String displayPetType = 'dog';
+
+    if (petsList != null && petsList.isNotEmpty) {
+      // Get all pet names and join them with commas
+      final petNames = petsList
+          .map((p) => (p as Map<String, dynamic>)['name'] as String? ?? 'Unknown')
+          .toList();
+      
+      displayPetName = petNames.join(', '); // "Max, Bella, Charlie"
+      
+      // Use the first pet's species for the icon
+      final firstPet = petsList[0] as Map<String, dynamic>;
+      displayPetType = (firstPet['species'] ?? 'dog').toString().toLowerCase();
+    }
+    
+    if (sitter != null) {
+      if (sitter['user'] != null && sitter['user']['name'] != null) {
+        parsedSitterName = sitter['user']['name'];
+      } else if (sitter['name'] != null) {
+        // Fallback in case your backend structure is flat
+        parsedSitterName = sitter['name'];
+      }
+    }
+
     return OwnerInboxItem(
       id: json['id'] as int,
-      petName: pet?['name'] ?? 'Unknown Pet',
-      sitterName: sitter?['name'] ?? 'Waiting for Sitter...',
-      petType: (pet?['species'] ?? 'dog').toString().toLowerCase(),
+      petName: displayPetName,
+      sitterName: parsedSitterName,
+      petType: displayPetType,
       startDate: json['start_date'] ?? '',
       endDate: json['end_date'] ?? '',
       estimatedCost: (json['total_amount'] ?? 0).toDouble(),
