@@ -48,7 +48,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'title': 'Find Trusted Sitters',
       'subtitle':
           'Need a sitter? Browse verified caregivers near you and pay safely.',
-      'image': 'assets/images/backgroundroleimage.jpg',
+      'image': 'assets/images/ragdoll-3rd.jpg',
     },
   ];
 
