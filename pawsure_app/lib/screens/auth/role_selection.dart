@@ -101,6 +101,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        height: double.infinity, // Ensure background covers full height
         decoration: const BoxDecoration(
           image: DecorationImage(
             image: AssetImage('assets/images/backgroundroleimage.jpg'),
@@ -108,80 +109,87 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: Column(
-              children: [
-                // Show back button and title for registration flow
-                if (widget.isRegistrationFlow) ...[
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => Navigator.pop(context),
-                        icon: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.arrow_back,
-                            color: Color(0xFF4CAF50),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Column(
+          // 1. Wrap the content in SingleChildScrollView
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Column(
+                children: [
+                  if (widget.isRegistrationFlow) ...[
+                    Row(
                       children: [
-                        Text(
-                          'Choose Your Role',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                        IconButton(
+                          onPressed: _isLoading ? null : () => Navigator.pop(context),
+                          icon: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back,
+                              color: Color(0xFF4CAF50),
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Select how you want to use Pawsure',
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Column(
+                        children: [
+                          Text(
+                            'Choose Your Role',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Select how you want to use Pawsure',
+                            style: TextStyle(fontSize: 14, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // 2. REPLACE Spacer() with SizedBox
+                    const SizedBox(height: 40), 
+                  ],
+                  
+                  // 3. REPLACE Spacer() logic with standard spacing
+                  if (!widget.isRegistrationFlow) 
+                    const SizedBox(height: 80), // Push content down if no header
+
+                  _buildRoleCard(
+                    title: "I'm a Pet Owner",
+                    subtitle: "Track, care, and connect for\nyour pets.",
+                    role: 'owner',
+                    userRole: UserRole.owner,
+                    icon: Icons.pets,
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 24),
+                  _buildRoleCard(
+                    title: "I'm a Pet Sitter",
+                    subtitle: "Offer safe, loving care for\nothers' pets.",
+                    role: 'sitter',
+                    userRole: UserRole.sitter,
+                    icon: Icons.home_work_outlined,
+                  ),
+                  
+                  // 4. Add some bottom padding so it doesn't stick to the bottom edge
+                  const SizedBox(height: 40),
                 ],
-                if (!widget.isRegistrationFlow) const Spacer(),
-                _buildRoleCard(
-                  title: "I'm a Pet Owner",
-                  subtitle: "Track, care, and connect for\nyour pets.",
-                  role: 'owner',
-                  userRole: UserRole.owner,
-                  icon: Icons.pets,
-                ),
-                const SizedBox(height: 24),
-                _buildRoleCard(
-                  title: "I'm a Pet Sitter",
-                  subtitle: "Offer safe, loving care for\nothers' pets.",
-                  role: 'sitter',
-                  userRole: UserRole.sitter,
-                  icon: Icons.home_work_outlined,
-                ),
-                const Spacer(),
-              ],
+              ),
             ),
           ),
         ),
@@ -216,8 +224,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
           opacity: isOtherLoading ? 0.5 : 1.0,
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-            constraints: const BoxConstraints(minHeight: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+            constraints: const BoxConstraints(minHeight: 160),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.95),
               borderRadius: BorderRadius.circular(24),
