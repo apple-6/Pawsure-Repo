@@ -178,12 +178,19 @@ async findAll(minRating?: number): Promise<any[]> {
     }
   }
   
-  async findOne(id: number): Promise<any> {
+ async findOne(id: number): Promise<any> {
     const sitter = await this.sitterRepository.findOne({
       where: { id },
       withDeleted: false,
-      relations: ['user', 'reviews', 'reviews.owner', 'bookings','reviews.booking',       // Links the review to the booking
-        'reviews.booking.pets',],
+      // 👇 Updated relations to deeply fetch booking and pets
+      relations: [
+        'user', 
+        'reviews', 
+        'reviews.owner', 
+        'bookings',
+        'reviews.booking',      
+        'reviews.booking.pets', 
+      ],
     });
 
     if (!sitter) {
@@ -215,7 +222,13 @@ async findByUserId(userId: number): Promise<any> {
     // 1. Fetch sitter AND reviews (Just like findOne)
     const sitter = await this.sitterRepository.findOne({
       where: { userId, deleted_at: IsNull() },
-      relations: ['user', 'reviews'], // <--- CRITICAL: This was missing
+      relations: [
+        'user', 
+        'reviews', 
+        'reviews.owner',          
+        'reviews.booking',        
+        'reviews.booking.pets',   
+      ],
     });
 
     if (!sitter) {
@@ -236,9 +249,13 @@ async findByUserId(userId: number): Promise<any> {
     // 3. Return the merged object (Just like findOne)
     return {
       ...sitter,
-      rating: avgRating,       // <--- Now 'rating' exists in the JSON
+      rating: avgRating,
       reviewCount: reviewCount,
       reviews_count: reviewCount,
+      // Sort reviews by newest first
+      reviews: sitter.reviews 
+        ? sitter.reviews.sort((a, b) => b.created_at.getTime() - a.created_at.getTime()) 
+        : []
     };
   }
 
