@@ -1648,7 +1648,7 @@ class ApiService {
       rethrow;
     }
   }
-}
+
 
 // ========================================================================
   // SITTER PROFILE API (Current User)
