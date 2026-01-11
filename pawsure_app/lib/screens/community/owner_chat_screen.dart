@@ -77,6 +77,9 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
     socket = IO.io(socketUrl, <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
+      'reconnection': true, // ✅ Enable auto-reconnection
+      'reconnectionAttempts': 5,
+      'reconnectionDelay': 1000,
     });
 
     socket.connect();
@@ -96,6 +99,19 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
         _scrollToBottom();
       }
     });
+
+  socket.onDisconnect((_) {
+    print('❌ Disconnected from socket');
+  });
+
+  socket.onError((error) {
+    print('🔴 Socket error: $error');
+  });
+
+  socket.onReconnect((_) {
+    print('🔄 Reconnected to socket');
+    socket.emit('joinRoom', widget.room); // Re-join room after reconnect
+  });
   }
 
   void _sendMessage() {
