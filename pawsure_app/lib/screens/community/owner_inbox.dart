@@ -45,9 +45,16 @@ class OwnerInboxItem {
     String displayPetType = 'dog';
 
     if (petsList != null && petsList.isNotEmpty) {
-      final bookingPet = petsList[0] as Map<String, dynamic>;
-      displayPetName = bookingPet['name'] ?? 'Unknown Pet';
-      displayPetType = (bookingPet['species'] ?? 'dog').toString().toLowerCase();
+      // Get all pet names and join them with commas
+      final petNames = petsList
+          .map((p) => (p as Map<String, dynamic>)['name'] as String? ?? 'Unknown')
+          .toList();
+      
+      displayPetName = petNames.join(', '); // "Max, Bella, Charlie"
+      
+      // Use the first pet's species for the icon
+      final firstPet = petsList[0] as Map<String, dynamic>;
+      displayPetType = (firstPet['species'] ?? 'dog').toString().toLowerCase();
     }
     
     if (sitter != null) {
