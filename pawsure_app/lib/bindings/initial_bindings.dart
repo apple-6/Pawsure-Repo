@@ -14,6 +14,8 @@ import 'package:pawsure_app/controllers/activity_controller.dart';
 import 'package:pawsure_app/controllers/community_controller.dart';
 import 'package:pawsure_app/controllers/profile_controller.dart';
 import 'package:pawsure_app/controllers/sitter_controller.dart';
+import 'package:pawsure_app/controllers/booking_controller.dart';
+import 'package:pawsure_app/controllers/calendar_controller.dart';
 
 class InitialBindings implements Bindings {
 ...
@@ -22,6 +24,12 @@ class InitialBindings implements Bindings {
 
     Get.put<SitterController>(SitterController(), permanent: true);
     debugPrint('✅ SitterController registered');
+
+    Get.put<BookingController>(BookingController(), permanent: true);
+    debugPrint('✅ BookingController registered');
+
+    Get.put<CalendarController>(CalendarController(), permanent: true);
+    debugPrint('✅ CalendarController registered');
 
     debugPrint('✅ All Controllers Initialized');
     debugPrint('🎉 InitialBindings: Complete!');
