@@ -47,7 +47,7 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
   static const double _teleportThreshold = 100.0;
   static const int _minTimeForValidUpdate = 2;
 
-  // ✅ Only Walk and Run allowed
+  // Only Walk and Run allowed
   final List<models.ActivityType> _allowedActivityTypes = [
     models.ActivityType.walk,
     models.ActivityType.run,
@@ -379,7 +379,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     }
   }
 
-  // ✅ Recenter Map Function
   void _recenterMap() {
     if (_currentPosition != null && _mapController != null) {
       _mapController!.animateCamera(
@@ -388,6 +387,61 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
         ),
       );
     }
+  }
+
+  // ✅ NEW: Helper method to show pet selection dialog
+  Future<List<int>?> _showPetSelectionDialog() async {
+    final Set<int> selectedIds = {};
+    if (_petController.selectedPet.value != null) {
+      selectedIds.add(_petController.selectedPet.value!.id);
+    }
+
+    return await Get.dialog<List<int>>(
+      AlertDialog(
+        title: const Text('Which pets were with you?'),
+        content: StatefulBuilder(
+          builder: (context, setDialogState) {
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: _petController.pets.map((pet) {
+                  final isSelected = selectedIds.contains(pet.id);
+                  return CheckboxListTile(
+                    title: Row(
+                      children: [
+                        Text(pet.species?.toLowerCase() == 'dog' ? '🐕' : '🐈'),
+                        const SizedBox(width: 8),
+                        Text(pet.name),
+                      ],
+                    ),
+                    value: isSelected,
+                    onChanged: (checked) {
+                      setDialogState(() {
+                        if (checked == true) {
+                          selectedIds.add(pet.id);
+                        } else {
+                          selectedIds.remove(pet.id);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: null),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: selectedIds.toList()),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _saveActivity() async {
@@ -447,9 +501,15 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       if (confirm != true) return;
     }
 
-    final pet = _petController.selectedPet.value;
-    if (pet == null) {
-      Get.snackbar('Error', 'No pet selected');
+    // ✅ CHANGED: Show pet selection dialog BEFORE save dialog
+    final selectedPetIds = await _showPetSelectionDialog();
+
+    if (selectedPetIds == null || selectedPetIds.isEmpty) {
+      Get.snackbar(
+        'Cancelled',
+        'No pets selected',
+        backgroundColor: Colors.orange.withValues(alpha: 0.1),
+      );
       return;
     }
 
@@ -475,9 +535,11 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
       debugPrint('   Duration: ${payload['duration_minutes']} min');
       debugPrint('   Distance: ${payload['distance_km']} km');
       debugPrint('   Route points: ${_routeData.length}');
+      debugPrint('   Pets: $selectedPetIds');
 
       try {
-        await _activityController.createActivity(pet.id, payload);
+        // ✅ CHANGED: Pass selected pet IDs list
+        await _activityController.createActivity(selectedPetIds, payload);
 
         Get.snackbar(
           'Success!',
@@ -521,7 +583,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
     return (durationMinutes * caloriesPerMinute).round();
   }
 
-  // ✅ FIXED: Only Walk and Run in save dialog
   Widget _buildSaveDialog() {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
@@ -537,7 +598,6 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ✅ Only Walk and Run options
                   Container(
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey[300]!),
@@ -909,10 +969,9 @@ class _GPSTrackingScreenState extends State<GPSTrackingScreen> {
               ),
             ),
 
-            // ✅ ADDED: Recenter Button (Bottom Right)
+            // Recenter Button
             Positioned(
-              bottom:
-                  220, // Comfortable thumb position above the bottom controls
+              bottom: 220,
               right: 16,
               child: FloatingActionButton(
                 mini: false,

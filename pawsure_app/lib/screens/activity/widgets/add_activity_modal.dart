@@ -1,4 +1,4 @@
-//pawsure_app\lib\screens\activity\widgets\add_activity_modal.dart
+// pawsure_app\lib\screens\activity\widgets\add_activity_modal.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/activity_controller.dart';
@@ -17,6 +17,9 @@ class _AddActivityModalState extends State<AddActivityModal> {
   final ActivityController _activityController = Get.find<ActivityController>();
   final PetController _petController = Get.find<PetController>();
 
+  // ✅ NEW: Track multiple selections
+  final Set<int> _selectedPetIds = {};
+
   // Only Walk and Run allowed
   ActivityType _selectedType = ActivityType.walk;
   final TextEditingController _titleController = TextEditingController();
@@ -34,6 +37,15 @@ class _AddActivityModalState extends State<AddActivityModal> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // ✅ NEW: Auto-select current pet initially
+    if (_petController.selectedPet.value != null) {
+      _selectedPetIds.add(_petController.selectedPet.value!.id);
+    }
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
@@ -41,6 +53,52 @@ class _AddActivityModalState extends State<AddActivityModal> {
     _distanceController.dispose();
     _caloriesController.dispose();
     super.dispose();
+  }
+
+  // ✅ NEW: Multi-select widget
+  Widget _buildPetSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Select Pets *',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+        ),
+        const SizedBox(height: 12),
+        Obx(() {
+          // Wrapped in Obx in case pets list updates
+          return Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _petController.pets.map((pet) {
+              final isSelected = _selectedPetIds.contains(pet.id);
+              return FilterChip(
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(pet.species?.toLowerCase() == 'dog' ? '🐕' : '🐈'),
+                    const SizedBox(width: 8),
+                    Text(pet.name),
+                  ],
+                ),
+                selected: isSelected,
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedPetIds.add(pet.id);
+                    } else {
+                      _selectedPetIds.remove(pet.id);
+                    }
+                  });
+                },
+                selectedColor: Colors.green.withOpacity(0.2),
+                checkmarkColor: Colors.green,
+              );
+            }).toList(),
+          );
+        }),
+      ],
+    );
   }
 
   @override
@@ -75,6 +133,10 @@ class _AddActivityModalState extends State<AddActivityModal> {
                   ),
                 ],
               ),
+              const SizedBox(height: 24),
+
+              // ✅ INSERTED: Pet Selector Widget
+              _buildPetSelector(),
               const SizedBox(height: 24),
 
               // Activity Type Selector - Only Walk and Run
@@ -349,16 +411,18 @@ class _AddActivityModalState extends State<AddActivityModal> {
     );
   }
 
-  // Only showing the _submitActivity method - rest of the file stays the same
-
   void _submitActivity() {
-    if (_formKey.currentState!.validate()) {
-      final pet = _petController.selectedPet.value;
-      if (pet == null) {
-        Get.snackbar('Error', 'No pet selected');
-        return;
-      }
+    // ✅ NEW: Validate pet selection
+    if (_selectedPetIds.isEmpty) {
+      Get.snackbar(
+        'Error',
+        'Please select at least one pet',
+        backgroundColor: Colors.red.withOpacity(0.1),
+      );
+      return;
+    }
 
+    if (_formKey.currentState!.validate()) {
       // 🔧 STEP 1: Create DateTime in LOCAL timezone (user's input)
       final localDateTime = DateTime(
         _selectedDate.year,
@@ -391,11 +455,11 @@ class _AddActivityModalState extends State<AddActivityModal> {
         'calories_burned': _caloriesController.text.isNotEmpty
             ? int.parse(_caloriesController.text)
             : null,
-        'activity_date': activityDateUtc
-            .toIso8601String(), // ✅ Sends with 'Z' suffix
+        'activity_date': activityDateUtc.toIso8601String(),
       };
 
-      _activityController.createActivity(pet.id, payload);
+      // ✅ NEW: Pass List<int> to the updated controller method
+      _activityController.createActivity(_selectedPetIds.toList(), payload);
     }
   }
 }
