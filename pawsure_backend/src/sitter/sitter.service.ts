@@ -321,7 +321,7 @@ async findAll(minRating?: number): Promise<any[]> {
         .andWhere('sitter.deleted_at IS NULL')
         .groupBy('sitter.id')
         .addGroupBy('user.id')
-        .orderBy('averageRatingRaw', 'DESC');
+        .orderBy('"averageRatingRaw"', 'DESC');
 try {
       const { entities, raw } = await query.getRawAndEntities();
 
