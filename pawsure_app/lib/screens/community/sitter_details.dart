@@ -511,21 +511,13 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  "Property Type: $houseType",
+                                  "House Type: $houseType",
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,
                                     color: Colors.black87,
                                   ),
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                _buildEnvironmentPlaceholder(),
-                                const SizedBox(width: 12),
-                                _buildEnvironmentPlaceholder(),
                               ],
                             ),
                           ],
@@ -570,35 +562,6 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
 
                       const SizedBox(height: 16),
 
-                      // --- 8. Reviews ---
-                      // _buildSectionCard(
-                      //   title: "Reviews",
-                      //   trailing: GestureDetector(
-                      //     onTap: () {
-                      //       ScaffoldMessenger.of(context).showSnackBar(
-                      //         const SnackBar(content: Text("See more clicked")),
-                      //       );
-                      //     },
-                      //     behavior: HitTestBehavior.opaque,
-                      //     child: const Padding(
-                      //       padding: EdgeInsets.only(left: 8.0),
-                      //       child: Text(
-                      //         "See more",
-                      //         style: TextStyle(
-                      //           color: Color(0xFF34D399),
-                      //           fontWeight: FontWeight.bold,
-                      //           fontSize: 14,
-                      //         ),
-                      //       ),
-                      //     ),
-                      //   ),
-                      //   child: Column(
-                      //     children: reviewsData
-                      //         .take(2)
-                      //         .map((review) => _buildReviewItem(review))
-                      //         .toList(),
-                      //   ),
-                      // ),
                      _buildSectionCard(
                         title: "Reviews",
                         // ✅ OPTIONAL IMPROVEMENT: Only show "See more" if there are more than 2 reviews
@@ -738,114 +701,7 @@ class _SitterDetailsScreenState extends State<SitterDetailsScreen> {
     );
   }
 
-// Widget _buildReviewItem(dynamic reviewData) {
-//     final owner = reviewData['owner'];
-//     final String userName = owner != null ? (owner['name'] ?? 'Anonymous') : 'User';
-    
-//     // ---------------------------------------------------------
-//     // 1. Image Logic: Construct the full URL
-//     // ---------------------------------------------------------
-//     String? finalProfileUrl;
-    
-//     if (owner != null && owner['profile_picture'] != null) {
-//       String rawPic = owner['profile_picture'].toString();
-      
-//       if (rawPic.isNotEmpty) {
-//         if (rawPic.startsWith('http')) {
-//           // Case A: It's already a full URL (like PostCard)
-//           finalProfileUrl = rawPic;
-//         } else {
-//           // Case B: It's just a filename. We MUST prepend the Supabase path.
-//           // Note: Ensure 'profile_pictures' matches your Supabase bucket name for users
-//           finalProfileUrl = "${ApiConfig.supabaseUrl}/storage/v1/object/public/profile_pictures/$rawPic";
-//         }
-//       }
-//     }
-//     // ---------------------------------------------------------
 
-//     final String date = reviewData['created_at'] != null
-//         ? reviewData['created_at'].toString().substring(0, 10)
-//         : 'Recent';
-//     final double rating = (reviewData['rating'] ?? 5).toDouble();
-//     final String comment = reviewData['comment'] ?? '';
-
-//     return Padding(
-//       padding: const EdgeInsets.only(bottom: 16.0),
-//       child: Container(
-//         padding: const EdgeInsets.all(12),
-//         decoration: BoxDecoration(
-//           border: Border.all(color: Colors.grey.shade200),
-//           borderRadius: BorderRadius.circular(12),
-//         ),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Row(
-//               children: [
-//                 // ------------------------------------------------
-//                 // 2. Display Logic (Matches PostCard style)
-//                 // ------------------------------------------------
-//                 CircleAvatar(
-//                   backgroundColor: Colors.grey[200],
-//                   radius: 20,
-//                   // If we successfully built a URL, display it
-//                   backgroundImage: (finalProfileUrl != null)
-//                       ? NetworkImage(finalProfileUrl)
-//                       : null,
-//                   // If no URL, show the fallback icon
-//                   child: (finalProfileUrl == null)
-//                       ? Icon(Icons.person_outline, color: Colors.grey[600])
-//                       : null,
-//                 ),
-//                 const SizedBox(width: 12),
-//                 Expanded(
-//                   child: Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       Row(
-//                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                         children: [
-//                           Text(
-//                             userName,
-//                             style: const TextStyle(
-//                               fontWeight: FontWeight.bold,
-//                               fontSize: 14,
-//                             ),
-//                           ),
-//                           Text(
-//                             date,
-//                             style: const TextStyle(
-//                               color: Colors.grey,
-//                               fontSize: 12,
-//                             ),
-//                           ),
-//                         ],
-//                       ),
-//                       const SizedBox(height: 4),
-//                       Row(
-//                         children: List.generate(5, (index) {
-//                           return Icon(
-//                             index < rating ? Icons.star : Icons.star_border,
-//                             color: Colors.amber,
-//                             size: 14,
-//                           );
-//                         }),
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//               ],
-//             ),
-//             const SizedBox(height: 8),
-//             Text(
-//               comment,
-//               style: const TextStyle(fontSize: 13, color: Colors.black87),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
 
   Widget _buildServiceRow(String name, String price, Color color) {
     return Row(
@@ -902,6 +758,7 @@ class AllReviewsScreen extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // 2. Reusable Widget for a single review (Logic extracted from your previous code)
 // ---------------------------------------------------------------------------
+//
 class ReviewCard extends StatelessWidget {
   final dynamic reviewData;
 
@@ -912,7 +769,36 @@ class ReviewCard extends StatelessWidget {
     final owner = reviewData['owner'];
     final String userName = owner != null ? (owner['name'] ?? 'Anonymous') : 'User';
 
-    // --- Image Logic (Reused) ---
+    // --- 1. Pet Name Extraction Logic (Added) ---
+    List<String> petNames = [];
+    
+    // Check if the review has a 'booking' object attached
+    if (reviewData['booking'] != null) {
+      final booking = reviewData['booking'];
+      
+      // Scenario A: Backend returns a simple 'pets' array inside booking
+      if (booking['pets'] != null && booking['pets'] is List) {
+        for (var pet in booking['pets']) {
+          if (pet['name'] != null) {
+            petNames.add(pet['name']);
+          }
+        }
+      }
+      // Scenario B: Backend returns the raw Supabase join (booking_pets)
+      else if (booking['booking_pets'] != null && booking['booking_pets'] is List) {
+        for (var bp in booking['booking_pets']) {
+          // Join often looks like: { pet: { name: "Max" } }
+          if (bp['pet'] != null && bp['pet']['name'] != null) {
+            petNames.add(bp['pet']['name']);
+          }
+        }
+      }
+    }
+    
+    // Join names (e.g., "Max, Bella")
+    String petsString = petNames.isNotEmpty ? petNames.join(", ") : "";
+
+    // --- 2. Image Logic (Preserved from your code) ---
     String? finalProfileUrl;
     if (owner != null && owner['profile_picture'] != null) {
       String rawPic = owner['profile_picture'].toString();
@@ -926,7 +812,6 @@ class ReviewCard extends StatelessWidget {
         }
       }
     }
-    // ----------------------------
 
     final String date = reviewData['created_at'] != null
         ? reviewData['created_at'].toString().substring(0, 10)
@@ -955,7 +840,7 @@ class ReviewCard extends StatelessWidget {
                       ? NetworkImage(finalProfileUrl)
                       : null,
                   
-                  // 2. ✅ FIX: Only provide the error handler if the image is NOT null
+                  // 2. Only provide the error handler if the image is NOT null
                   onForegroundImageError: (finalProfileUrl != null) 
                       ? (_, __) {} 
                       : null, 
@@ -981,6 +866,21 @@ class ReviewCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                      
+                      // --- Display Pet Name if available (Added) ---
+                      if (petsString.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2.0),
+                          child: Text(
+                            "Pet: $petsString",
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        
                       const SizedBox(height: 4),
                       Row(
                         children: List.generate(5, (index) {

@@ -182,7 +182,8 @@ async findAll(minRating?: number): Promise<any[]> {
     const sitter = await this.sitterRepository.findOne({
       where: { id },
       withDeleted: false,
-      relations: ['user', 'reviews', 'reviews.owner', 'bookings'],
+      relations: ['user', 'reviews', 'reviews.owner', 'bookings','reviews.booking',       // Links the review to the booking
+        'reviews.booking.pets',],
     });
 
     if (!sitter) {
