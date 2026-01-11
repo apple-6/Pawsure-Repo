@@ -16,9 +16,7 @@ import 'sitter_performance_page.dart';
 import '../../models/sitter_model.dart';
 import 'sitter_registration_screen.dart';
 
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:pawsure_app/constants/api_config.dart';
+
 
 class SitterSettingScreen extends StatefulWidget {
   const SitterSettingScreen({super.key});
