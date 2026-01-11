@@ -105,7 +105,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const PopupMenuDivider(),
+                  //const PopupMenuDivider(),
                   // Add Pet option
                   // const PopupMenuItem<String>(
                   //   value: 'add_pet',
@@ -259,6 +259,7 @@ class HomeScreen extends StatelessWidget {
                   streak: controller.currentStreak.value,
                   progress: controller.dailyProgress,
                   goals: controller.dailyGoals,
+                  photoUrl: pet.photoUrl,
                 ),
 
                 const SizedBox(height: 24),
