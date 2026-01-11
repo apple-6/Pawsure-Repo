@@ -46,13 +46,13 @@ export class Post {
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @OneToMany(() => PostMedia, (media) => media.post, {cascade: true})
+  @OneToMany(() => PostMedia, (media) => media.post, {cascade: true, onDelete: 'CASCADE'})
   post_media: PostMedia[];
 
-  @OneToMany(() => Comment, (comment) => comment.post, {cascade: true})
+  @OneToMany(() => Comment, (comment) => comment.post, {cascade: true, onDelete: 'CASCADE'})
   comments: Comment[];
 
-  @OneToMany(() => Like, (like) => like.post, {cascade: true})
+  @OneToMany(() => Like, (like) => like.post, {cascade: true, onDelete: 'CASCADE'})
   likes: Like[];
 
   // UPDATED: Many-to-Many relationship for multiple pets
