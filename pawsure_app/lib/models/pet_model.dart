@@ -69,6 +69,48 @@ class Pet {
     );
   }
 
+  Pet copyWith({
+    int? id,
+    String? name,
+    String? species,
+    String? breed,
+    String? dob,
+    double? weight,
+    double? height,
+    int? bodyConditionScore,
+    List<WeightRecord>? weightHistory,
+    String? allergies,
+    String? foodBrand,
+    String? dailyFoodAmount,
+    List<String>? vaccinationDates,
+    String? lastVetVisit,
+    double? moodRating,
+    int? streak,
+    String? photoUrl,
+    String? sterilizationStatus,
+  }) {
+    return Pet(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      species: species ?? this.species,
+      breed: breed ?? this.breed,
+      dob: dob ?? this.dob,
+      weight: weight ?? this.weight,
+      height: height ?? this.height,
+      bodyConditionScore: bodyConditionScore ?? this.bodyConditionScore,
+      weightHistory: weightHistory ?? this.weightHistory,
+      allergies: allergies ?? this.allergies,
+      foodBrand: foodBrand ?? this.foodBrand,
+      dailyFoodAmount: dailyFoodAmount ?? this.dailyFoodAmount,
+      vaccinationDates: vaccinationDates ?? this.vaccinationDates,
+      lastVetVisit: lastVetVisit ?? this.lastVetVisit,
+      moodRating: moodRating ?? this.moodRating,
+      streak: streak ?? this.streak,
+      photoUrl: photoUrl ?? this.photoUrl,
+      sterilizationStatus: sterilizationStatus ?? this.sterilizationStatus,
+    );
+  }
+
   /// Parse int from various types (int, double, string)
   static int? _parseInt(dynamic value) {
     if (value == null) return null;

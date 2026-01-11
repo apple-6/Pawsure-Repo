@@ -260,7 +260,7 @@ class DailyCareHub extends StatelessWidget {
               data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
                 title: const Text(
-                  'View Activity Details',
+                  "Today's Activity Details",
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -268,76 +268,117 @@ class DailyCareHub extends StatelessWidget {
                   ),
                 ),
                 children: [
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.symmetric(horizontal: 20),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey[200]!),
-                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     child: (() {
+                      final progress = controller.calculateDailyProgress();
                       final stats = controller.todayActivityStats.value;
-                      if (stats == null || stats.totalActivities == 0) {
-                        return Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.directions_walk, size: 32, color: Colors.grey[300]),
-                              const SizedBox(height: 8),
-                              Text(
-                                "No activities logged yet today.",
-                                style: TextStyle(color: Colors.grey[500], fontSize: 13),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
+                      final todayStr = DateFormat('EEEE, MMM d').format(DateTime.now());
 
-                      // Dynamic Breakdown
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text("Today's Breakdown", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                todayStr,
+                                style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500),
+                              ),
+                              Text(
+                                '$progress%',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: progress >= 100 ? Colors.green : Colors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 12),
-                          if (stats.activityBreakdown != null)
-                             ...stats.activityBreakdown!.entries.map((entry) {
-                               return Padding(
-                                 padding: const EdgeInsets.only(bottom: 8.0),
-                                 child: Row(
-                                   children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blue.withOpacity(0.1),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.circle, size: 8, color: Colors.blue),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        entry.key[0].toUpperCase() + entry.key.substring(1), // Capitalize
-                                        style: const TextStyle(fontWeight: FontWeight.w500),
-                                      ),
-                                      const Spacer(),
-                                      Text(
-                                        "${entry.value} sessions",
-                                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                                      ),
-                                   ],
-                                 ),
-                               );
-                             }).toList(),
-                           
-                           const Divider(),
-                           Row(
-                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                             children: [
-                               const Text("Total Distance", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                               Text("${stats.totalDistance.toStringAsFixed(1)} km", style: const TextStyle(fontWeight: FontWeight.bold)),
-                             ],
-                           ),
+
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: LinearProgressIndicator(
+                              value: progress / 100,
+                              minHeight: 8,
+                              backgroundColor: Colors.grey[200],
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                progress >= 100 ? Colors.green : Colors.orange,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          if (controller.isLoadingActivityStats.value)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16),
+                                child: CircularProgressIndicator(),
+                              ),
+                            )
+                          else if (stats != null && stats.totalActivities > 0)
+                            Column(
+                              children: [
+                                _buildProgressItem(
+                                  icon: Icons.directions_walk,
+                                  label: 'Activities Today',
+                                  value: '${stats.totalActivities}',
+                                  color: Colors.blue,
+                                ),
+                                const SizedBox(height: 8),
+                                _buildProgressItem(
+                                  icon: Icons.timer,
+                                  label: 'Time Active',
+                                  value: '${stats.totalDuration} min',
+                                  color: Colors.orange,
+                                ),
+                                if (stats.totalDistance > 0) ...[
+                                  const SizedBox(height: 8),
+                                  _buildProgressItem(
+                                    icon: Icons.straighten,
+                                    label: 'Distance',
+                                    value: '${stats.totalDistance.toStringAsFixed(1)} km',
+                                    color: Colors.green,
+                                  ),
+                                ],
+                                if (stats.totalCalories > 0) ...[
+                                  const SizedBox(height: 8),
+                                  _buildProgressItem(
+                                    icon: Icons.local_fire_department,
+                                    label: 'Calories',
+                                    value: '${stats.totalCalories} cal',
+                                    color: Colors.red,
+                                  ),
+                                ],
+                              ],
+                            )
+                          else
+                            Center(
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.directions_walk,
+                                    size: 48,
+                                    color: Colors.grey[300],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'No activities today',
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  TextButton(
+                                    onPressed: () {
+                                      final navController =
+                                          Get.find<NavigationController>();
+                                      navController.changePage(2);
+                                    },
+                                    child: const Text('Track Activity'),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       );
                     })(),
@@ -350,6 +391,36 @@ class DailyCareHub extends StatelessWidget {
         ),
       );
     });
+  }
+
+  // Helper method for progress items
+  Widget _buildProgressItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(label, style: TextStyle(color: Colors.grey[700])),
+        ),
+        Text(
+          value,
+          style: TextStyle(fontWeight: FontWeight.bold, color: color),
+        ),
+      ],
+    );
   }
 
   Widget _buildActionCard({

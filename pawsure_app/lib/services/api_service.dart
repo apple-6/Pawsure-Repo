@@ -1472,6 +1472,68 @@ class ApiService {
     }
   }
 
+  // ========================================================================
+  // MEAL LOGS API
+  // ========================================================================
+
+  /// POST /pets/:petId/meals - Log a meal for the pet
+  Future<Map<String, dynamic>> logMeal({
+    required int petId,
+    required String mealType,
+  }) async {
+    try {
+      debugPrint('🍲 API: POST $apiBaseUrl/pets/$petId/meals');
+
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/pets/$petId/meals'),
+        headers: headers,
+        body: jsonEncode({
+          'meal_type': mealType,
+        }),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to log meal (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in logMeal: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /pets/:petId/meals/today - Get today's meals
+  Future<List<String>> getTodayMeals(int petId) async {
+    try {
+      debugPrint('📅 API: GET $apiBaseUrl/pets/$petId/meals/today');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/pets/$petId/meals/today'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((e) => e['meal_type'] as String).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('❌ Error in getTodayMeals: $e');
+      return [];
+    }
+  }
+
   Future<void> createReview({
   required int bookingId,
   required double rating,

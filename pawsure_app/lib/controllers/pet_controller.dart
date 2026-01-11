@@ -78,6 +78,21 @@ class PetController extends GetxController {
     }
   }
 
+  /// 🆕 Update a pet's streak in the list and if selected
+  void updatePetStreak(int petId, int newStreak) {
+    // 1. Update in the list
+    final index = pets.indexWhere((p) => p.id == petId);
+    if (index != -1) {
+      pets[index] = pets[index].copyWith(streak: newStreak);
+      debugPrint('🔥 Updated streak for ${pets[index].name} to $newStreak');
+    }
+
+    // 2. Update selectedPet if it's the same pet
+    if (selectedPet.value?.id == petId) {
+      selectedPet.value = selectedPet.value!.copyWith(streak: newStreak);
+    }
+  }
+
   /// Refresh pets from database
   Future<void> refreshPets() async {
     await loadPets();

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/home_controller.dart';
 import '../../controllers/navigation_controller.dart';
-import '../../widgets/home/status_card.dart';
+import '../../widgets/home/daily_care_hub.dart';
 import '../../widgets/home/sos_button.dart';
 import '../../widgets/home/upcoming_events_card.dart';
 import 'package:pawsure_app/widgets/home/quick_actions.dart';
@@ -108,27 +108,6 @@ class HomeScreen extends StatelessWidget {
                   ),
                   // Divider
                   const PopupMenuDivider(),
-                  // Add Pet option
-                  // const PopupMenuItem<String>(
-                  //   value: 'add_pet',
-                  //   child: Row(
-                  //     children: [
-                  //       Icon(
-                  //         Icons.add_circle_outline,
-                  //         size: 20,
-                  //         color: Color(0xFF22C55E),
-                  //       ),
-                  //       SizedBox(width: 12),
-                  //       Text(
-                  //         'Add New Pet',
-                  //         style: TextStyle(
-                  //           color: Color(0xFF22C55E),
-                  //           fontWeight: FontWeight.w500,
-                  //         ),
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
                 ],
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -255,20 +234,8 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Status Card (uses controller.currentStreak for real-time updates)
-                StatusCard(
-                  petName: pet.name,
-                  petType: pet.species ?? 'Pet',
-                  currentMood: controller.currentMood.value,
-                  streak: controller.currentStreak.value,
-                  progress: controller.dailyProgress,
-                  goals: controller.dailyGoals,
-                ),
-
-                const SizedBox(height: 24),
-
-                // Daily Activity Progress Card
-                _buildDailyActivityCard(controller),
+                // NEW Daily Care Hub
+                const DailyCareHub(),
 
                 const SizedBox(height: 24),
 
@@ -281,7 +248,7 @@ class HomeScreen extends StatelessWidget {
                 UpcomingEventsCard(petId: pet.id),
                 const SizedBox(height: 24),
 
-                // ✅ UPDATED: Bookings Section - Show ALL bookings
+                // Bookings Section
                 Obx(() {
                   return Container(
                     width: double.infinity,
@@ -313,7 +280,6 @@ class HomeScreen extends StatelessWidget {
                                 color: Colors.black87,
                               ),
                             ),
-                            // ✅ Show total count
                             if (!bookingController.isLoadingBookings.value)
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -336,63 +302,8 @@ class HomeScreen extends StatelessWidget {
                           ],
                         ),
 
-                        // ⚠️ UNPAID BOOKINGS WARNING
-                        if (!bookingController.isLoadingBookings.value) ...[
-                          (() {
-                            final unpaidCount = bookingController.userBookings
-                                .where((b) {
-                                  final status =
-                                      b['status']?.toString().toLowerCase() ??
-                                      '';
-                                  final isPaid = b['is_paid'] == true;
-                                  return status == 'completed' && !isPaid;
-                                })
-                                .length;
-
-                            if (unpaidCount > 0) {
-                              return Container(
-                                margin: const EdgeInsets.only(
-                                  top: 12,
-                                  bottom: 8,
-                                ),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.shade50,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.orange.shade200,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.warning_amber_rounded,
-                                      color: Colors.orange,
-                                      size: 24,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        'You have $unpaidCount unpaid booking${unpaidCount > 1 ? 's' : ''}.\nPlease complete payment below.',
-                                        style: const TextStyle(
-                                          color: Colors.orange,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          })(),
-                        ],
-
                         const SizedBox(height: 16),
 
-                        // Logic for Loading, Empty, or List
                         if (bookingController.isLoadingBookings.value)
                           const Center(
                             child: Padding(
@@ -425,7 +336,6 @@ class HomeScreen extends StatelessWidget {
                             ),
                           )
                         else
-                          // ✅ REMOVED FILTERING - Show ALL bookings
                           Column(
                             children: bookingController.userBookings
                                 .map(
@@ -449,165 +359,6 @@ class HomeScreen extends StatelessWidget {
           ),
         );
       }),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: Colors.deepPurple,
-        child: const Icon(Icons.auto_awesome, color: Colors.white),
-      ),
-    );
-  }
-
-  // Daily Activity Progress Card Widget
-  Widget _buildDailyActivityCard(HomeController controller) {
-    return Obx(() {
-      final progress = controller.calculateDailyProgress();
-      final stats = controller.todayActivityStats.value;
-
-      return Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Daily Activity Progress',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '$progress%',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: progress >= 100 ? Colors.green : Colors.orange,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Progress Bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: progress / 100,
-                  minHeight: 8,
-                  backgroundColor: Colors.grey[200],
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    progress >= 100 ? Colors.green : Colors.orange,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Activity Stats Summary
-              if (controller.isLoadingActivityStats.value)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(),
-                  ),
-                )
-              else if (stats != null && stats.totalActivities > 0)
-                Column(
-                  children: [
-                    _buildProgressItem(
-                      icon: Icons.directions_walk,
-                      label: 'Activities Today',
-                      value: '${stats.totalActivities}',
-                      color: Colors.blue,
-                    ),
-                    const SizedBox(height: 8),
-                    _buildProgressItem(
-                      icon: Icons.timer,
-                      label: 'Time Active',
-                      value: '${stats.totalDuration} min',
-                      color: Colors.orange,
-                    ),
-                    if (stats.totalDistance > 0) ...[
-                      const SizedBox(height: 8),
-                      _buildProgressItem(
-                        icon: Icons.straighten,
-                        label: 'Distance',
-                        value: '${stats.totalDistance.toStringAsFixed(1)} km',
-                        color: Colors.green,
-                      ),
-                    ],
-                    if (stats.totalCalories > 0) ...[
-                      const SizedBox(height: 8),
-                      _buildProgressItem(
-                        icon: Icons.local_fire_department,
-                        label: 'Calories',
-                        value: '${stats.totalCalories} cal',
-                        color: Colors.red,
-                      ),
-                    ],
-                  ],
-                )
-              else
-                Center(
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.directions_walk,
-                        size: 48,
-                        color: Colors.grey[300],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'No activities today',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                      const SizedBox(height: 4),
-                      TextButton(
-                        onPressed: () {
-                          final navController =
-                              Get.find<NavigationController>();
-                          navController.changePage(2);
-                        },
-                        child: const Text('Track Activity'),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-      );
-    });
-  }
-
-  // Helper method for progress items
-  Widget _buildProgressItem({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Row(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: color, size: 18),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(label, style: TextStyle(color: Colors.grey[700])),
-        ),
-        Text(
-          value,
-          style: TextStyle(fontWeight: FontWeight.bold, color: color),
-        ),
-      ],
     );
   }
 }
