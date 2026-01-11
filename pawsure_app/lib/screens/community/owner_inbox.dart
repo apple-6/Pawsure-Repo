@@ -33,7 +33,7 @@ class OwnerInboxItem {
   });
 
   factory OwnerInboxItem.fromJson(Map<String, dynamic> json) {
-    final pet = json['pet'] as Map<String, dynamic>?;
+    final petsList = json['pets'] as List<dynamic>?;
     // Owners see the SITTER'S name
     final sitter = json['sitter'] as Map<String, dynamic>?;
 
@@ -44,9 +44,10 @@ class OwnerInboxItem {
     String displayPetName = 'Unknown Pet';
     String displayPetType = 'dog';
 
-    if (pet != null) {
-      displayPetName = pet['name'] ?? 'Unknown Pet';
-      displayPetType = (pet['species'] ?? 'dog').toString().toLowerCase();
+    if (petsList != null && petsList.isNotEmpty) {
+      final bookingPet = petsList[0] as Map<String, dynamic>;
+      displayPetName = bookingPet['name'] ?? 'Unknown Pet';
+      displayPetType = (bookingPet['species'] ?? 'dog').toString().toLowerCase();
     }
     
     if (sitter != null) {
@@ -62,7 +63,7 @@ class OwnerInboxItem {
       id: json['id'] as int,
       petName: displayPetName,
       sitterName: parsedSitterName,
-      petType: (pet?['species'] ?? 'dog').toString().toLowerCase(),
+      petType: displayPetType,
       startDate: json['start_date'] ?? '',
       endDate: json['end_date'] ?? '',
       estimatedCost: (json['total_amount'] ?? 0).toDouble(),
