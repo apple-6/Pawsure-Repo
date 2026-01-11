@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, In } from 'typeorm';
 import { ActivityLog } from './activity-log.entity';
 import { Pet } from '../pet/pet.entity';
 import { CreateActivityLogDto } from './dto/create-activity-log.dto';
@@ -18,30 +18,110 @@ export class ActivityLogService {
     private petService: PetService,
   ) {}
 
-  async create(petId: number, dto: CreateActivityLogDto, userId: number): Promise<ActivityLog> {
-    const pet = await this.petRepository.findOne({ 
-      where: { id: petId }, 
-      relations: ['owner'] 
+  /**
+   * ✅ NEW: Create activity for multiple pets at once
+   * Creates one activity record per pet with identical data
+   */
+  async createForMultiplePets(
+    petIds: number[],
+    dto: CreateActivityLogDto,
+    userId: number,
+  ): Promise<ActivityLog[]> {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📥 Creating activity for multiple pets');
+    console.log('   Pet IDs:', petIds);
+    console.log('   Activity Type:', dto.activity_type);
+    console.log('   User ID:', userId);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    // STEP 1: Validate all pets exist
+    const pets = await this.petRepository.find({
+      where: { id: In(petIds) },
+      relations: ['owner'],
     });
-    
+
+    if (pets.length !== petIds.length) {
+      const foundIds = pets.map(p => p.id);
+      const missingIds = petIds.filter(id => !foundIds.includes(id));
+      throw new NotFoundException(
+        `Pets not found: ${missingIds.join(', ')}`,
+      );
+    }
+
+    // STEP 2: Validate user owns ALL selected pets
+    const unauthorizedPets = pets.filter(pet => pet.owner.id !== userId);
+    if (unauthorizedPets.length > 0) {
+      const unauthorizedNames = unauthorizedPets.map(p => p.name).join(', ');
+      throw new ForbiddenException(
+        `You don't own these pets: ${unauthorizedNames}`,
+      );
+    }
+
+    // STEP 3: Parse activity date as UTC
+    const activityDateUtc = new Date(dto.activity_date);
+    console.log('📅 Activity Date (UTC):', activityDateUtc.toISOString());
+
+    // STEP 4: Create activity for each pet (parallel execution for performance)
+    const activityPromises = petIds.map(async (petId) => {
+      const activity = this.activityLogRepository.create({
+        activity_type: dto.activity_type,
+        title: dto.title,
+        description: dto.description,
+        duration_minutes: dto.duration_minutes,
+        distance_km: dto.distance_km,
+        calories_burned: dto.calories_burned,
+        activity_date: activityDateUtc,
+        route_data: dto.route_data,
+        pet: { id: petId },
+      });
+
+      return this.activityLogRepository.save(activity);
+    });
+
+    const savedActivities = await Promise.all(activityPromises);
+
+    console.log('✅ Successfully created activities:');
+    savedActivities.forEach((activity, index) => {
+      console.log(`   [${index + 1}] ID: ${activity.id}, Pet: ${petIds[index]}, Date: ${activity.activity_date.toISOString()}`);
+    });
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+    return savedActivities;
+  }
+
+  /**
+   * ✅ KEPT: Original single-pet creation (legacy support)
+   * Used by legacy endpoint /activity-logs/pets/:petId
+   */
+  async create(petId: number, dto: CreateActivityLogDto, userId: number): Promise<ActivityLog> {
+    const pet = await this.petRepository.findOne({
+      where: { id: petId },
+      relations: ['owner'],
+    });
+
     if (!pet) {
       throw new NotFoundException('Pet not found');
     }
-    
+
     if (pet.owner.id !== userId) {
       throw new ForbiddenException('Not your pet');
     }
 
-    // ✅ CRITICAL FIX: Parse as UTC explicitly
     const activityDateUtc = new Date(dto.activity_date);
-    
+
     console.log('📥 Received activity_date:', dto.activity_date);
     console.log('📅 Parsed as Date:', activityDateUtc.toISOString());
 
     const activity = this.activityLogRepository.create({
-      ...dto,
+      activity_type: dto.activity_type,
+      title: dto.title,
+      description: dto.description,
+      duration_minutes: dto.duration_minutes,
+      distance_km: dto.distance_km,
+      calories_burned: dto.calories_burned,
+      activity_date: activityDateUtc,
+      route_data: dto.route_data,
       pet: { id: petId },
-      activity_date: activityDateUtc, // ✅ Store UTC
     });
 
     const savedActivity = await this.activityLogRepository.save(activity);
@@ -58,20 +138,23 @@ export class ActivityLogService {
     return savedActivity;
   }
 
+  /**
+   * Get all activities for a specific pet with optional filters
+   */
   async findAllByPet(
     petId: number,
     userId: number,
     filters?: { type?: string; startDate?: string; endDate?: string },
   ): Promise<ActivityLog[]> {
-    const pet = await this.petRepository.findOne({ 
-      where: { id: petId }, 
-      relations: ['owner'] 
+    const pet = await this.petRepository.findOne({
+      where: { id: petId },
+      relations: ['owner'],
     });
-    
+
     if (!pet) {
       throw new NotFoundException('Pet not found');
     }
-    
+
     if (pet.owner.id !== userId) {
       throw new ForbiddenException('Not your pet');
     }
@@ -84,8 +167,8 @@ export class ActivityLogService {
 
     if (filters?.startDate && filters?.endDate) {
       query.activity_date = Between(
-        new Date(filters.startDate), 
-        new Date(filters.endDate)
+        new Date(filters.startDate),
+        new Date(filters.endDate),
       );
     }
 
@@ -109,16 +192,19 @@ export class ActivityLogService {
     });
   }
 
+  /**
+   * Get activity statistics for a specific pet
+   */
   async getStats(petId: number, userId: number, period: 'day' | 'week' | 'month') {
-    const pet = await this.petRepository.findOne({ 
-      where: { id: petId }, 
-      relations: ['owner'] 
+    const pet = await this.petRepository.findOne({
+      where: { id: petId },
+      relations: ['owner'],
     });
-    
+
     if (!pet) {
       throw new NotFoundException('Pet not found');
     }
-    
+
     if (pet.owner.id !== userId) {
       throw new ForbiddenException('Not your pet');
     }
@@ -166,10 +252,13 @@ export class ActivityLogService {
       totalDuration,
       totalDistance,
       totalCalories,
-      byType,
+      activityBreakdown: byType,
     };
   }
 
+  /**
+   * Get a single activity by ID
+   */
   async findOne(id: number, userId: number): Promise<ActivityLog> {
     const activity = await this.activityLogRepository.findOne({
       where: { id },
@@ -179,7 +268,7 @@ export class ActivityLogService {
     if (!activity) {
       throw new NotFoundException('Activity not found');
     }
-    
+
     if (activity.pet.owner.id !== userId) {
       throw new ForbiddenException('Not your activity');
     }
@@ -187,18 +276,27 @@ export class ActivityLogService {
     return activity;
   }
 
+  /**
+   * Update an activity
+   */
   async update(id: number, dto: UpdateActivityLogDto, userId: number): Promise<ActivityLog> {
     const activity = await this.findOne(id, userId);
 
-    Object.assign(activity, dto);
+    // Update fields
+    if (dto.activity_type !== undefined) activity.activity_type = dto.activity_type;
+    if (dto.title !== undefined) activity.title = dto.title;
+    if (dto.description !== undefined) activity.description = dto.description;
+    if (dto.duration_minutes !== undefined) activity.duration_minutes = dto.duration_minutes;
+    if (dto.distance_km !== undefined) activity.distance_km = dto.distance_km;
+    if (dto.calories_burned !== undefined) activity.calories_burned = dto.calories_burned;
+    if (dto.route_data !== undefined) activity.route_data = dto.route_data;
 
     if (dto.activity_date) {
-      // ✅ CRITICAL FIX: Parse as UTC
       const activityDateUtc = new Date(dto.activity_date);
-      
+
       console.log('📥 Update received activity_date:', dto.activity_date);
       console.log('📅 Parsed as Date:', activityDateUtc.toISOString());
-      
+
       activity.activity_date = activityDateUtc;
     }
 
@@ -215,6 +313,9 @@ export class ActivityLogService {
     return saved;
   }
 
+  /**
+   * Delete an activity
+   */
   async remove(id: number, userId: number): Promise<void> {
     const activity = await this.findOne(id, userId);
     const petId = activity.petId || (activity.pet ? activity.pet.id : 0);
