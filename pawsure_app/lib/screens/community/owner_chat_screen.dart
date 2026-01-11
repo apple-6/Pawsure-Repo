@@ -71,48 +71,73 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
     }
   }
 
-  void _connectSocket() {
-    String socketUrl = Platform.isAndroid ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+void _connectSocket() {
+  String socketUrl = Platform.isAndroid ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+  
+  print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  print('🔌 Initializing socket connection');
+  print('   URL: $socketUrl');
+  print('   Room: ${widget.room}');
+  print('   User ID: ${widget.currentUserId}');
+  
+  socket = IO.io(socketUrl, <String, dynamic>{
+    'transports': ['websocket'],
+    'autoConnect': false,
+    'reconnection': true,
+    'reconnectionAttempts': 5,
+    'reconnectionDelay': 1000,
+  });
+
+  socket.connect();
+  
+  socket.onConnect((_) {
+    print('✅ SOCKET CONNECTED!');
+    print('   Socket ID: ${socket.id}');
+    print('   Joining room: ${widget.room}');
+    socket.emit('joinRoom', widget.room);
+    print('   Join room emitted');
+  });
+
+  socket.on('receiveMessage', (data) {
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('📨 MESSAGE RECEIVED VIA SOCKET');
+    print('   Text: ${data['text']}');
+    print('   Sender ID: ${data['senderId']}');
+    print('   My User ID: ${widget.currentUserId}');
+    print('   Is Me: ${data['senderId'] == widget.currentUserId}');
+    print('   Timestamp: ${data['timestamp']}');
     
-    socket = IO.io(socketUrl, <String, dynamic>{
-      'transports': ['websocket'],
-      'autoConnect': false,
-      'reconnection': true, // ✅ Enable auto-reconnection
-      'reconnectionAttempts': 5,
-      'reconnectionDelay': 1000,
-    });
-
-    socket.connect();
-    socket.onConnect((_) {
-      socket.emit('joinRoom', widget.room);
-    });
-
-    socket.on('receiveMessage', (data) {
-      if (mounted) {
-        setState(() {
-          _messages.add({
-            "text": data['text'],
-            "isMe": data['senderId'] == widget.currentUserId,
-            "time": DateTime.now().toString(),
-          });
+    if (mounted) {
+      setState(() {
+        _messages.add({
+          "text": data['text'],
+          "isMe": data['senderId'] == widget.currentUserId,
+          "time": data['timestamp'] ?? DateTime.now().toString(),
         });
-        _scrollToBottom();
-      }
-    });
+      });
+      print('✅ Message added to list. Total messages: ${_messages.length}');
+      _scrollToBottom();
+    } else {
+      print('⚠️ Widget not mounted, message ignored');
+    }
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  });
 
   socket.onDisconnect((_) {
-    print('❌ Disconnected from socket');
+    print('❌ SOCKET DISCONNECTED');
   });
 
   socket.onError((error) {
-    print('🔴 Socket error: $error');
+    print('🔴 SOCKET ERROR: $error');
   });
 
   socket.onReconnect((_) {
-    print('🔄 Reconnected to socket');
-    socket.emit('joinRoom', widget.room); // Re-join room after reconnect
+    print('🔄 SOCKET RECONNECTED');
+    socket.emit('joinRoom', widget.room);
   });
-  }
+  
+  print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+}
 
   void _sendMessage() {
     final text = _controller.text.trim();
