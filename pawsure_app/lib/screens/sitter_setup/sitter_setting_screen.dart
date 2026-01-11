@@ -16,6 +16,10 @@ import 'sitter_performance_page.dart';
 import '../../models/sitter_model.dart';
 import 'sitter_registration_screen.dart';
 
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:pawsure_app/constants/api_config.dart';
+
 class SitterSettingScreen extends StatefulWidget {
   const SitterSettingScreen({super.key});
 
@@ -28,19 +32,20 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
   bool isLoading = true;
   String? errorMessage;
 
+  double rating = 0.0;
+  int reviewCount = 0;
+
   @override
   void initState() {
     super.initState();
     _fetchUserData();
   }
 
-  Future<void> _fetchUserData() async {
+ Future<void> _fetchUserData() async {
     try {
-      // 1. Get the ApiService
       final apiService = Get.find<ApiService>();
       
-      // 2. Call the new method we created (getMySitterProfile)
-      // This automatically uses the token and handles the /my-profile endpoint
+      // 1. Get the profile (Now includes rating/reviews inside the object)
       final profile = await apiService.getMySitterProfile();
 
       if (profile != null) {
@@ -48,10 +53,14 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
           setState(() {
             currentUser = profile;
             isLoading = false;
+
+            // ✅ FIXED: No more 'toJson' error. Just use the fields directly.
+            rating = profile.rating;
+            reviewCount = profile.reviewCount;
           });
         }
       } else {
-        // ⚠️ Profile is null (404) -> User needs to register
+        // User not found (404)
         if (mounted) {
            Get.off(() => const SitterRegistrationScreen());
         }
@@ -63,6 +72,28 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
           errorMessage = "Error: $e";
         });
       }
+    }
+  }
+
+ // ✅ New Helper to fetch stats specifically
+  Future<void> _fetchSitterStats(ApiService apiService, int sitterId) async {
+    try {
+      // Calls the new API method we added in Step 2
+      final data = await apiService.getSitterDetails(sitterId);
+
+      if (data != null && mounted) {
+        setState(() {
+          // Parse data safely
+          rating = (data['rating'] ?? data['avgRating'] ?? 0).toDouble();
+          
+          reviewCount = data['reviewCount'] ?? 
+                        data['reviews_count'] ?? 
+                        data['review_count'] ?? 
+                        0;
+        });
+      }
+    } catch (e) {
+      print("Error loading stats: $e");
     }
   }
 
@@ -392,17 +423,19 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                                   label: "Wallet",
                                   color: Colors.green,
                                 ),
-                                _buildVerticalDivider(),
+                               _buildVerticalDivider(),
                                 _buildStatColumn(
                                   icon: Icons.star_rounded,
-                                  value: "4.9",
+                                  // --- UPDATED: Use dynamic variable ---
+                                  value: rating.toStringAsFixed(1), 
                                   label: "Rating",
                                   color: Colors.amber,
                                 ),
-                                _buildVerticalDivider(),
+                               _buildVerticalDivider(),
                                 _buildStatColumn(
                                   icon: Icons.people_alt,
-                                  value: "32",
+                                  // --- UPDATED: Use dynamic variable ---
+                                  value: reviewCount.toString(),
                                   label: "Reviews",
                                   color: Colors.blueAccent,
                                 ),

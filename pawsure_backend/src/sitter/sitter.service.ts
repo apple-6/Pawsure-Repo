@@ -210,11 +210,35 @@ async findAll(minRating?: number): Promise<any[]> {
     } as any;
   }
 
-  async findByUserId(userId: number): Promise<Sitter | null> {
-    return await this.sitterRepository.findOne({
+async findByUserId(userId: number): Promise<any> {
+    // 1. Fetch sitter AND reviews (Just like findOne)
+    const sitter = await this.sitterRepository.findOne({
       where: { userId, deleted_at: IsNull() },
-      relations: ['user'],
+      relations: ['user', 'reviews'], // <--- CRITICAL: This was missing
     });
+
+    if (!sitter) {
+      return null;
+    }
+
+    // 2. Calculate Stats (Exact copy from findOne)
+    // We wrap review.rating in Number() to prevent string concatenation bugs
+    const reviewCount = sitter.reviews ? sitter.reviews.length : 0;
+
+    const totalRating = sitter.reviews
+      ? sitter.reviews.reduce((sum, review) => sum + Number(review.rating), 0)
+      : 0;
+
+    let avgRating = reviewCount > 0 ? totalRating / reviewCount : 0;
+    avgRating = parseFloat(avgRating.toFixed(1));
+
+    // 3. Return the merged object (Just like findOne)
+    return {
+      ...sitter,
+      rating: avgRating,       // <--- Now 'rating' exists in the JSON
+      reviewCount: reviewCount,
+      reviews_count: reviewCount,
+    };
   }
 
   async update(
