@@ -19,15 +19,15 @@ class ActivityScreen extends StatelessWidget {
     final ActivityController controller = Get.find<ActivityController>();
     final PetController petController = Get.find<PetController>();
 
-    // Brand colors & Styles matching Home Screen
+    // ✅ Brand colors & Styles matching Activity History Screen
     const brandColor = Color(0xFF22C55E);
     const backgroundColor = Color(0xFFF9FAFB);
 
     return Scaffold(
-      backgroundColor: backgroundColor, // ✅ Consistent off-white background
+      backgroundColor: backgroundColor,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: backgroundColor, // ✅ Flat AppBar matching background
+        backgroundColor: backgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
         title: const Text(
@@ -39,7 +39,7 @@ class ActivityScreen extends StatelessWidget {
           ),
         ),
         actions: [
-          // ✅ Pet Selector (Matches Home Screen "Pill" style)
+          // Pet Selector
           Obx(() {
             if (petController.pets.isNotEmpty) {
               final selectedPet = petController.selectedPet.value;
@@ -56,7 +56,6 @@ class ActivityScreen extends StatelessWidget {
                 onSelected: (Pet pet) {
                   petController.selectPet(pet);
                 },
-                // The Trigger Button (Capsule Style)
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -64,7 +63,7 @@ class ActivityScreen extends StatelessWidget {
                   ),
                   margin: const EdgeInsets.only(right: 16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6), // Matching Home Screen grey
+                    color: const Color(0xFFF3F4F6),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -89,7 +88,6 @@ class ActivityScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Dropdown Items
                 itemBuilder: (context) => petController.pets
                     .map(
                       (pet) => PopupMenuItem<Pet>(
@@ -146,168 +144,241 @@ class ActivityScreen extends StatelessWidget {
           }),
         ],
       ),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
+      body: Column(
+        children: [
+          // 1. SCROLLABLE CONTENT (Stats, Filter, List)
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-        if (petController.selectedPet.value == null) {
-          return const Center(child: Text('Please select a pet'));
-        }
+              if (petController.selectedPet.value == null) {
+                return const Center(child: Text('Please select a pet'));
+              }
 
-        return Column(
-          children: [
-            // Statistics Card
-            const ActivityStatsCard(),
-
-            // Filter Chips - Only Walk and Run
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Obx(
-                () => Row(
-                  children: [
-                    _buildFilterChip(controller, 'All'),
-                    _buildFilterChip(controller, 'Walk'),
-                    _buildFilterChip(controller, 'Run'),
-                  ],
-                ),
-              ),
-            ),
-
-            // Recent Activities Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              return Column(
                 children: [
-                  const Text(
-                    'Recent Activities',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: () =>
-                        Get.to(() => const ActivityHistoryScreen()),
-                    icon: const Icon(Icons.history, size: 18),
-                    label: const Text('View All'),
-                    style: TextButton.styleFrom(foregroundColor: Colors.orange),
-                  ),
-                ],
-              ),
-            ),
+                  // Statistics Card
+                  const ActivityStatsCard(),
 
-            // Activity List - Show only last 5 activities
-            Flexible(
-              child: Obx(() {
-                if (controller.filteredActivities.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  // Merged Filters (Left) + View All (Right)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: Row(
                       children: [
-                        Icon(
-                          Icons.directions_walk,
-                          size: 64,
-                          color: Colors.grey[300],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No activities yet',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
+                        // Compact Filters
+                        Obx(
+                          () => Row(
+                            children: [
+                              _buildCompactFilter(
+                                controller,
+                                'All',
+                                brandColor,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildCompactFilter(
+                                controller,
+                                'Walk',
+                                brandColor,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildCompactFilter(
+                                controller,
+                                'Run',
+                                brandColor,
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Track your first activity!',
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 14,
+                        const Spacer(),
+                        // View All Button
+                        TextButton.icon(
+                          onPressed: () =>
+                              Get.to(() => const ActivityHistoryScreen()),
+                          icon: const Icon(Icons.history, size: 16),
+                          label: const Text(
+                            'View All',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            foregroundColor: brandColor, // ✅ Changed to Green
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(60, 30),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                         ),
                       ],
                     ),
-                  );
-                }
+                  ),
 
-                // Sort activities by date (most recent first) and take only 5
-                final sortedActivities = List.from(
-                  controller.filteredActivities,
-                )..sort((a, b) => b.activityDate.compareTo(a.activityDate));
+                  // Activity List
+                  Expanded(
+                    child: Obx(() {
+                      if (controller.filteredActivities.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.directions_walk,
+                                size: 64,
+                                color: Colors.grey[300],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No activities yet',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
 
-                final recentActivities = sortedActivities.take(5).toList();
+                      final sortedActivities =
+                          List.from(controller.filteredActivities)..sort(
+                            (a, b) => b.activityDate.compareTo(a.activityDate),
+                          );
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: recentActivities.length,
-                  itemBuilder: (context, index) {
-                    return ActivityListItem(activity: recentActivities[index]);
-                  },
-                );
-              }),
-            ),
-          ],
-        );
-      }),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Start GPS Tracking Button
-          FloatingActionButton.extended(
-            heroTag: 'gps',
-            onPressed: () async {
-              await Get.to(() => const GPSTrackingScreen());
-              if (Get.isRegistered<HomeController>()) {
-                Get.find<HomeController>().refreshHomeData();
-              }
-            },
-            backgroundColor: Colors.orange,
-            icon: const Icon(Icons.gps_fixed),
-            label: const Text('Start Tracking'),
+                      final recentActivities = sortedActivities
+                          .take(5)
+                          .toList();
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        itemCount: recentActivities.length,
+                        itemBuilder: (context, index) {
+                          return ActivityListItem(
+                            activity: recentActivities[index],
+                          );
+                        },
+                      );
+                    }),
+                  ),
+                ],
+              );
+            }),
           ),
-          const SizedBox(height: 12),
-          // Manual Add Button
-          FloatingActionButton(
-            heroTag: 'manual',
-            onPressed: () async {
-              await _showAddActivityModal(context);
-              if (Get.isRegistered<HomeController>()) {
-                Get.find<HomeController>().refreshHomeData();
-              }
-            },
-            backgroundColor: brandColor, // Consistent Green
-            child: const Icon(Icons.add),
+
+          // 2. STICKY BOTTOM ACTION BAR
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -5),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Manual Log Button
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await _showAddActivityModal(context);
+                      if (Get.isRegistered<HomeController>()) {
+                        Get.find<HomeController>().refreshHomeData();
+                      }
+                    },
+                    icon: const Icon(Icons.edit_note, size: 20),
+                    label: const Text('Manual Log'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.black87,
+                      side: BorderSide(color: Colors.grey.shade300),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Start Tracking Button (Prominent)
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await Get.to(() => const GPSTrackingScreen());
+                      if (Get.isRegistered<HomeController>()) {
+                        Get.find<HomeController>().refreshHomeData();
+                      }
+                    },
+                    icon: const Icon(Icons.directions_run, size: 20),
+                    label: const Text(
+                      'Start Tracking',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: brandColor, // ✅ Changed to Green
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ✅ UPDATED: Cleaner Filter Chips
-  Widget _buildFilterChip(ActivityController controller, String label) {
+  // Custom Compact Filter Widget
+  Widget _buildCompactFilter(
+    ActivityController controller,
+    String label,
+    Color color,
+  ) {
     final isSelected = controller.selectedFilter.value == label;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Text(
+    return GestureDetector(
+      onTap: () => controller.setFilter(label),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color : Colors.white, // ✅ Green when selected
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? color : Colors.grey.shade300),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.3), // ✅ Green Shadow
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.orange.shade900 : Colors.black87,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.white : Colors.grey.shade700,
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
           ),
         ),
-        selected: isSelected,
-        onSelected: (_) => controller.setFilter(label),
-        backgroundColor: Colors.white,
-        selectedColor: Colors.orange.withOpacity(0.2),
-        checkmarkColor: Colors.orange,
-        shape: const StadiumBorder(side: BorderSide.none), // Cleaner look
-        elevation: 0,
       ),
     );
   }
