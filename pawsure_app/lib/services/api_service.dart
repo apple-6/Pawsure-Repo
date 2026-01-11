@@ -1568,11 +1568,104 @@ class ApiService {
 
       debugPrint('📦 API Response: ${response.statusCode}');
 
-      if (response.statusCode != 201 && response.statusCode != 200) {
-        throw Exception('Failed to submit review: ${response.body}');
+    if (response.statusCode != 201 && response.statusCode != 200) {
+      throw Exception('Failed to submit review: ${response.body}');
+    }
+  } catch (e) {
+    debugPrint('❌ Error submitting review: $e');
+    rethrow;
+  }
+}
+
+// ========================================================================
+  // SITTER PROFILE API (Current User)
+  // ========================================================================
+
+  /// GET /sitters/my-profile - Fetch the logged-in user's sitter profile
+  /// This replaces the crashing '/sitters/me' call
+  Future<UserProfile?> getMySitterProfile() async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/sitters/my-profile');
+      final headers = await _getHeaders();
+
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/sitters/my-profile'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return UserProfile.fromJson(data);
+      } else if (response.statusCode == 404) {
+        // Profile not found - User needs to register as sitter
+        return null;
+      } else {
+        throw Exception('Failed to load profile: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('❌ Error submitting review: $e');
+      debugPrint('❌ Error in getMySitterProfile: $e');
+      return null;
+    }
+  }
+
+// ========================================================================
+  // SITTER CHECK & REGISTRATION API (Added for Switch Mode)
+  // ========================================================================
+
+  /// GET /sitters/user/:userId - Check if sitter profile exists
+  /// Returns UserProfile if found (Scenario A), returns null if 404 (Scenario B).
+  Future<UserProfile?> getSitterByUserId(int userId) async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/sitters/user/$userId');
+      final headers = await _getHeaders();
+      
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/sitters/user/$userId'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        // ✅ Profile exists!
+        return UserProfile.fromJson(jsonDecode(response.body));
+      } else if (response.statusCode == 404) {
+        // ⚠️ Profile does not exist (User is not a sitter yet)
+        return null; 
+      } else {
+        // Other errors (500, etc)
+        debugPrint('⚠️ Unexpected status checking sitter: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error checking sitter status: $e');
+      return null;
+    }
+  }
+
+  /// POST /sitters - Create a new sitter profile
+  Future<void> createSitterProfile(Map<String, dynamic> payload) async {
+    try {
+      debugPrint('➕ API: POST $apiBaseUrl/sitters');
+      debugPrint('📤 Payload: ${jsonEncode(payload)}');
+      
+      final headers = await _getHeaders();
+      
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/sitters'),
+        headers: headers,
+        body: jsonEncode(payload),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        debugPrint('✅ Sitter profile created successfully');
+      } else {
+        throw Exception('Failed to register as sitter: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error in createSitterProfile: $e');
       rethrow;
     }
   }

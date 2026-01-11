@@ -76,7 +76,7 @@ class Step4Rates extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
                 prefixText: '',
               ),
-              initialValue: formData['ratePerNight']?.toString(),
+              initialValue: formData['ratePerNight']?.toString()?? '',
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
@@ -93,8 +93,7 @@ class Step4Rates extends StatelessWidget {
                 return null;
               },
               // Save the value to the map as a double
-              onSaved: (value) =>
-                  formData['ratePerNight'] = double.parse(value!),
+              onSaved: (value) => formData['ratePerNight'] = value,
             ),
             const SizedBox(height: 8),
             Row(
