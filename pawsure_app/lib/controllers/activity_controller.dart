@@ -1,4 +1,3 @@
-//pawsure_app/lib/controllers/activity_controller.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/services/activity_service.dart';
@@ -15,13 +14,24 @@ class ActivityController extends GetxController {
 
   var todayStats = Rx<ActivityStats?>(null);
   var weekStats = Rx<ActivityStats?>(null);
+  // ✅ ADDED: Variable to store month stats
+  var monthStats = Rx<ActivityStats?>(null);
 
   var selectedPeriod = 'week'.obs;
   var selectedFilter = 'All'.obs;
 
-  // 🔧 FIX: Return Rx<ActivityStats?> so the UI can call .value on it
-  Rx<ActivityStats?> get stats =>
-      selectedPeriod.value == 'week' ? weekStats : todayStats;
+  // ✅ UPDATED: Logic to return correct stats based on selection
+  Rx<ActivityStats?> get stats {
+    switch (selectedPeriod.value) {
+      case 'week':
+        return weekStats;
+      case 'month':
+        return monthStats; // Returns the actual month stats
+      case 'day':
+      default:
+        return todayStats;
+    }
+  }
 
   @override
   void onInit() {
@@ -34,11 +44,13 @@ class ActivityController extends GetxController {
         loadActivities();
         loadTodayStats();
         loadWeekStats();
+        loadMonthStats(); // ✅ ADDED: Trigger load on pet change
       } else {
         activities.clear();
         filteredActivities.clear();
         todayStats.value = null;
         weekStats.value = null;
+        monthStats.value = null; // ✅ ADDED: Clear month stats
       }
     });
 
@@ -50,6 +62,7 @@ class ActivityController extends GetxController {
       loadActivities();
       loadTodayStats();
       loadWeekStats();
+      loadMonthStats(); // ✅ ADDED: Trigger initial load
     }
   }
 
@@ -94,6 +107,17 @@ class ActivityController extends GetxController {
     }
   }
 
+  // ✅ ADDED: Function to fetch month data from API
+  Future<void> loadMonthStats() async {
+    final pet = _petController.selectedPet.value;
+    if (pet == null) return;
+    try {
+      monthStats.value = await _activityService.getStats(pet.id, 'month');
+    } catch (e) {
+      debugPrint('❌ Error loading month stats: $e');
+    }
+  }
+
   void setFilter(String filter) {
     selectedFilter.value = filter;
   }
@@ -116,13 +140,15 @@ class ActivityController extends GetxController {
 
   void setPeriod(String period) {
     selectedPeriod.value = period;
-    // Optional: reload if needed
+    // ✅ UPDATED: Reload specific stat if needed
     final pet = _petController.selectedPet.value;
     if (pet != null) {
       if (period == 'day') {
         loadTodayStats();
-      } else {
+      } else if (period == 'week') {
         loadWeekStats();
+      } else if (period == 'month') {
+        loadMonthStats();
       }
     }
   }
@@ -131,10 +157,11 @@ class ActivityController extends GetxController {
     try {
       await _activityService.createActivity(petId, payload);
       await loadActivities();
+      // Refresh all stats including month
       await loadTodayStats();
       await loadWeekStats();
+      await loadMonthStats();
       Get.back();
-      // 🔧 FIX: Updated deprecated withOpacity
       Get.snackbar(
         'Success',
         'Activity added!',
@@ -154,8 +181,11 @@ class ActivityController extends GetxController {
     try {
       await _activityService.updateActivity(id, payload);
       await loadActivities();
+      // Added stats refresh to ensure accuracy after update
+      await loadTodayStats();
+      await loadWeekStats();
+      await loadMonthStats();
       Get.back();
-      // 🔧 FIX: Updated deprecated withOpacity
       Get.snackbar(
         'Success',
         'Activity updated!',
@@ -177,7 +207,7 @@ class ActivityController extends GetxController {
       await loadActivities();
       loadTodayStats();
       loadWeekStats();
-      // 🔧 FIX: Updated deprecated withOpacity
+      loadMonthStats(); // ✅ ADDED: Refresh month stats
       Get.snackbar(
         'Success',
         'Activity deleted',
