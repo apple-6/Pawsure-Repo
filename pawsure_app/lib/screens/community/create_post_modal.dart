@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:pawsure_app/services/api_service.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 class CreatePostModal extends StatefulWidget {
   final VoidCallback onPostCreated;
@@ -111,12 +113,13 @@ class _CreatePostModalState extends State<CreatePostModal> {
     setState(() => _isLoading = true);
 
     try {
-      // Prepare media paths
+      // We just need the temporary paths from the image picker.
+      // Your ApiService.createPost will take these paths and UPLOAD the actual
+      // files to the server.
       final List<String> mediaPaths = _selectedMedia
           .map((xfile) => xfile.path)
           .toList();
 
-      // Call the API service method
       await _apiService.createPost(
         content: _captionController.text.trim(),
         isUrgent: _isUrgent,
@@ -127,10 +130,11 @@ class _CreatePostModalState extends State<CreatePostModal> {
         'Post successfully created!',
         backgroundColor: Colors.green,
       );
+
       widget.onPostCreated();
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      _showSnackBar('Error creating post: $e', backgroundColor: Colors.red);
+      _showSnackBar('Error: $e', backgroundColor: Colors.red);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
