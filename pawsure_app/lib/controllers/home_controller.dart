@@ -26,20 +26,46 @@ class HomeController extends GetxController {
   var currentStreak = 0.obs;
   var todayMoodLogged = false.obs;
   var isLoggingMood = false.obs;
+  
+  // 🆕 Persistent State Storage (Per Pet ID)
+  final Map<int, Map<String, int>> _petProgressStorage = {};
+  final Map<int, Set<String>> _petLoggedMealsStorage = {};
+  final Map<int, String> _petMoodStorage = {};
 
   // Daily Progress
   var dailyProgress = <String, int>{"walks": 0, "meals": 0, "wellbeing": 0}.obs;
   final Map<String, int> dailyGoals = {"walks": 2, "meals": 2, "wellbeing": 1};
+  
+  // 🆕 Meal tracking
+  var loggedMeals = <String>{}.obs;
 
   // 🆕 Activity Stats
   var todayActivityStats = Rx<ActivityStats?>(null);
   var isLoadingActivityStats = false.obs;
 
+  // 🆕 Track last loaded pet ID and date to prevent stale data
+  int? _lastPetId;
+  String? _lastLoadedDate;
+
   @override
   void onInit() {
     super.onInit();
+    _lastLoadedDate = _getTodayString();
     _syncUserName();
     _observePetChanges();
+  }
+
+  String _getTodayString() => DateTime.now().toIso8601String().split('T')[0];
+
+  void _checkAndResetForNewDay() {
+    final today = _getTodayString();
+    if (_lastLoadedDate != today) {
+      debugPrint('☀️ New day detected! Resetting daily hub storage.');
+      _petProgressStorage.clear();
+      _petLoggedMealsStorage.clear();
+      _petMoodStorage.clear();
+      _lastLoadedDate = today;
+    }
   }
 
   /// Sync user name from ProfileController
@@ -75,19 +101,30 @@ class HomeController extends GetxController {
 
   /// 🆕 Observe pet changes from PetController
   void _observePetChanges() {
-    // Initial load when first pet is available
+    // Initial load
     if (_petController.selectedPet.value != null) {
       final pet = _petController.selectedPet.value!;
+      _checkAndResetForNewDay();
+      _lastPetId = pet.id;
       _updatePetData(pet);
       loadTodayActivityStats(pet.id);
     }
 
-    // Listen for subsequent changes
+    // Listen for changes
     ever(_petController.selectedPet, (Pet? pet) {
       if (pet != null) {
-        debugPrint('🔄 Pet changed to: ${pet.name} (ID: ${pet.id})');
+        _checkAndResetForNewDay();
+        
+        // 🛡️ CRITICAL FIX: Only reload if the PET ID changed.
+        if (pet.id == _lastPetId && todayActivityStats.value != null) {
+          currentStreak.value = pet.streak;
+          return;
+        }
 
-        // Clear old stats immediately to avoid showing stale data
+        debugPrint('🔄 Pet switched to: ${pet.name} (ID: ${pet.id})');
+        _lastPetId = pet.id;
+
+        // Clear old stats immediately
         todayActivityStats.value = null;
 
         _updatePetData(pet);
@@ -98,27 +135,56 @@ class HomeController extends GetxController {
 
   /// Update data when pet is selected
   void _updatePetData(Pet pet) {
-    // Update mood display based on pet's mood rating
-    if (pet.moodRating != null) {
-      if (pet.moodRating! >= 8) {
-        currentMood.value = "😊";
-      } else if (pet.moodRating! >= 5) {
-        currentMood.value = "😐";
-      } else {
-        currentMood.value = "😢";
-      }
+    int petId = pet.id;
+    debugPrint('💾 Loading persistent state for pet ID: $petId');
+
+    // 1. Load or Initialize Mood (Session fallback)
+    if (_petMoodStorage.containsKey(petId)) {
+      currentMood.value = _petMoodStorage[petId]!;
+      todayMoodLogged.value = currentMood.value != "❓";
     } else {
       currentMood.value = "❓";
+      todayMoodLogged.value = false;
     }
 
-    // Update streak from pet data
+    // 2. Load or Initialize Progress (Session fallback)
+    if (_petProgressStorage.containsKey(petId)) {
+      dailyProgress.assignAll(_petProgressStorage[petId]!);
+    } else {
+      dailyProgress.assignAll({"walks": 0, "meals": 0, "wellbeing": 0});
+    }
+
+    // 3. Load or Initialize Logged Meals (Session fallback)
+    if (_petLoggedMealsStorage.containsKey(petId)) {
+      loggedMeals.assignAll(_petLoggedMealsStorage[petId]!);
+    } else {
+      loggedMeals.clear();
+    }
+
+    // Update streak from pet data (Source of truth)
     currentStreak.value = pet.streak;
 
-    // Check if mood was logged today
-    _checkTodayMood(pet.id);
+    // Background sync with server
+    _checkTodayMood(petId);
+    _loadTodayMeals(petId);
+  }
 
-    // TODO: Fetch actual activity data from backend
-    dailyProgress.value = {"walks": 1, "meals": 2, "wellbeing": 0};
+  /// 🆕 Load today's meals from API
+  Future<void> _loadTodayMeals(int petId) async {
+    try {
+      final meals = await _apiService.getTodayMeals(petId);
+      if (meals.isNotEmpty) {
+        loggedMeals.assignAll(meals);
+        dailyProgress['meals'] = meals.length;
+        
+        // Save to session storage
+        _petLoggedMealsStorage[petId] = Set<String>.from(meals);
+        _petProgressStorage[petId] = Map<String, int>.from(dailyProgress);
+        dailyProgress.refresh();
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error loading today meals: $e');
+    }
   }
 
   /// 🆕 Check if mood was logged today
@@ -127,8 +193,24 @@ class HomeController extends GetxController {
       final todayMood = await _apiService.getTodayMood(petId);
       todayMoodLogged.value = todayMood != null;
       if (todayMood != null) {
+        // Update progress
         dailyProgress['wellbeing'] = 1;
+        
+        // Update emoji based on the fetched mood
+        if (todayMood is Map) {
+             final score = todayMood['mood_score'] as int? ?? 5;
+             if (score >= 8) currentMood.value = "😊";
+             else if (score >= 5) currentMood.value = "😐";
+             else currentMood.value = "😢";
+        }
+        
+        // Save to storage
+        _petMoodStorage[petId] = currentMood.value;
+        _petProgressStorage[petId] = Map<String, int>.from(dailyProgress);
         dailyProgress.refresh();
+
+        // Also refresh streak info to be sure
+        loadStreakInfo(petId);
       }
     } catch (e) {
       debugPrint('⚠️ Error checking today mood: $e');
@@ -139,7 +221,9 @@ class HomeController extends GetxController {
   Future<void> loadStreakInfo(int petId) async {
     try {
       final streakInfo = await _apiService.getStreakInfo(petId);
-      currentStreak.value = streakInfo['currentStreak'] as int? ?? 0;
+      final newStreak = streakInfo['currentStreak'] as int? ?? 0;
+      currentStreak.value = newStreak;
+      _petController.updatePetStreak(petId, newStreak);
       debugPrint('🔥 Current streak: ${currentStreak.value} days');
     } catch (e) {
       debugPrint('⚠️ Error loading streak info: $e');
@@ -155,6 +239,17 @@ class HomeController extends GetxController {
       final stats = await _activityService.getStats(petId, 'day');
 
       todayActivityStats.value = stats;
+      
+      // Update walks progress from stats
+      if (stats != null) {
+          dailyProgress['walks'] = stats.totalActivities;
+          _petProgressStorage[petId] = Map<String, int>.from(dailyProgress);
+          dailyProgress.refresh();
+          
+          // Walks also update streak, so refresh it
+          loadStreakInfo(petId);
+      }
+
       debugPrint(
         '✅ Activity stats loaded: ${stats.totalActivities} activities, ${stats.totalDuration} min',
       );
@@ -172,27 +267,24 @@ class HomeController extends GetxController {
     if (pet != null) {
       debugPrint('🔄 Refreshing home data for ${pet.name}...');
       await loadTodayActivityStats(pet.id);
+      await _loadTodayMeals(pet.id);
     }
   }
 
   /// 🆕 Calculate daily progress percentage
   int calculateDailyProgress() {
-    final stats = todayActivityStats.value;
-    if (stats == null) return 0;
+    final double walksProgress =
+        (dailyProgress['walks'] ?? 0) / (dailyGoals['walks'] ?? 1);
+    final double mealsProgress =
+        (dailyProgress['meals'] ?? 0) / (dailyGoals['meals'] ?? 1);
+    final double wellbeingProgress =
+        (dailyProgress['wellbeing'] ?? 0) / (dailyGoals['wellbeing'] ?? 1);
 
-    // Define daily targets (customize as needed)
-    const targetMinutes = 30; // 30 minutes of activity per day
-    const targetActivities = 2; // At least 2 activities per day
-
-    final minutesProgress = (stats.totalDuration / targetMinutes * 100).clamp(
-      0,
-      100,
-    );
-    final activitiesProgress = (stats.totalActivities / targetActivities * 100)
-        .clamp(0, 100);
-
-    // Average of both metrics
-    return ((minutesProgress + activitiesProgress) / 2).round();
+    final double totalProgress =
+        ((walksProgress + mealsProgress + wellbeingProgress) / 3)
+            .clamp(0.0, 1.0);
+    
+    return (totalProgress * 100).round();
   }
 
   /// 🔧 Getters that delegate to PetController
@@ -267,9 +359,16 @@ class HomeController extends GetxController {
       final newStreak = result['streak'] as int? ?? 0;
       currentStreak.value = newStreak;
       todayMoodLogged.value = true;
+      
+      // Update PetController globally
+      _petController.updatePetStreak(pet.id, newStreak);
 
       // Update wellbeing progress
       dailyProgress['wellbeing'] = 1;
+      
+      // Save to storage
+      _petMoodStorage[pet.id] = currentMood.value;
+      _petProgressStorage[pet.id] = Map<String, int>.from(dailyProgress);
       dailyProgress.refresh();
 
       // Show success with streak info
@@ -301,11 +400,77 @@ class HomeController extends GetxController {
     }
   }
 
+  /// 🆕 Log meal (local state only for now)
+  Future<void> logMeal(String mealType) async {
+    final pet = _petController.selectedPet.value;
+    if (pet == null) return;
+
+    if (loggedMeals.contains(mealType)) {
+       Get.snackbar(
+        "Already Logged",
+        "You've already logged $mealType for today!",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.withOpacity(0.1),
+        colorText: Colors.orange[800],
+        duration: const Duration(seconds: 2),
+      );
+      return;
+    }
+
+    try {
+      // Call API to log meal and get updated streak
+      final result = await _apiService.logMeal(
+        petId: pet.id,
+        mealType: mealType,
+      );
+
+      final newStreak = result['streak'] as int? ?? 0;
+      currentStreak.value = newStreak;
+      
+      // Update PetController globally
+      _petController.updatePetStreak(pet.id, newStreak);
+
+      final currentMeals = dailyProgress['meals'] ?? 0;
+      
+      // Increment meal count and add to set
+      loggedMeals.add(mealType);
+      dailyProgress['meals'] = currentMeals + 1;
+      
+      // Save to storage
+      _petLoggedMealsStorage[pet.id] = Set<String>.from(loggedMeals);
+      _petProgressStorage[pet.id] = Map<String, int>.from(dailyProgress);
+      
+      dailyProgress.refresh();
+        
+      Get.snackbar(
+        "Meal Logged 🔥",
+        "$mealType has been recorded! Current streak: $newStreak",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green[800],
+        duration: const Duration(seconds: 2),
+      );
+    } catch (e) {
+      debugPrint('❌ Error logging meal: $e');
+      Get.snackbar(
+        "Error",
+        "Failed to save meal. Please try again.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red[800],
+      );
+    }
+  }
+
   /// Reset state (call on logout)
   void resetState() {
     currentMood.value = "❓";
     userName.value = "User";
-    dailyProgress.value = {"walks": 0, "meals": 0, "wellbeing": 0};
+    dailyProgress.assignAll({"walks": 0, "meals": 0, "wellbeing": 0});
+    loggedMeals.clear();
+    _petProgressStorage.clear();
+    _petLoggedMealsStorage.clear();
+    _petMoodStorage.clear();
     todayActivityStats.value = null;
     isLoadingActivityStats.value = false;
     currentStreak.value = 0;

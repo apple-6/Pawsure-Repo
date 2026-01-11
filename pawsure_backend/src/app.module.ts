@@ -26,6 +26,7 @@ import { FileModule } from './file/file.module';
 import { EventsModule } from './events/events.module';
 import { ChatModule } from './chat/chat.module';
 import { MoodLogModule } from './mood-log/mood-log.module';
+import { MealLogModule } from './meal-log/meal-log.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { MoodLogModule } from './mood-log/mood-log.module';
     EventsModule,
     ChatModule,
     MoodLogModule, // 🆕 Mood & Streak tracking
+    MealLogModule,
   ],
   controllers: [AppController],
   providers: [AppService, FileService],

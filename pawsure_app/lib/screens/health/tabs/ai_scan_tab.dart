@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
+import 'package:pawsure_app/constants/api_config.dart';
+import 'package:intl/intl.dart';
 
 class AIScanTab extends StatefulWidget {
   const AIScanTab({super.key});
@@ -16,26 +18,79 @@ class _AIScanTabState extends State<AIScanTab> {
   bool _isScanning = false;
   final HealthController healthController = Get.find<HealthController>();
 
-  // Use consistent colors from your app theme
+  // Colors
   final Color _brandColor = const Color(0xFF22C55E);
   final Color _orangeColor = Colors.orange;
 
-  // 1. Function to Pick and Upload Image (Restored to Old Logic)
-  Future<void> _handleScan(BuildContext context) async {
+  // 1. Show Image Source Selection
+  void _showImageSourceSelection(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Take a Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _processImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _processImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // 2. Process Image (Pick & Upload)
+  Future<void> _processImage(ImageSource source) async {
     final picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    XFile? image;
+    
+    try {
+      debugPrint("📷 Picking image from $source...");
+      image = await picker.pickImage(source: source);
+    } catch (e) {
+      debugPrint("❌ Error picking image: $e");
+      _showError("Error picking image: $e");
+      return;
+    }
 
-    if (image == null) return;
+    if (image == null) {
+      debugPrint("⚠️ Image selection cancelled.");
+      return;
+    }
 
+    debugPrint("✅ Image picked: ${image.path}");
     setState(() => _isScanning = true);
 
     try {
-      var uri = Uri.parse('http://localhost:3000/ai/scan');
+      final url = '${ApiConfig.baseUrl}/ai/scan';
+      debugPrint("🚀 Sending image to AI service at: $url");
+
+      var uri = Uri.parse(url); 
       var request = http.MultipartRequest('POST', uri);
       request.files.add(await http.MultipartFile.fromPath('image', image.path));
 
+      debugPrint("⏳ Sending request...");
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
+      debugPrint("📩 Response received: ${response.statusCode}");
+      debugPrint("📄 Body: ${response.body}");
 
       if (!mounted) return;
 
@@ -43,12 +98,12 @@ class _AIScanTabState extends State<AIScanTab> {
         final result = jsonDecode(response.body);
         _showResultDialog(result['prediction'], result['confidence']);
       } else {
+        debugPrint("❌ Server Error: ${response.statusCode}");
         _showError("Server Error: ${response.statusCode}");
       }
     } catch (e) {
-      if (mounted) {
-        _showError("Could not connect to backend. Is NestJS running?");
-      }
+      debugPrint("❌ Connection Error: $e");
+      _showError("Could not connect to backend at ${ApiConfig.baseUrl}. Is NestJS running?");
     } finally {
       if (mounted) {
         setState(() => _isScanning = false);
@@ -56,7 +111,7 @@ class _AIScanTabState extends State<AIScanTab> {
     }
   }
 
-  // 2. Confirmation Dialog
+  // 3. Confirmation Dialog for Delete
   void _confirmDelete(int id) {
     showDialog(
       context: context,
@@ -81,11 +136,11 @@ class _AIScanTabState extends State<AIScanTab> {
     );
   }
 
-  // 3. Delete from Database Logic
+  // 4. Delete from Database Logic
   Future<void> _deleteScan(int id) async {
     try {
       final response = await http.delete(
-        Uri.parse('http://localhost:3000/ai/scan/$id'),
+        Uri.parse('${ApiConfig.baseUrl}/ai/scan/$id'),
       );
 
       if (!mounted) return;
@@ -101,7 +156,7 @@ class _AIScanTabState extends State<AIScanTab> {
     }
   }
 
-  // 4. Save AI Result to Database
+  // 5. Save AI Result to Database
   Future<void> _saveAiScan(String result, String confidence) async {
     final int? petId = healthController.selectedPet.value?.id;
 
@@ -112,7 +167,7 @@ class _AIScanTabState extends State<AIScanTab> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3000/ai/save/$petId'),
+        Uri.parse('${ApiConfig.baseUrl}/ai/save/$petId'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"result": result, "confidence": confidence}),
       );
@@ -128,7 +183,7 @@ class _AIScanTabState extends State<AIScanTab> {
     }
   }
 
-  // 5. Show the AI Result Dialog
+  // 6. Show the AI Result Dialog
   void _showResultDialog(String label, String confidence) {
     final isNormal = label == 'Normal';
     showDialog(
@@ -220,13 +275,15 @@ class _AIScanTabState extends State<AIScanTab> {
     final int? petId = healthController.selectedPet.value?.id;
     if (petId == null) return [];
 
-    final response = await http.get(
-      Uri.parse('http://localhost:3000/ai/history/$petId'),
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to load history');
+    try {
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/ai/history/$petId'));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
     }
   }
 
@@ -240,87 +297,24 @@ class _AIScanTabState extends State<AIScanTab> {
       final currentPetId = healthController.selectedPet.value?.id;
 
       if (currentPetId == null) {
-        return const Center(child: Text("Please select a pet above"));
+        return const Center(child: Text("Please select a pet first"));
       }
 
       return Stack(
         children: [
           ListView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
+            padding: const EdgeInsets.all(24),
             children: [
-              // 1. BIG SCAN BUTTON CARD (Matching Activity/Home Styling)
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: InkWell(
-                  onTap: () => _handleScan(context),
-                  borderRadius: BorderRadius.circular(24),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: _orangeColor.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.add_a_photo_rounded,
-                            size: 48,
-                            color: _orangeColor,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          "New AI Scan",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "Take or upload a photo to analyze\nhealth indicators instantly.",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              Row(
+                children: [
+                  _buildActionCard('Analyze Poop', Icons.analytics_outlined, Colors.orange, () => _showImageSourceSelection(context)),
+                  const SizedBox(width: 16),
+                  _buildActionCard('Check Gait', Icons.directions_walk_outlined, Colors.teal, () {}),
+                ],
               ),
-
               const SizedBox(height: 32),
-
-              // 2. HISTORY HEADER
-              const Padding(
-                padding: EdgeInsets.only(left: 4, bottom: 12),
-                child: Text(
-                  'Scan History',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-
-              // 3. HISTORY LIST
+              const Text('Past Scans', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+              const SizedBox(height: 16),
               FutureBuilder<List<dynamic>>(
                 key: ValueKey(currentPetId),
                 future: _fetchScanHistory(),
@@ -363,10 +357,7 @@ class _AIScanTabState extends State<AIScanTab> {
                     itemBuilder: (context, index) {
                       final scan = snapshot.data![index];
                       final isNormal = scan['result'] == 'Normal';
-                      // ✅ FIX: Use dateStr variable safely
-                      final dateStr = scan['scannedAt'].toString().split(
-                        'T',
-                      )[0];
+                      final dateStr = scan['scannedAt'].toString().split('T')[0];
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -409,7 +400,7 @@ class _AIScanTabState extends State<AIScanTab> {
                           subtitle: Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
-                              "$dateStr • ${scan['confidence']}%", // ✅ Fixed variable name
+                              "$dateStr • ${scan['confidence']}% Match",
                               style: TextStyle(
                                 color: Colors.grey[500],
                                 fontSize: 13,
@@ -443,5 +434,29 @@ class _AIScanTabState extends State<AIScanTab> {
         ],
       );
     });
+  }
+
+  Widget _buildActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
+    return Expanded(
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        color: color.withOpacity(0.1),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                Icon(icon, size: 38, color: color),
+                const SizedBox(height: 12),
+                Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

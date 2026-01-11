@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { ActivityLog } from './activity-log.entity';
 import { Pet } from '../pet/pet.entity';
 import { CreateActivityLogDto } from './dto/create-activity-log.dto';
 import { UpdateActivityLogDto } from './dto/update-activity-log.dto';
+import { PetService } from '../pet/pet.service';
 
 @Injectable()
 export class ActivityLogService {
@@ -13,6 +14,8 @@ export class ActivityLogService {
     private activityLogRepository: Repository<ActivityLog>,
     @InjectRepository(Pet)
     private petRepository: Repository<Pet>,
+    @Inject(forwardRef(() => PetService))
+    private petService: PetService,
   ) {}
 
   async create(petId: number, dto: CreateActivityLogDto, userId: number): Promise<ActivityLog> {
@@ -41,15 +44,18 @@ export class ActivityLogService {
       activity_date: activityDateUtc, // ✅ Store UTC
     });
 
-    const saved = await this.activityLogRepository.save(activity);
+    const savedActivity = await this.activityLogRepository.save(activity);
+    
+    // Recalculate streak
+    await this.petService.calculateAndUpdateStreak(petId);
 
     console.log('✅ Created activity:', {
-      id: saved.id,
-      title: saved.title,
-      activity_date: saved.activity_date.toISOString(),
+      id: savedActivity.id,
+      title: savedActivity.title,
+      activity_date: savedActivity.activity_date.toISOString(),
     });
-
-    return saved;
+    
+    return savedActivity;
   }
 
   async findAllByPet(
@@ -119,10 +125,12 @@ export class ActivityLogService {
 
     const now = new Date();
     let startDate: Date;
+    let endDate: Date = now;
 
     switch (period) {
       case 'day':
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
         break;
       case 'week':
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -130,12 +138,16 @@ export class ActivityLogService {
       case 'month':
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     }
+
+    console.log(`📊 Fetching stats for Pet ${petId}, Period: ${period}, Range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
 
     const activities = await this.activityLogRepository.find({
       where: {
-        pet: { id: petId },
-        activity_date: Between(startDate, now),
+        petId: petId,
+        activity_date: Between(startDate, endDate),
       },
     });
 
@@ -191,6 +203,9 @@ export class ActivityLogService {
     }
 
     const saved = await this.activityLogRepository.save(activity);
+    
+    // Recalculate streak
+    await this.petService.calculateAndUpdateStreak(activity.petId || (activity.pet ? activity.pet.id : 0));
 
     console.log('✅ Updated activity:', {
       id: saved.id,
@@ -202,6 +217,8 @@ export class ActivityLogService {
 
   async remove(id: number, userId: number): Promise<void> {
     const activity = await this.findOne(id, userId);
+    const petId = activity.petId || (activity.pet ? activity.pet.id : 0);
     await this.activityLogRepository.remove(activity);
+    await this.petService.calculateAndUpdateStreak(petId);
   }
 }

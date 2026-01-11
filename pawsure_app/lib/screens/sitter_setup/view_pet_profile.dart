@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/pet_controller.dart';
+import '../../controllers/sitter_controller.dart';
 import '../../models/pet_model.dart';
 
 class PetProfileView extends StatelessWidget {
@@ -13,6 +14,7 @@ class PetProfileView extends StatelessWidget {
     final petController = Get.find<PetController>();
 
     // Retrieve arguments (The Pet model object from your Dashboard)
+    final int? bookingId = Get.arguments['bookingId'];
     final Pet pet = Get.arguments['pet'];
     final String dateRange = Get.arguments['dateRange'] ?? "N/A";
     final String estEarning = Get.arguments['estEarning'] ?? "RM 0.00";
@@ -152,10 +154,10 @@ class PetProfileView extends StatelessWidget {
                     _accent,
                     Colors.white,
                     () {
-                      Get.snackbar(
-                        "Success",
-                        "Booking for ${pet.name} accepted!",
-                      );
+                      if (bookingId != null) {
+                        Get.find<SitterController>().updateBookingStatus(bookingId, 'accepted');
+                        Get.back();
+                      }
                     },
                   ),
                   const SizedBox(height: 12),
@@ -164,7 +166,10 @@ class PetProfileView extends StatelessWidget {
                     Colors.red.shade50,
                     Colors.red,
                     () {
-                      Get.back(); // Simple go back for now
+                      if (bookingId != null) {
+                        Get.find<SitterController>().updateBookingStatus(bookingId, 'declined');
+                        Get.back();
+                      }
                     },
                   ),
                   const SizedBox(height: 12),

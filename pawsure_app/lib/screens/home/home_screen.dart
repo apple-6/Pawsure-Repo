@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/home_controller.dart';
 import '../../controllers/navigation_controller.dart';
-import '../../widgets/home/status_card.dart';
+import '../../widgets/home/daily_care_hub.dart';
 import '../../widgets/home/sos_button.dart';
 import '../../widgets/home/upcoming_events_card.dart';
 import 'package:pawsure_app/widgets/home/quick_actions.dart';
@@ -252,19 +252,8 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                StatusCard(
-                  petName: pet.name,
-                  petType: pet.species ?? 'Pet',
-                  currentMood: controller.currentMood.value,
-                  streak: controller.currentStreak.value,
-                  progress: controller.dailyProgress,
-                  goals: controller.dailyGoals,
-                  photoUrl: pet.photoUrl,
-                ),
-
-                const SizedBox(height: 24),
-
-                _buildDailyActivityCard(controller),
+                // NEW Daily Care Hub
+                const DailyCareHub(),
 
                 const SizedBox(height: 24),
 
@@ -277,6 +266,7 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
+                // Bookings Section
                 Obx(() {
                   return Container(
                     width: double.infinity,
@@ -440,161 +430,6 @@ class HomeScreen extends StatelessWidget {
           ),
         );
       }),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: Colors.deepPurple,
-        child: const Icon(Icons.auto_awesome, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildDailyActivityCard(HomeController controller) {
-    return Obx(() {
-      final progress = controller.calculateDailyProgress();
-      final stats = controller.todayActivityStats.value;
-
-      return Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Daily Activity Progress',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '$progress%',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: progress >= 100 ? Colors.green : Colors.orange,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: progress / 100,
-                  minHeight: 8,
-                  backgroundColor: Colors.grey[200],
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    progress >= 100 ? Colors.green : Colors.orange,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              if (controller.isLoadingActivityStats.value)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(),
-                  ),
-                )
-              else if (stats != null && stats.totalActivities > 0)
-                Column(
-                  children: [
-                    _buildProgressItem(
-                      icon: Icons.directions_walk,
-                      label: 'Activities Today',
-                      value: '${stats.totalActivities}',
-                      color: Colors.blue,
-                    ),
-                    const SizedBox(height: 8),
-                    _buildProgressItem(
-                      icon: Icons.timer,
-                      label: 'Time Active',
-                      value: '${stats.totalDuration} min',
-                      color: Colors.orange,
-                    ),
-                    if (stats.totalDistance > 0) ...[
-                      const SizedBox(height: 8),
-                      _buildProgressItem(
-                        icon: Icons.straighten,
-                        label: 'Distance',
-                        value: '${stats.totalDistance.toStringAsFixed(1)} km',
-                        color: Colors.green,
-                      ),
-                    ],
-                    if (stats.totalCalories > 0) ...[
-                      const SizedBox(height: 8),
-                      _buildProgressItem(
-                        icon: Icons.local_fire_department,
-                        label: 'Calories',
-                        value: '${stats.totalCalories} cal',
-                        color: Colors.red,
-                      ),
-                    ],
-                  ],
-                )
-              else
-                Center(
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.directions_walk,
-                        size: 48,
-                        color: Colors.grey[300],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'No activities today',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                      const SizedBox(height: 4),
-                      TextButton(
-                        onPressed: () {
-                          final navController =
-                              Get.find<NavigationController>();
-                          navController.changePage(2);
-                        },
-                        child: const Text('Track Activity'),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-      );
-    });
-  }
-
-  Widget _buildProgressItem({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Row(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: color, size: 18),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(label, style: TextStyle(color: Colors.grey[700])),
-        ),
-        Text(
-          value,
-          style: TextStyle(fontWeight: FontWeight.bold, color: color),
-        ),
-      ],
     );
   }
 }

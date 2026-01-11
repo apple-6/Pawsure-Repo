@@ -15,6 +15,7 @@ import { HealthRecord } from '../health-record/health-record.entity';
 import { Booking } from '../booking/booking.entity';
 import { Event } from '../events/entities/event.entity';
 import { MoodLog } from '../mood-log/mood-log.entity';
+import { MealLog } from '../meal-log/meal-log.entity';
 
 
 @Entity('pets')
@@ -96,6 +97,11 @@ export class Pet {
   @OneToMany(() => MoodLog, (moodLog) => moodLog.pet)
   moodLogs: MoodLog[];
 
+  // 🆕 Meal logs relationship
+  @OneToMany(() => MealLog, (mealLog) => mealLog.pet)
+  mealLogs: MealLog[];
+
+  // 🆕 Last activity date for streak calculation
   @Column({ type: 'date', nullable: true })
   last_activity_date: Date;
 
