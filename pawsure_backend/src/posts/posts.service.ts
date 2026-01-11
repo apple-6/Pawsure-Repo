@@ -160,79 +160,82 @@ export class PostsService {
     try {
       const post = await this.postRepo.findOne({
         where: { id },
-        relations: ['pets', 'post_media'], // Load existing media too
+        relations: ['pets', 'post_media'],
       });
-
+  
       if (!post) throw new NotFoundException(`Post with ID ${id} not found`);
       if (post.userId !== userId) throw new UnauthorizedException('Permission denied');
-
-      // --- 1. Handle Text & Boolean Updates ---
+  
+      // --- 1. Handle Pet Updates (Many-to-Many) ---
       if (body.pet_id || body.petIds) {
         let petIds: number[] = [];
         const rawPetIds = body.pet_id || body.petIds;
+        
         if (Array.isArray(rawPetIds)) {
-          petIds = rawPetIds.map(Number);
-        } else {
-          petIds = String(rawPetIds).split(',').map(id => Number(id.trim()));
+          petIds = rawPetIds.map(Number).filter(id => !isNaN(id));
+        } else if (rawPetIds) {
+          petIds = String(rawPetIds)
+            .split(',')
+            .map(id => Number(id.trim()))
+            .filter(id => !isNaN(id));
         }
-        post.pets = await this.petRepo.findBy({ id: In(petIds) });
+  
+        if (petIds.length > 0) {
+          // Fetch the actual Pet entities
+          const pets = await this.petRepo.findBy({ id: In(petIds) });
+          if (pets.length > 0) {
+            post.pets = pets; // Assign the Pet entities
+          }
+        } else {
+          post.pets = []; // Clear pets if no IDs provided
+        }
       }
-
+  
+      // --- 2. Handle Text & Boolean Updates ---
       post.content = body.content ?? post.content;
       post.rate_per_night = body.rate_per_night ? parseFloat(body.rate_per_night) : post.rate_per_night;
       post.start_date = body.start_date ? new Date(body.start_date) : post.start_date;
       post.end_date = body.end_date ? new Date(body.end_date) : post.end_date;
       post.is_urgent = body.is_urgent !== undefined ? (body.is_urgent === 'true' || body.is_urgent === true) : post.is_urgent;
-
-      // Save basic updates first
+  
+      // Save basic updates + many-to-many relations
       const updatedPost = await this.postRepo.save(post);
-
-      // --- 2. Handle Existing Media (Deletions) ---
-      // The frontend sends 'existingMedia' as a JSON string of URLs that should STAY.
-      // Anything NOT in this list should be deleted.
+  
+      // --- 3. Handle Existing Media (Deletions) ---
       if (body.existingMedia) {
         const keptMediaUrls: string[] = JSON.parse(body.existingMedia);
-        
-        // Find media that is currently in DB but NOT in the kept list
-        const mediaToDelete = post.post_media.filter(
+        const mediaToDelete = updatedPost.post_media.filter(
           (m) => !keptMediaUrls.includes(m.media_url)
         );
-
+  
         if (mediaToDelete.length > 0) {
           await this.mediaRepo.remove(mediaToDelete);
         }
       }
-
-      // --- 3. Handle New Media (Uploads) ---
+  
+      // --- 4. Handle New Media (Uploads) ---
       if (files && files.length > 0) {
-        // NOTE: Use ConfigService in production instead of hardcoded localhost
-        const baseUrl = 'http://localhost:3000'; 
-        
-        // Option 1: If your entity uses a relation object (recommended)
-        const newMediaRecords = files.map((file) => 
+        const baseUrl = 'http://localhost:3000';
+        const newMediaRecords = files.map((file) =>
           this.mediaRepo.create({
             media_url: `${baseUrl}/uploads/post-media/${file.filename}`,
-            post_id: updatedPost.id,  // ✅ This is correct now
+            post_id: updatedPost.id,
             media_type: file.mimetype.startsWith('image/') ? 'image' : 'video',
           })
         );
-        
+  
         await this.mediaRepo.save(newMediaRecords);
-
-// Option 2: Check your PostMedia entity and use the correct column name
-// For example, if it's defined as:
-// @Column() post_id: number;
-// Then use post_id directly, BUT make sure the property exists
       }
-
+  
       // Return the fresh post with updated relations
       return await this.postRepo.findOne({
         where: { id: updatedPost.id },
         relations: ['user', 'post_media', 'pets'],
       });
-
+  
     } catch (error) {
       this.logger.error(`❌ Update Error: ${error.message}`);
+      this.logger.error(`❌ Stack: ${error.stack}`);
       throw error;
     }
   }

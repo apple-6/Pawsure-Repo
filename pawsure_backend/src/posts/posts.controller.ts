@@ -38,7 +38,7 @@ export class PostsController {
       console.log('❌ Posts service error:', error.message);
       throw new BadRequestException(`Failed to fetch posts: ${error.message}`);
     }
-  } // Added missing closing brace here
+  }
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -117,13 +117,42 @@ export class PostsController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FilesInterceptor('media', 10, {
+      storage: diskStorage({
+        destination: './uploads/post-media',
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        const allowedMimes = [
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          'video/mp4',
+          'video/quicktime',
+          'video/x-msvideo',
+        ];
+        if (allowedMimes.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new BadRequestException(`File type not allowed: ${file.mimetype}`), false);
+        }
+      },
+    }),
+  )
   async update(
     @Param('id') id: string,
     @Body() updatePostDto: any,
+    @UploadedFiles() files: Express.Multer.File[] | undefined,
     @GetUser() user: any,
   ) {
     try {
-      const updatedPost = await this.postsService.update(+id, updatePostDto, user.id);
+      const uploadedFiles = files && files.length > 0 ? files : [];
+      const updatedPost = await this.postsService.update(+id, updatePostDto, user.id, uploadedFiles);
       return {
         success: true,
         message: 'Post updated successfully',
