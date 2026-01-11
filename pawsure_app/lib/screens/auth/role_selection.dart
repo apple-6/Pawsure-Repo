@@ -101,7 +101,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        height: double.infinity, // Ensure background covers full height
+        height: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
             image: AssetImage('assets/images/backgroundroleimage.jpg'),
@@ -109,87 +109,105 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
           ),
         ),
         child: SafeArea(
-          // 1. Wrap the content in SingleChildScrollView
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Column(
-                children: [
-                  if (widget.isRegistrationFlow) ...[
-                    Row(
-                      children: [
-                        IconButton(
-                          onPressed: _isLoading ? null : () => Navigator.pop(context),
-                          icon: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.arrow_back,
-                              color: Color(0xFF4CAF50),
-                            ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              children: [
+                // ==================================================
+                // 1. FIXED ZONE (Back Button & Header)
+                // These stay pinned at the top and NEVER scroll.
+                // ==================================================
+                if (widget.isRegistrationFlow) ...[
+                  // Back Button
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () => Navigator.pop(context),
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          child: const Icon(
+                            Icons.arrow_back,
+                            color: Color(0xFF4CAF50),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Header Title Box
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Column(
+                      children: [
+                        Text(
+                          'Choose Your Role',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Select how you want to use Pawsure',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.95),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Column(
-                        children: [
-                          Text(
-                            'Choose Your Role',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Select how you want to use Pawsure',
-                            style: TextStyle(fontSize: 14, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // 2. REPLACE Spacer() with SizedBox
-                    const SizedBox(height: 40), 
-                  ],
-                  
-                  // 3. REPLACE Spacer() logic with standard spacing
-                  if (!widget.isRegistrationFlow) 
-                    const SizedBox(height: 80), // Push content down if no header
-
-                  _buildRoleCard(
-                    title: "I'm a Pet Owner",
-                    subtitle: "Track, care, and connect for\nyour pets.",
-                    role: 'owner',
-                    userRole: UserRole.owner,
-                    icon: Icons.pets,
                   ),
-                  const SizedBox(height: 24),
-                  _buildRoleCard(
-                    title: "I'm a Pet Sitter",
-                    subtitle: "Offer safe, loving care for\nothers' pets.",
-                    role: 'sitter',
-                    userRole: UserRole.sitter,
-                    icon: Icons.home_work_outlined,
-                  ),
-                  
-                  // 4. Add some bottom padding so it doesn't stick to the bottom edge
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 20), // Gap between header and scroll area
                 ],
-              ),
+
+                // ==================================================
+                // 2. SCROLLABLE ZONE (The Cards)
+                // Expanded takes the remaining space below the header.
+                // SingleChildScrollView allows the cards to scroll inside that space.
+                // ==================================================
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      children: [
+                        // If not registration flow, add top spacing since there is no header
+                        if (!widget.isRegistrationFlow) 
+                           const SizedBox(height: 60),
+
+                        _buildRoleCard(
+                          title: "I'm a Pet Owner",
+                          subtitle: "Track, care, and connect for\nyour pets.",
+                          role: 'owner',
+                          userRole: UserRole.owner,
+                          icon: Icons.pets,
+                        ),
+                        const SizedBox(height: 24),
+                        _buildRoleCard(
+                          title: "I'm a Pet Sitter",
+                          subtitle: "Offer safe, loving care for\nothers' pets.",
+                          role: 'sitter',
+                          userRole: UserRole.sitter,
+                          icon: Icons.home_work_outlined,
+                        ),
+                        // Bottom padding to ensure last card isn't flush with edge
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
