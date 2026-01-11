@@ -448,6 +448,21 @@ class _FeedTabViewState extends State<FeedTabView>
     }
   }
 
+  // Add this inside _FeedTabViewState
+  void _editStandardPost(PostModel post) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        // Assuming CreatePostModal accepts a 'postToEdit' parameter similar to CreateVacancyModal
+        return CreatePostModal(
+          onPostCreated: () => widget.parentState.setState(() {}),
+          postToEdit: post,
+        );
+      },
+    );
+  }
+
   void _handleChat(PostModel post) {
     Navigator.push(
       context,
@@ -548,6 +563,13 @@ class _FeedTabViewState extends State<FeedTabView>
                       post: post,
                       onLike: (id) => _handleLike(id),
                       onComment: (id) {},
+                      // ✅ Connect Delete (Reuse your existing function)
+                      onDelete: canManagePost ? () => _deletePost(post) : null,
+
+                      // ✅ Connect Edit (Use the new helper)
+                      onEdit: canManagePost
+                          ? () => _editStandardPost(post)
+                          : null,
                     ),
                   );
                 },
