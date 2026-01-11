@@ -1,4 +1,4 @@
-//pawsure_app\lib\screens\profile\my_pets_screen.dart
+// pawsure_app/lib/screens/profile/my_pets_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -6,7 +6,8 @@ import 'package:pawsure_app/screens/profile/create_pet_profile_screen.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/services/api_service.dart';
 import 'package:pawsure_app/controllers/navigation_controller.dart';
-import 'package:pawsure_app/controllers/pet_controller.dart'; // 🔧 Changed to PetController
+import 'package:pawsure_app/controllers/pet_controller.dart';
+import 'package:pawsure_app/controllers/health_controller.dart'; // ✅ Import HealthController
 
 class MyPetsScreen extends StatefulWidget {
   const MyPetsScreen({super.key});
@@ -28,45 +29,37 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
     _loadPets();
   }
 
-  // Load pets from database
   Future<void> _loadPets() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      debugPrint('🔍 Loading pets from database...');
       final pets = await _apiService.getPets();
-      debugPrint('✅ Loaded ${pets.length} pets');
-
-      setState(() {
-        _pets = pets;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _pets = pets;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      debugPrint('❌ Error loading pets: $e');
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load pets: ${e.toString()}'),
+            content: Text('Failed to load pets: $e'),
             backgroundColor: Colors.red,
           ),
         );
+        setState(() {
+          _isLoading = false;
+        });
       }
-
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
 
-  // 🔧 FIXED: Refresh the global PetController (updates Home & Health automatically)
   void _refreshGlobalControllers() {
     if (Get.isRegistered<PetController>()) {
-      final PetController petController = Get.find<PetController>();
-      petController.loadPets(); // This updates both Home and Health screens
-      debugPrint('✅ Global PetController refreshed');
+      Get.find<PetController>().loadPets();
     }
   }
 
@@ -76,23 +69,19 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
     });
   }
 
-  /// Handles the confirmation and removal of a pet, calling the API.
   Future<void> _handleRemovePet(int petId, String petName) async {
-    // Show confirmation dialog
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Remove Pet'),
-        content: Text(
-          'Are you sure you want to remove $petName from your pets?',
-        ),
+        content: Text('Are you sure you want to remove $petName?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Remove'),
           ),
@@ -102,13 +91,8 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
 
     if (shouldDelete == true) {
       try {
-        // 1. Call API to delete pet from the database
         await _apiService.deletePet(petId);
-
-        // 2. 🔑 FIX: Refresh the global state (Home and Health screens)
         _refreshGlobalControllers();
-
-        // 3. Remove locally from MyPetsScreen list
         setState(() {
           _pets.removeWhere((pet) => pet.id == petId);
         });
@@ -116,7 +100,7 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('$petName has been removed'),
+              content: Text('$petName removed'),
               backgroundColor: Colors.green,
             ),
           );
@@ -125,7 +109,7 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to remove pet: ${e.toString()}'),
+              content: Text('Failed to remove: $e'),
               backgroundColor: Colors.red,
             ),
           );
@@ -134,23 +118,29 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
     }
   }
 
+  // --- 🔧 FIXED FUNCTION ---
   void _handlePetClick(Pet pet) {
     if (!_isEditMode) {
-      // Get PetController
       final PetController petController = Get.find<PetController>();
       final NavigationController navController =
           Get.find<NavigationController>();
 
-      // 🔧 FIXED: Select the pet globally (updates both Home and Health)
+      // 1. Select the pet globally
       petController.selectPet(pet);
 
-      // Navigate to Health tab (index 1)
+      // 2. Reset Health Screen to Profile Tab (Index 0)
+      if (Get.isRegistered<HealthController>()) {
+        final HealthController healthController = Get.find<HealthController>();
+        healthController.changeTab(0); // ✅ Uses the new helper method
+        debugPrint('✅ Reset Health Screen to Profile Tab');
+      }
+
+      // 3. Navigate to Health tab (index 1 of main nav)
       navController.changePage(1);
 
-      // Close the My Pets screen
+      // 4. Close the My Pets screen
       Navigator.of(context).pop();
 
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Viewing ${pet.name}\'s health records'),
@@ -165,11 +155,8 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
     final result = await Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const CreatePetProfileScreen()),
     );
-
-    // Refresh the pet list if a new pet was added
     if (result == true) {
       _loadPets();
-      // Also refresh global state if a pet was added
       _refreshGlobalControllers();
     }
   }
@@ -179,10 +166,8 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Pet List Content
           CustomScrollView(
             slivers: [
-              // Custom App Bar
               SliverAppBar(
                 automaticallyImplyLeading: false,
                 pinned: true,
@@ -211,14 +196,10 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
                     ),
                 ],
               ),
-
-              // Loading State
               if (_isLoading)
                 const SliverFillRemaining(
                   child: Center(child: CircularProgressIndicator()),
                 ),
-
-              // Empty State
               if (!_isLoading && _pets.isEmpty)
                 SliverFillRemaining(
                   child: Center(
@@ -234,76 +215,56 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
                             color: Colors.grey[600],
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Tap the button below to add your first pet',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
                       ],
                     ),
                   ),
                 ),
-
-              // Pet List Items
               if (!_isLoading && _pets.isNotEmpty)
                 SliverPadding(
-                  padding: const EdgeInsets.only(
-                    left: 16.0,
-                    right: 16.0,
-                    top: 8.0,
-                    bottom: 100,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                   sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate((
-                      BuildContext context,
-                      int index,
-                    ) {
-                      final pet = _pets[index];
-                      return _buildPetCard(context, pet);
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      return _buildPetCard(context, _pets[index]);
                     }, childCount: _pets.length),
                   ),
                 ),
             ],
           ),
 
-          // Fixed "Add Another Pet" Button
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                border: Border(top: BorderSide(color: Colors.grey.shade200)),
-              ),
-              child: ElevatedButton.icon(
-                onPressed: _handleAddPet,
-                icon: const Icon(Icons.add, size: 24),
-                label: Text(
-                  _pets.isEmpty ? 'Add Your First Pet' : 'Add Another Pet',
-                  style: const TextStyle(fontSize: 18),
+          // Fixed "Add Pet" Button (No flicker)
+          if (!_isLoading)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  border: Border(top: BorderSide(color: Colors.grey.shade200)),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 56),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
+                child: ElevatedButton.icon(
+                  onPressed: _handleAddPet,
+                  icon: const Icon(Icons.add, size: 24),
+                  label: Text(
+                    _pets.isEmpty ? 'Add Your First Pet' : 'Add Another Pet',
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  /// Builds the Pet Card with robust image loading and fallback logic.
   Widget _buildPetCard(BuildContext context, Pet pet) {
-    // 1. Improved URL Validation
     final bool hasValidPhotoUrl =
         pet.photoUrl != null &&
         pet.photoUrl!.isNotEmpty &&
@@ -324,7 +285,6 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
             padding: const EdgeInsets.all(12.0),
             child: Row(
               children: [
-                // --- FIXED PHOTO AREA ---
                 Container(
                   width: 72,
                   height: 72,
@@ -337,36 +297,16 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
                         ? Image.network(
                             pet.photoUrl!,
                             fit: BoxFit.cover,
-                            // Proper loading state
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  value:
-                                      loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                      : null,
-                                ),
-                              );
-                            },
-                            // Proper error state (Fallback to Initial)
-                            errorBuilder: (context, error, stackTrace) {
-                              debugPrint('❌ Image Load Error: $error');
-                              return _buildInitialFallback(pet.name);
-                            },
+                            errorBuilder: (ctx, err, stack) =>
+                                _buildInitialFallback(pet.name),
                           )
                         : _buildInitialFallback(pet.name),
                   ),
                 ),
                 const SizedBox(width: 16),
-
-                // Pet Info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         pet.name,
@@ -388,8 +328,6 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
                     ],
                   ),
                 ),
-
-                // Edit Mode Icon
                 if (_isEditMode)
                   IconButton(
                     icon: const Icon(
@@ -407,7 +345,6 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
     );
   }
 
-  // Helper widget to show the first letter of the pet's name
   Widget _buildInitialFallback(String name) {
     return Center(
       child: Text(

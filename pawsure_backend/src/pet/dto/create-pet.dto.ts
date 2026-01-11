@@ -58,6 +58,11 @@ export class CreatePetDto {
   @IsOptional()
   daily_food_amount?: string;
 
+  // 🔧 ADD THIS FIELD
+  @IsString()
+  @IsOptional()
+  sterilization_status?: string;
+
   @IsArray()
   @IsOptional()
   vaccination_dates?: string[];

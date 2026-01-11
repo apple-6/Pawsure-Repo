@@ -1,4 +1,4 @@
-//pawsure_app\lib\screens\activity\activity_history_screen.dart
+// pawsure_app/lib/screens/activity/activity_history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/activity_controller.dart';
@@ -20,61 +20,105 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
   String _selectedFilter = 'All';
   String _selectedPeriod = 'All Time';
 
+  // ✅ CONSTANTS FROM HOME SCREEN
+  final Color _backgroundColor = const Color(0xFFF9FAFB); // Soft off-white
+  final Color _brandColor = const Color(0xFF22C55E); // Brand Green
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _backgroundColor, // ✅ Match Home background
       appBar: AppBar(
-        title: const Text('Activity History'),
+        backgroundColor: _backgroundColor, // ✅ Match Home AppBar
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            size: 20,
+            color: Colors.black,
+          ),
+          onPressed: () => Get.back(),
+        ),
+        title: const Text(
+          'Activity History',
+          style: TextStyle(
+            fontSize: 24, // ✅ Match Home Title Size
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
         actions: [
-          // Period filter
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.calendar_today),
-            onSelected: (value) {
-              setState(() => _selectedPeriod = value);
-            },
-            itemBuilder: (context) =>
-                ['All Time', 'This Week', 'This Month', 'This Year']
-                    .map(
-                      (period) => PopupMenuItem(
-                        value: period,
-                        child: Row(
-                          children: [
-                            if (_selectedPeriod == period)
-                              const Icon(Icons.check, size: 20),
-                            if (_selectedPeriod == period)
-                              const SizedBox(width: 8),
-                            Text(period),
-                          ],
+          // Period Filter (Styled like a small button)
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: PopupMenuButton<String>(
+              icon: Icon(
+                Icons.calendar_month_rounded,
+                color: Colors.grey[700],
+                size: 20,
+              ),
+              tooltip: 'Filter by Date',
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              offset: const Offset(0, 45),
+              onSelected: (value) {
+                setState(() => _selectedPeriod = value);
+              },
+              itemBuilder: (context) =>
+                  ['All Time', 'This Week', 'This Month', 'This Year']
+                      .map(
+                        (period) => PopupMenuItem(
+                          value: period,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                period,
+                                style: TextStyle(
+                                  fontWeight: _selectedPeriod == period
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: _selectedPeriod == period
+                                      ? _brandColor
+                                      : Colors.black87,
+                                ),
+                              ),
+                              if (_selectedPeriod == period)
+                                Icon(
+                                  Icons.check_circle,
+                                  size: 18,
+                                  color: _brandColor,
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                    )
-                    .toList(),
+                      )
+                      .toList(),
+            ),
           ),
         ],
       ),
       body: Column(
         children: [
-          // Filter Chips - Walk, Run, All
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
+          // Filter Chips (Floating on the grey background)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  _buildFilterChip('All', Icons.list_alt),
-                  _buildFilterChip('Walk', Icons.directions_walk),
-                  _buildFilterChip('Run', Icons.directions_run),
+                  _buildModernFilterChip('All', Icons.grid_view_rounded),
+                  const SizedBox(width: 12),
+                  _buildModernFilterChip('Walk', Icons.directions_walk_rounded),
+                  const SizedBox(width: 12),
+                  _buildModernFilterChip('Run', Icons.directions_run_rounded),
                 ],
               ),
             ),
@@ -84,17 +128,19 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
           Expanded(
             child: Obx(() {
               if (_controller.isLoading.value) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(
+                  child: CircularProgressIndicator(color: _brandColor),
+                );
               }
 
               if (_petController.selectedPet.value == null) {
                 return const Center(child: Text('Please select a pet'));
               }
 
-              // Get all activities
+              // Filter Logic
               var activities = List.from(_controller.activities);
 
-              // Apply type filter
+              // 1. Type Filter
               if (_selectedFilter != 'All') {
                 activities = activities
                     .where(
@@ -105,7 +151,7 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
                     .toList();
               }
 
-              // Apply period filter
+              // 2. Period Filter
               final now = DateTime.now();
               switch (_selectedPeriod) {
                 case 'This Week':
@@ -136,84 +182,81 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
                   break;
               }
 
-              // Sort by date (most recent first)
+              // Sort (Newest first)
               activities.sort(
                 (a, b) => b.activityDate.compareTo(a.activityDate),
               );
 
               if (activities.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.search_off, size: 64, color: Colors.grey[300]),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No activities found',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Try adjusting your filters',
-                        style: TextStyle(color: Colors.grey[500], fontSize: 14),
-                      ),
-                    ],
-                  ),
-                );
+                return _buildEmptyState();
               }
 
-              // Group activities by date
+              // Group by Date
               final groupedActivities = _groupActivitiesByDate(activities);
 
               return ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                physics: const BouncingScrollPhysics(),
                 itemCount: groupedActivities.length,
                 itemBuilder: (context, index) {
                   final dateGroup = groupedActivities[index];
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Date Header
+                      // Date Header (Text on Grey Background)
                       Padding(
-                        padding: EdgeInsets.only(
+                        padding: const EdgeInsets.only(
                           left: 4,
-                          bottom: 12,
-                          top: index == 0 ? 0 : 16,
+                          bottom: 8,
+                          top: 12,
                         ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              size: 16,
-                              color: Colors.grey[600],
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              dateGroup['date'],
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Container(
-                                height: 1,
-                                color: Colors.grey[300],
-                              ),
+                        child: Text(
+                          dateGroup['date'],
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                      // ✅ CARD STYLE: Activities inside a white rounded card
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
+                        child: Column(
+                          children: List.generate(
+                            dateGroup['activities'].length,
+                            (i) {
+                              final activity = dateGroup['activities'][i];
+                              final isLast =
+                                  i == dateGroup['activities'].length - 1;
+                              return Column(
+                                children: [
+                                  ActivityListItem(activity: activity),
+                                  if (!isLast)
+                                    Divider(
+                                      height: 1,
+                                      thickness: 0.5,
+                                      color: Colors.grey[100],
+                                      indent: 16,
+                                      endIndent: 16,
+                                    ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
                       ),
-                      // Activities for this date
-                      ...dateGroup['activities'].map<Widget>((activity) {
-                        return ActivityListItem(activity: activity);
-                      }).toList(),
+                      const SizedBox(height: 12),
                     ],
                   );
                 },
@@ -225,24 +268,92 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
     );
   }
 
-  Widget _buildFilterChip(String label, IconData icon) {
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.search_off_rounded,
+              size: 48,
+              color: Colors.grey[300],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No activities found',
+            style: TextStyle(
+              color: Colors.grey[800],
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Try adjusting your filters',
+            style: TextStyle(color: Colors.grey[500], fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernFilterChip(String label, IconData icon) {
     final isSelected = _selectedFilter == label;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        avatar: Icon(
-          icon,
-          size: 18,
-          color: isSelected ? Colors.orange : Colors.grey[600],
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedFilter = label);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          // White background for inactive to pop off the grey scaffold
+          color: isSelected ? _brandColor : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: _brandColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+          border: Border.all(
+            color: isSelected ? _brandColor : Colors.transparent,
+          ),
         ),
-        label: Text(label),
-        selected: isSelected,
-        onSelected: (_) {
-          setState(() => _selectedFilter = label);
-        },
-        selectedColor: Colors.orange.withOpacity(0.2),
-        checkmarkColor: Colors.orange,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? Colors.white : Colors.grey[500],
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey[700],
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -268,7 +379,7 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
       } else if (activityDate.isAfter(
         today.subtract(const Duration(days: 7)),
       )) {
-        dateKey = DateFormat('EEEE').format(activityDate); // Day of week
+        dateKey = DateFormat('EEEE').format(activityDate);
       } else {
         dateKey = DateFormat('MMM d, yyyy').format(activityDate);
       }

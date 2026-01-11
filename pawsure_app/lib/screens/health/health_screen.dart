@@ -16,29 +16,27 @@ class HealthScreen extends StatelessWidget {
         ? Get.find<HealthController>()
         : Get.put(HealthController());
 
+    // Extracting the brand green color used elsewhere for consistency
+    const brandColor = Color(0xFF22C55E);
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: Obx(() {
-          if (controller.isLoadingPets.value) {
-            return const SizedBox(
-              height: 24,
-              width: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            );
-          }
-          if (controller.pets.isEmpty) {
-            return const Text('No Pets Available');
-          }
-          return Text(controller.selectedPet.value?.name ?? 'Select Pet');
-        }),
+        // ✅ UPDATED: Changed from dynamic pet name to static screen title
+        // since the pet is already shown in the selection dropdown.
+        title: const Text(
+          'Health',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+        ),
         actions: [
           // Dropdown menu to switch pets
           Obx(() {
             if (!controller.isLoadingPets.value && controller.pets.isNotEmpty) {
               final selectedPet = controller.selectedPet.value;
-              final emoji = selectedPet?.species?.toLowerCase() == 'dog' ? '🐕' : '🐈';
-              
+              final emoji = selectedPet?.species?.toLowerCase() == 'dog'
+                  ? '🐕'
+                  : '🐈';
+
               return PopupMenuButton<Pet>(
                 onSelected: (Pet pet) {
                   controller.selectPet(pet);
@@ -57,14 +55,17 @@ class HealthScreen extends StatelessWidget {
                               width: 32,
                               height: 32,
                               decoration: BoxDecoration(
-                                color: controller.selectedPet.value?.id == pet.id
-                                    ? const Color(0xFF22C55E).withOpacity(0.1)
+                                color:
+                                    controller.selectedPet.value?.id == pet.id
+                                    ? brandColor.withOpacity(0.1)
                                     : const Color(0xFFF3F4F6),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Center(
                                 child: Text(
-                                  pet.species?.toLowerCase() == 'dog' ? '🐕' : '🐈',
+                                  pet.species?.toLowerCase() == 'dog'
+                                      ? '🐕'
+                                      : '🐈',
                                   style: const TextStyle(fontSize: 16),
                                 ),
                               ),
@@ -74,7 +75,8 @@ class HealthScreen extends StatelessWidget {
                               child: Text(
                                 pet.name,
                                 style: TextStyle(
-                                  fontWeight: controller.selectedPet.value?.id == pet.id
+                                  fontWeight:
+                                      controller.selectedPet.value?.id == pet.id
                                       ? FontWeight.w600
                                       : FontWeight.normal,
                                 ),
@@ -84,7 +86,7 @@ class HealthScreen extends StatelessWidget {
                               const Icon(
                                 Icons.check_circle,
                                 size: 20,
-                                color: Color(0xFF22C55E),
+                                color: brandColor,
                               ),
                           ],
                         ),
@@ -92,7 +94,10 @@ class HealthScreen extends StatelessWidget {
                     )
                     .toList(),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   margin: const EdgeInsets.only(right: 8),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF3F4F6),
@@ -101,10 +106,7 @@ class HealthScreen extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        emoji,
-                        style: const TextStyle(fontSize: 18),
-                      ),
+                      Text(emoji, style: const TextStyle(fontSize: 18)),
                       const SizedBox(width: 8),
                       Text(
                         selectedPet?.name ?? 'Select',
@@ -144,7 +146,11 @@ class HealthScreen extends StatelessWidget {
                   ),
                 );
               },
-              icon: const Icon(Icons.share_outlined, size: 20, color: Color(0xFF6B7280)),
+              icon: const Icon(
+                Icons.share_outlined,
+                size: 20,
+                color: Color(0xFF6B7280),
+              ),
               tooltip: 'Share with Vet',
             ),
           ),
@@ -153,39 +159,53 @@ class HealthScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // Tab Bar Section (Calendar tab REMOVED)
+          // 🎨 IMPROVED VISUAL TAB BAR
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: Container(
+              height: 50,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F6F9),
-                borderRadius: BorderRadius.circular(24),
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(color: Colors.grey.shade200),
               ),
               child: TabBar(
                 controller: controller.tabController,
+                dividerColor: Colors.transparent,
+                indicatorPadding: const EdgeInsets.all(4),
+                indicatorSize: TabBarIndicatorSize.tab,
                 indicator: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
+                  color: brandColor,
+                  borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 4,
+                      color: brandColor.withOpacity(0.3),
+                      blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-                labelColor: Colors.black,
-                unselectedLabelColor: Colors.grey,
+                labelColor: Colors.white,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                unselectedLabelColor: Colors.grey.shade600,
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                ),
+                splashBorderRadius: BorderRadius.circular(25),
                 tabs: const [
                   Tab(text: 'Profile'),
                   Tab(text: 'Records'),
-                  Tab(text: 'AI Scan'), // Calendar tab REMOVED
+                  Tab(text: 'AI Scan'),
                 ],
               ),
             ),
           ),
 
-          // Tab Views (CalendarTab REMOVED)
+          // Tab Views
           Expanded(
             child: TabBarView(
               controller: controller.tabController,
@@ -208,7 +228,7 @@ class HealthScreen extends StatelessWidget {
                   return const RecordsTab();
                 }),
 
-                AIScanTab(), // Calendar tab REMOVED
+                AIScanTab(),
               ],
             ),
           ),

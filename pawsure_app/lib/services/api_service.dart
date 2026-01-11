@@ -264,6 +264,17 @@ class ApiService {
         request.fields['last_vet_visit'] = lastVetVisit;
       }
 
+      if (sterilizationStatus != null && sterilizationStatus.isNotEmpty) {
+        request.fields['sterilization_status'] = sterilizationStatus;
+        debugPrint(
+          '✅ Added sterilization_status to request: $sterilizationStatus',
+        );
+      } else {
+        debugPrint(
+          '⚠️ sterilizationStatus is null or empty: $sterilizationStatus',
+        );
+      }
+
       // Add new photo if provided
       if (photoPath != null && photoPath.isNotEmpty) {
         try {
@@ -1537,25 +1548,25 @@ class ApiService {
   }
 
   Future<void> createReview({
-  required int bookingId,
-  required double rating,
-  required String comment,
-}) async {
-  try {
-    debugPrint('⭐ API: POST $apiBaseUrl/reviews');
-    
-    final headers = await _getHeaders(); // Uses your existing helper
-    final response = await http.post(
-      Uri.parse('$apiBaseUrl/reviews'),
-      headers: headers,
-      body: jsonEncode({
-        'bookingId': bookingId,
-        'rating': rating,
-        'comment': comment,
-      }),
-    );
+    required int bookingId,
+    required double rating,
+    required String comment,
+  }) async {
+    try {
+      debugPrint('⭐ API: POST $apiBaseUrl/reviews');
 
-    debugPrint('📦 API Response: ${response.statusCode}');
+      final headers = await _getHeaders(); // Uses your existing helper
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/reviews'),
+        headers: headers,
+        body: jsonEncode({
+          'bookingId': bookingId,
+          'rating': rating,
+          'comment': comment,
+        }),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
 
     if (response.statusCode != 201 && response.statusCode != 200) {
       throw Exception('Failed to submit review: ${response.body}');
