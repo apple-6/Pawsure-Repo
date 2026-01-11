@@ -37,10 +37,23 @@ class OwnerInboxItem {
     // Owners see the SITTER'S name
     final sitter = json['sitter'] as Map<String, dynamic>?;
 
+    // 1. Logic to extract Sitter Name correctly
+    // The name is usually inside sitter['user']['name']
+    String parsedSitterName = 'Waiting for Sitter...';
+    
+    if (sitter != null) {
+      if (sitter['user'] != null && sitter['user']['name'] != null) {
+        parsedSitterName = sitter['user']['name'];
+      } else if (sitter['name'] != null) {
+        // Fallback in case your backend structure is flat
+        parsedSitterName = sitter['name'];
+      }
+    }
+
     return OwnerInboxItem(
       id: json['id'] as int,
       petName: pet?['name'] ?? 'Unknown Pet',
-      sitterName: sitter?['name'] ?? 'Waiting for Sitter...',
+      sitterName: parsedSitterName,
       petType: (pet?['species'] ?? 'dog').toString().toLowerCase(),
       startDate: json['start_date'] ?? '',
       endDate: json['end_date'] ?? '',
