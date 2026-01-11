@@ -241,11 +241,9 @@ class ProfileTab extends StatelessWidget {
     return items;
   }
 
-  // ========== UPDATED HEALTH CONTENT METHOD ==========
   List<Widget> _buildHealthContent(BuildContext context, Pet pet) {
     final items = <Widget>[];
 
-    // 🔧 FIX: ALWAYS show sterilization status with edit capability
     final status = (pet.sterilizationStatus ?? 'unknown').toLowerCase();
     final displayText = status == 'sterilized'
         ? 'Yes'
@@ -258,7 +256,6 @@ class ProfileTab extends StatelessWidget {
         ? Colors.orange
         : Colors.grey;
 
-    // 🆕 NEW: Make sterilization clickable
     items.add(
       InkWell(
         onTap: () {
@@ -624,227 +621,326 @@ class _WeightTrackingDialogState extends State<_WeightTrackingDialog> {
     }
   }
 
+  // 🔧 FIXED: Prevents overflow by making dialog scrollable and handling layout better
   @override
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
-        constraints: const BoxConstraints(maxHeight: 500),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // 1. Increased Max Height
+        constraints: const BoxConstraints(maxHeight: 600),
+        // 2. Added Scroll View to prevent overflow
+        child: SingleChildScrollView(
+          child: Padding(
+            // 3. Moved padding here
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Weight Tracking',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1F2937),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Weight Chart (improved)
+                _buildWeightChart(),
+                const SizedBox(height: 20),
+
+                // History Section
                 const Text(
-                  'Weight Tracking',
+                  'History',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF1F2937),
                   ),
                 ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                const SizedBox(height: 12),
+
+                // History List
+                // 4. Removed Flexible, added shrinkWrap + physics
+                _weightHistory.isNotEmpty
+                    ? ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _weightHistory.length.clamp(0, 5),
+                        itemBuilder: (context, index) {
+                          final record = _weightHistory[index];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  record.date,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                Text(
+                                  '${record.weight.toStringAsFixed(1)} kg',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF1F2937),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      )
+                    : Text(
+                        'No weight history yet',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+
+                const SizedBox(height: 20),
+
+                // Log New Weight Section
+                const Text(
+                  'Log New Weight',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Weight Input
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: const Color(0xFF22C55E),
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _weightController,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                decoration: const InputDecoration(
+                                  hintText: '15.5',
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.unfold_more,
+                                    size: 18,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'kg',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF22C55E),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        onPressed: _logNewWeight,
+                        icon: const Icon(Icons.add, color: Colors.white),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-
-            // Weight Chart (simplified bar chart)
-            _buildWeightChart(),
-            const SizedBox(height: 20),
-
-            // History Section
-            const Text(
-              'History',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1F2937),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // History List
-            Flexible(
-              child: _weightHistory.isNotEmpty
-                  ? ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _weightHistory.length.clamp(0, 5),
-                      itemBuilder: (context, index) {
-                        final record = _weightHistory[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                record.date,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              Text(
-                                '${record.weight.toStringAsFixed(1)} kg',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF1F2937),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    )
-                  : Text(
-                      'No weight history yet',
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-            ),
-            const SizedBox(height: 20),
-
-            // Log New Weight Section
-            const Text(
-              'Log New Weight',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1F2937),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Weight Input
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: const Color(0xFF22C55E),
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _weightController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            decoration: const InputDecoration(
-                              hintText: '15.5',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.unfold_more,
-                                size: 18,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'kg',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF22C55E),
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    onPressed: _logNewWeight,
-                    icon: const Icon(Icons.add, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
+  // ========== UPDATED CHART LOGIC ==========
   Widget _buildWeightChart() {
-    // Get last 4 months of data
+    // Only show chart if there's actual weight history
+    if (_weightHistory.isEmpty) {
+      return Container(
+        height: 120,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E293B),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.show_chart, color: Colors.white24, size: 32),
+              SizedBox(height: 8),
+              Text(
+                'No weight data yet',
+                style: TextStyle(color: Colors.white54, fontSize: 14),
+              ),
+              Text(
+                'Start logging to see trends',
+                style: TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final chartData = _getChartData();
 
     return Container(
-      height: 120,
+      height: 200,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Chart Title with current weight
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Weight Trend',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (_weightHistory.isNotEmpty)
+                Text(
+                  '${_weightHistory.first.weight.toStringAsFixed(1)} kg',
+                  style: const TextStyle(
+                    color: Color(0xFF22C55E),
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
           // Bars
           Expanded(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: chartData.map((data) {
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Container(
-                      width: 50,
-                      height: data['height'] as double,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF22C55E),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                final hasData = data['hasData'] as bool;
+                final weight = data['weight'] as double?;
+
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // Weight label above bar
+                        if (hasData && weight != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              weight.toStringAsFixed(1),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          )
+                        else
+                          const SizedBox(height: 14),
+
+                        // Bar
+                        Container(
+                          width: double.infinity,
+                          height: data['height'] as double,
+                          decoration: BoxDecoration(
+                            color: hasData
+                                ? const Color(0xFF22C55E)
+                                : Colors.white12,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 );
               }).toList(),
             ),
           ),
           const SizedBox(height: 8),
-          // Labels
+
+          // Month Labels
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: chartData.map((data) {
-              return SizedBox(
-                width: 50,
+              final hasData = data['hasData'] as bool;
+              return Expanded(
                 child: Text(
                   data['label'] as String,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: TextStyle(
+                    color: hasData ? Colors.white70 : Colors.white38,
+                    fontSize: 11,
+                    fontWeight: hasData ? FontWeight.w500 : FontWeight.normal,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               );
@@ -856,20 +952,48 @@ class _WeightTrackingDialogState extends State<_WeightTrackingDialog> {
   }
 
   List<Map<String, dynamic>> _getChartData() {
+    if (_weightHistory.isEmpty) {
+      return [];
+    }
+
+    // Find min and max weights for scaling
+    double minWeight = _weightHistory
+        .map((r) => r.weight)
+        .reduce((a, b) => a < b ? a : b);
+    double maxWeight = _weightHistory
+        .map((r) => r.weight)
+        .reduce((a, b) => a > b ? a : b);
+
+    // Add 10% padding to range
+    final range = maxWeight - minWeight;
+    if (range > 0) {
+      minWeight -= range * 0.1;
+      maxWeight += range * 0.1;
+    } else {
+      // If all weights are the same, create a small range
+      minWeight = minWeight * 0.9;
+      maxWeight = maxWeight * 1.1;
+    }
+
     final now = DateTime.now();
+    const maxBarHeight = 60.0;
+    const minBarHeight = 8.0;
 
     return List.generate(4, (index) {
       final month = DateTime(now.year, now.month - index, 1);
       final monthLabel = DateFormat('MMM').format(month);
 
-      // Find weight for this month
-      double height = 40; // Default height
+      // Find weight for this month (only from actual history)
+      double? weight;
+      bool hasData = false;
+
       for (var record in _weightHistory) {
         try {
           final recordDate = DateFormat('dd/MM/yyyy').parse(record.date);
           if (recordDate.month == month.month &&
               recordDate.year == month.year) {
-            height = (record.weight / 20 * 60).clamp(20, 60);
+            weight = record.weight;
+            hasData = true;
             break;
           }
         } catch (e) {
@@ -877,7 +1001,24 @@ class _WeightTrackingDialogState extends State<_WeightTrackingDialog> {
         }
       }
 
-      return {'label': monthLabel, 'height': height};
+      // Calculate bar height only if we have actual data
+      double barHeight = minBarHeight;
+      if (hasData && weight != null) {
+        if (maxWeight > minWeight) {
+          final normalized = (weight - minWeight) / (maxWeight - minWeight);
+          barHeight =
+              minBarHeight + (normalized * (maxBarHeight - minBarHeight));
+        } else {
+          barHeight = maxBarHeight / 2; // Middle height for single data point
+        }
+      }
+
+      return {
+        'label': monthLabel,
+        'height': barHeight,
+        'hasData': hasData,
+        'weight': weight,
+      };
     }).reversed.toList();
   }
 }
