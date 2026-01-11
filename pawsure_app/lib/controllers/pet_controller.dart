@@ -14,6 +14,7 @@ class PetController extends GetxController {
   var pets = <Pet>[].obs;
   var selectedPet = Rx<Pet?>(null);
   var isLoadingPets = true.obs;
+  var healthTabIndex = 0.obs;
 
   @override
   void onInit() {
@@ -144,5 +145,9 @@ class PetController extends GetxController {
     } catch (e) {
       Get.snackbar("Error", "Failed to accept booking");
     }
+  }
+
+  void setHealthTab(int index) {
+    healthTabIndex.value = index;
   }
 }

@@ -7,6 +7,7 @@ class StatusCard extends StatelessWidget {
   final int streak;
   final Map<String, int> progress;
   final Map<String, int> goals;
+  final String? photoUrl; // 🔧 NEW: Add photoUrl parameter
 
   const StatusCard({
     super.key,
@@ -16,6 +17,7 @@ class StatusCard extends StatelessWidget {
     required this.streak,
     required this.progress,
     required this.goals,
+    this.photoUrl, // 🔧 NEW: Optional photo URL
   });
 
   String _getPetEmoji() {
@@ -45,7 +47,7 @@ class StatusCard extends StatelessWidget {
           // Pet Info Row
           Row(
             children: [
-              // Pet Avatar
+              // 🔧 UPDATED: Pet Avatar with photo support
               Container(
                 width: 56,
                 height: 56,
@@ -53,11 +55,30 @@ class StatusCard extends StatelessWidget {
                   color: const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Center(
-                  child: Text(
-                    _getPetEmoji(),
-                    style: const TextStyle(fontSize: 28),
-                  ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: photoUrl != null && photoUrl!.isNotEmpty
+                      ? Image.network(
+                          photoUrl!,
+                          fit: BoxFit.cover,
+                          width: 56,
+                          height: 56,
+                          errorBuilder: (context, error, stackTrace) {
+                            // Fallback to emoji if image fails to load
+                            return Center(
+                              child: Text(
+                                _getPetEmoji(),
+                                style: const TextStyle(fontSize: 28),
+                              ),
+                            );
+                          },
+                        )
+                      : Center(
+                          child: Text(
+                            _getPetEmoji(),
+                            style: const TextStyle(fontSize: 28),
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -176,7 +197,9 @@ class StatusCard extends StatelessWidget {
   }
 
   Widget _buildProgressRing(String label, int current, int goal, Color color) {
-    final double progressValue = goal > 0 ? (current / goal).clamp(0.0, 1.0) : 0.0;
+    final double progressValue = goal > 0
+        ? (current / goal).clamp(0.0, 1.0)
+        : 0.0;
     final bool isComplete = current >= goal;
 
     return Column(
@@ -221,11 +244,7 @@ class StatusCard extends StatelessWidget {
                     color: color.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    Icons.check,
-                    color: color,
-                    size: 24,
-                  ),
+                  child: Icon(Icons.check, color: color, size: 24),
                 )
               else
                 Text(

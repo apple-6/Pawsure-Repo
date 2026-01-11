@@ -60,7 +60,6 @@ class HomeScreen extends StatelessWidget {
                 ),
                 offset: const Offset(0, 45),
                 itemBuilder: (context) => [
-                  // Pet list items
                   ...controller.pets.map(
                     (pet) => PopupMenuItem<String>(
                       value: pet.id.toString(),
@@ -106,8 +105,28 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Divider
-                  const PopupMenuDivider(),
+                  //const PopupMenuDivider(),
+                  // Add Pet option
+                  // const PopupMenuItem<String>(
+                  //   value: 'add_pet',
+                  //   child: Row(
+                  //     children: [
+                  //       Icon(
+                  //         Icons.add_circle_outline,
+                  //         size: 20,
+                  //         color: Color(0xFF22C55E),
+                  //       ),
+                  //       SizedBox(width: 12),
+                  //       Text(
+                  //         'Add New Pet',
+                  //         style: TextStyle(
+                  //           color: Color(0xFF22C55E),
+                  //           fontWeight: FontWeight.w500,
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
                 ],
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -214,7 +233,6 @@ class HomeScreen extends StatelessWidget {
             padding: const EdgeInsets.all(24.0),
             child: Column(
               children: [
-                // Pet Info Row
                 Row(
                   children: [
                     Text(
@@ -239,13 +257,13 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // Quick Actions
                 const QuickActions(),
 
                 const SizedBox(height: 24),
 
-                // Upcoming Events Card
-                UpcomingEventsCard(petId: pet.id),
+                // ✅ UPDATED: Removed petId parameter
+                const UpcomingEventsCard(),
+
                 const SizedBox(height: 24),
 
                 // Bookings Section
@@ -301,6 +319,59 @@ class HomeScreen extends StatelessWidget {
                               ),
                           ],
                         ),
+
+                        if (!bookingController.isLoadingBookings.value) ...[
+                          (() {
+                            final unpaidCount = bookingController.userBookings
+                                .where((b) {
+                                  final status =
+                                      b['status']?.toString().toLowerCase() ??
+                                      '';
+                                  final isPaid = b['is_paid'] == true;
+                                  return status == 'completed' && !isPaid;
+                                })
+                                .length;
+
+                            if (unpaidCount > 0) {
+                              return Container(
+                                margin: const EdgeInsets.only(
+                                  top: 12,
+                                  bottom: 8,
+                                ),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.orange.shade200,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.warning_amber_rounded,
+                                      color: Colors.orange,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'You have $unpaidCount unpaid booking${unpaidCount > 1 ? 's' : ''}.\nPlease complete payment below.',
+                                        style: const TextStyle(
+                                          color: Colors.orange,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          })(),
+                        ],
 
                         const SizedBox(height: 16),
 

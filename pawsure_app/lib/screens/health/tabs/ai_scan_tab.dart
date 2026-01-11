@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
 import 'package:pawsure_app/constants/api_config.dart';
+import 'package:intl/intl.dart';
 
 class AIScanTab extends StatefulWidget {
   const AIScanTab({super.key});
@@ -15,8 +16,11 @@ class AIScanTab extends StatefulWidget {
 
 class _AIScanTabState extends State<AIScanTab> {
   bool _isScanning = false;
-
   final HealthController healthController = Get.find<HealthController>();
+
+  // Colors
+  final Color _brandColor = const Color(0xFF22C55E);
+  final Color _orangeColor = Colors.orange;
 
   // 1. Show Image Source Selection
   void _showImageSourceSelection(BuildContext context) {
@@ -88,6 +92,8 @@ class _AIScanTabState extends State<AIScanTab> {
       debugPrint("📩 Response received: ${response.statusCode}");
       debugPrint("📄 Body: ${response.body}");
 
+      if (!mounted) return;
+
       if (response.statusCode == 201 || response.statusCode == 200) {
         final result = jsonDecode(response.body);
         _showResultDialog(result['prediction'], result['confidence']);
@@ -105,22 +111,23 @@ class _AIScanTabState extends State<AIScanTab> {
     }
   }
 
-  // 3. Confirmation Dialog for Laptop Demo
+  // 3. Confirmation Dialog for Delete
   void _confirmDelete(int id) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Delete Scan?"),
         content: const Text("This action cannot be undone."),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context); 
-              _deleteScan(id);        
+              Navigator.pop(context);
+              _deleteScan(id);
             },
             child: const Text("Delete", style: TextStyle(color: Colors.red)),
           ),
@@ -136,6 +143,8 @@ class _AIScanTabState extends State<AIScanTab> {
         Uri.parse('${ApiConfig.baseUrl}/ai/scan/$id'),
       );
 
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         setState(() {}); // Refresh list
         ScaffoldMessenger.of(context).showSnackBar(
@@ -143,13 +152,13 @@ class _AIScanTabState extends State<AIScanTab> {
         );
       }
     } catch (e) {
-      _showError("Failed to delete from server.");
+      if (mounted) _showError("Failed to delete from server.");
     }
   }
 
   // 5. Save AI Result to Database
   Future<void> _saveAiScan(String result, String confidence) async {
-    final int? petId = healthController.selectedPet.value?.id; 
+    final int? petId = healthController.selectedPet.value?.id;
 
     if (petId == null) {
       _showError("Please select a pet first.");
@@ -160,62 +169,101 @@ class _AIScanTabState extends State<AIScanTab> {
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/ai/save/$petId'),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "result": result,
-          "confidence": confidence,
-        }),
+        body: jsonEncode({"result": result, "confidence": confidence}),
       );
+
+      if (!mounted) return;
 
       if (response.statusCode == 201) {
         Navigator.pop(context); // Close dialog
         setState(() {}); // Refresh history list
       }
     } catch (e) {
-      _showError("Failed to save AI scan.");
+      if (mounted) _showError("Failed to save AI scan.");
     }
   }
 
   // 6. Show the AI Result Dialog
   void _showResultDialog(String label, String confidence) {
+    final isNormal = label == 'Normal';
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
-            mainAxisSize: MainAxisSize.min, 
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("PawSure AI Analysis", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text(
+                "AI Analysis Result",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 32),
-              Icon(
-                label == 'Normal' ? Icons.check_circle_rounded : Icons.warning_rounded,
-                color: label == 'Normal' ? Colors.green : Colors.orange,
-                size: 80,
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: (isNormal ? _brandColor : _orangeColor).withOpacity(
+                    0.1,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isNormal ? Icons.check_circle_rounded : Icons.warning_rounded,
+                  color: isNormal ? _brandColor : _orangeColor,
+                  size: 64,
+                ),
               ),
               const SizedBox(height: 24),
-              Text(label, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: isNormal ? _brandColor : _orangeColor,
+                ),
+              ),
               const SizedBox(height: 8),
-              Text("Confidence: $confidence", style: TextStyle(color: Colors.grey.shade600, fontSize: 16)),
+              Text(
+                "Confidence: $confidence",
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+              ),
               const SizedBox(height: 32),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text("Discard"),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        "Discard",
+                        style: TextStyle(color: Colors.grey),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () => _saveAiScan(label, confidence),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
-                      child: const Text("Save"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _brandColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text("Save Record"),
                     ),
                   ),
                 ],
-              )
+              ),
             ],
           ),
         ),
@@ -224,8 +272,7 @@ class _AIScanTabState extends State<AIScanTab> {
   }
 
   Future<List<dynamic>> _fetchScanHistory() async {
-    final int? petId = healthController.selectedPet.value?.id; 
-
+    final int? petId = healthController.selectedPet.value?.id;
     if (petId == null) return [];
 
     try {
@@ -233,11 +280,9 @@ class _AIScanTabState extends State<AIScanTab> {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        // Only throw if meaningful, or return empty
         return [];
       }
     } catch (e) {
-      // Return empty list on connection error to avoid breaking UI loop
       return [];
     }
   }
@@ -248,31 +293,61 @@ class _AIScanTabState extends State<AIScanTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            Row(
-              children: [
-                _buildActionCard('Analyze Poop', Icons.analytics_outlined, Colors.orange, () => _showImageSourceSelection(context)),
-                const SizedBox(width: 16),
-                _buildActionCard('Check Gait', Icons.directions_walk_outlined, Colors.teal, () {}),
-              ],
-            ),
-            const SizedBox(height: 32),
-            const Text('Past Scans', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-            const SizedBox(height: 16),
-            Obx(() {
-              final currentPetId = healthController.selectedPet.value?.id;
-              return FutureBuilder<List<dynamic>>(
+    return Obx(() {
+      final currentPetId = healthController.selectedPet.value?.id;
+
+      if (currentPetId == null) {
+        return const Center(child: Text("Please select a pet first"));
+      }
+
+      return Stack(
+        children: [
+          ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              Row(
+                children: [
+                  _buildActionCard('Analyze Poop', Icons.analytics_outlined, Colors.orange, () => _showImageSourceSelection(context)),
+                  const SizedBox(width: 16),
+                  _buildActionCard('Check Gait', Icons.directions_walk_outlined, Colors.teal, () {}),
+                ],
+              ),
+              const SizedBox(height: 32),
+              const Text('Past Scans', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+              const SizedBox(height: 16),
+              FutureBuilder<List<dynamic>>(
                 key: ValueKey(currentPetId),
                 future: _fetchScanHistory(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Text("No scans found.");
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  } else if (snapshot.hasError ||
+                      !snapshot.hasData ||
+                      snapshot.data!.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.history,
+                              size: 48,
+                              color: Colors.grey[300],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              "No history yet.",
+                              style: TextStyle(color: Colors.grey[500]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
                   }
 
                   return ListView.builder(
@@ -281,44 +356,90 @@ class _AIScanTabState extends State<AIScanTab> {
                     itemCount: snapshot.data!.length,
                     itemBuilder: (context, index) {
                       final scan = snapshot.data![index];
-                      return Card(
+                      final isNormal = scan['result'] == 'Normal';
+                      final dateStr = scan['scannedAt'].toString().split('T')[0];
+
+                      return Container(
                         margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
                         child: ListTile(
-                          leading: const Icon(Icons.analytics_outlined, color: Colors.orange),
-                          title: Text(scan['result']),
-                          subtitle: Text("${scan['scannedAt'].toString().split('T')[0]} • ${scan['confidence']}% Match"),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Chip(
-                                label: Text(scan['result'] == 'Normal' ? 'Normal' : 'Attention'),
-                                backgroundColor: scan['result'] == 'Normal' ? Colors.green[50] : Colors.orange[50],
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          leading: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: (isNormal ? _brandColor : _orangeColor)
+                                  .withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.analytics_outlined,
+                              color: isNormal ? _brandColor : _orangeColor,
+                              size: 24,
+                            ),
+                          ),
+                          title: Text(
+                            scan['result'],
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              "$dateStr • ${scan['confidence']}% Match",
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 13,
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                                onPressed: () => _confirmDelete(scan['id']),
-                              ),
-                            ],
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: Icon(
+                              Icons.delete_outline,
+                              color: Colors.grey[400],
+                            ),
+                            onPressed: () => _confirmDelete(scan['id']),
                           ),
                         ),
                       );
                     },
                   );
                 },
-              );
-            }),
-          ],
-        ),
-        if (_isScanning)
-          Container(color: Colors.black26, child: const Center(child: CircularProgressIndicator())),
-      ],
-    );
+              ),
+            ],
+          ),
+
+          // Loading Overlay
+          if (_isScanning)
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+            ),
+        ],
+      );
+    });
   }
 
   Widget _buildActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
     return Expanded(
       child: Card(
+        elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         color: color.withOpacity(0.1),
         child: InkWell(

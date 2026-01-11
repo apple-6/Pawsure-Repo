@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsDateString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsDateString, IsArray } from 'class-validator';
 import { EventType, EventStatus } from '../entities/event.entity';
 
 export class CreateEventDto {
@@ -25,7 +25,13 @@ export class CreateEventDto {
   @IsOptional()
   notes?: string;
 
+  // ✅ OPTION 1: Single Pet
   @IsNumber()
-  @IsNotEmpty()
-  petId: number;
+  @IsOptional()
+  petId?: number;
+
+  // ✅ OPTION 2: Multiple Pets (New UI sends this)
+  @IsArray()
+  @IsOptional()
+  pet_ids?: number[];
 }

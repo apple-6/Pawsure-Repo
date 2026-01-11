@@ -56,6 +56,10 @@ export class Pet {
   @Column({ nullable: true })
   daily_food_amount: string;
 
+  // 🔧 ADD THIS COLUMN
+  @Column({ nullable: true, default: 'unknown' })
+  sterilization_status: string;
+
   @Column({ type: 'simple-array', nullable: true })
   vaccination_dates: string[];
 
@@ -87,11 +91,9 @@ export class Pet {
   @OneToMany(() => Booking, (booking) => booking.pets)
   bookings: Booking[];
 
-  // 🆕 Events relationship
   @OneToMany(() => Event, (event) => event.pet)
   events: Event[];
 
-  // 🆕 Mood logs relationship
   @OneToMany(() => MoodLog, (moodLog) => moodLog.pet)
   moodLogs: MoodLog[];
 
