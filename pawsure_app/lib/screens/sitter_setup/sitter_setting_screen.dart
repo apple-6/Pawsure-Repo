@@ -5,6 +5,7 @@ import 'package:pawsure_app/screens/community/community_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pawsure_app/main_navigation.dart';
 import 'package:pawsure_app/services/api_service.dart';
+import 'package:pawsure_app/controllers/sitter_controller.dart';
 
 // Navigation Imports
 import 'sitter_calendar.dart';
@@ -412,32 +413,35 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                               child: Divider(height: 1),
                             ),
                             // Stats Row
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _buildStatColumn(
-                                  icon: Icons.account_balance_wallet,
-                                  value: "RM 120",
-                                  label: "Wallet",
-                                  color: Colors.green,
-                                ),
-                               _buildVerticalDivider(),
-                                _buildStatColumn(
-                                  icon: Icons.star_rounded,
-                                  // --- UPDATED: Use dynamic variable ---
-                                  value: rating.toStringAsFixed(1), 
-                                  label: "Rating",
-                                  color: Colors.amber,
-                                ),
-                               _buildVerticalDivider(),
-                                _buildStatColumn(
-                                  icon: Icons.people_alt,
-                                  // --- UPDATED: Use dynamic variable ---
-                                  value: reviewCount.toString(),
-                                  label: "Reviews",
-                                  color: Colors.blueAccent,
-                                ),
-                              ],
+                            GetBuilder<SitterController>(
+                              init: Get.isRegistered<SitterController>() ? Get.find<SitterController>() : SitterController(),
+                              builder: (controller) {
+                                return Obx(() => Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                  children: [
+                                    _buildStatColumn(
+                                      icon: Icons.account_balance_wallet,
+                                      value: "RM ${controller.earnings.value.toStringAsFixed(0)}",
+                                      label: "Wallet",
+                                      color: Colors.green,
+                                    ),
+                                    _buildVerticalDivider(),
+                                    _buildStatColumn(
+                                      icon: Icons.star_rounded,
+                                      value: controller.avgRating.value.toStringAsFixed(1),
+                                      label: "Rating",
+                                      color: Colors.amber,
+                                    ),
+                                    _buildVerticalDivider(),
+                                    _buildStatColumn(
+                                      icon: Icons.people_alt,
+                                      value: "${controller.sitterProfile['reviewCount'] ?? 0}",
+                                      label: "Reviews",
+                                      color: Colors.blueAccent,
+                                    ),
+                                  ],
+                                ));
+                              },
                             ),
                           ],
                         ),
