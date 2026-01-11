@@ -66,6 +66,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  // --- NEW FUNCTION: Added to handle Skip action ---
+  void _skip() {
+    // Jump directly to the last page index
+    _controller.animateToPage(
+      _pages.length - 1, 
+      duration: const Duration(milliseconds: 500), 
+      curve: Curves.easeInOut
+    );
+  }
+
   @override
   void dispose() {
     _loginTap.dispose();
@@ -238,6 +248,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
 
                           const SizedBox(height: 8),
+
+
+                          // --- START OF NEW CODE: SKIP BUTTON ---
+                          // Only show Skip on the first page
+                          if (index == 0)
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: _skip,
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: const Text(
+                                  'Skip',
+                                  style: TextStyle(
+                                    color: Color(0xFF4CAF50), 
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          // --- END OF NEW CODE ---
+
                           // On the last page show the login prompt below the button
                           if (index == _pages.length - 1)
                             Padding(
