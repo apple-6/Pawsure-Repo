@@ -51,13 +51,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account created successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
       // 🆕 RELOAD ProfileController with the NEW user's data
       if (Get.isRegistered<ProfileController>()) {
         final profileController = Get.find<ProfileController>();
@@ -108,6 +101,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        height: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
             image: AssetImage('assets/images/backgroundroleimage.jpg'),
@@ -119,8 +113,12 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Column(
               children: [
-                // Show back button and title for registration flow
+                // ==================================================
+                // 1. FIXED ZONE (Back Button & Header)
+                // These stay pinned at the top and NEVER scroll.
+                // ==================================================
                 if (widget.isRegistrationFlow) ...[
+                  // Back Button
                   Row(
                     children: [
                       IconButton(
@@ -142,6 +140,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
+
+                  // Header Title Box
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
@@ -169,25 +169,44 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                       ],
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 20), // Gap between header and scroll area
                 ],
-                if (!widget.isRegistrationFlow) const Spacer(),
-                _buildRoleCard(
-                  title: "I'm a Pet Owner",
-                  subtitle: "Track, care, and connect for\nyour pets.",
-                  role: 'owner',
-                  userRole: UserRole.owner,
-                  icon: Icons.pets,
+
+                // ==================================================
+                // 2. SCROLLABLE ZONE (The Cards)
+                // Expanded takes the remaining space below the header.
+                // SingleChildScrollView allows the cards to scroll inside that space.
+                // ==================================================
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      children: [
+                        // If not registration flow, add top spacing since there is no header
+                        if (!widget.isRegistrationFlow) 
+                           const SizedBox(height: 60),
+
+                        _buildRoleCard(
+                          title: "I'm a Pet Owner",
+                          subtitle: "Track, care, and connect for\nyour pets.",
+                          role: 'owner',
+                          userRole: UserRole.owner,
+                          icon: Icons.pets,
+                        ),
+                        const SizedBox(height: 24),
+                        _buildRoleCard(
+                          title: "I'm a Pet Sitter",
+                          subtitle: "Offer safe, loving care for\nothers' pets.",
+                          role: 'sitter',
+                          userRole: UserRole.sitter,
+                          icon: Icons.home_work_outlined,
+                        ),
+                        // Bottom padding to ensure last card isn't flush with edge
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 24),
-                _buildRoleCard(
-                  title: "I'm a Pet Sitter",
-                  subtitle: "Offer safe, loving care for\nothers' pets.",
-                  role: 'sitter',
-                  userRole: UserRole.sitter,
-                  icon: Icons.home_work_outlined,
-                ),
-                const Spacer(),
               ],
             ),
           ),
@@ -223,8 +242,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
           opacity: isOtherLoading ? 0.5 : 1.0,
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-            constraints: const BoxConstraints(minHeight: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+            constraints: const BoxConstraints(minHeight: 160),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.95),
               borderRadius: BorderRadius.circular(24),

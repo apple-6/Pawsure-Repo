@@ -264,6 +264,17 @@ class ApiService {
         request.fields['last_vet_visit'] = lastVetVisit;
       }
 
+      if (sterilizationStatus != null && sterilizationStatus.isNotEmpty) {
+        request.fields['sterilization_status'] = sterilizationStatus;
+        debugPrint(
+          '✅ Added sterilization_status to request: $sterilizationStatus',
+        );
+      } else {
+        debugPrint(
+          '⚠️ sterilizationStatus is null or empty: $sterilizationStatus',
+        );
+      }
+
       // Add new photo if provided
       if (photoPath != null && photoPath.isNotEmpty) {
         try {
@@ -1068,6 +1079,77 @@ class ApiService {
     }
   }
 
+  Future<void> updatePost({
+    required String postId,
+    required String content,
+    required bool isUrgent,
+    required List<String> existingMediaUrls,
+    required List<String> newMediaPaths,
+  }) async {
+    // 1. Get Token safely
+    final authService = Get.find<AuthService>();
+    String? token = await authService.getToken();
+
+    // Debugging: Print exactly what we have
+    print("DEBUG: Raw Token: '$token'");
+
+    if (token == null || token.isEmpty || token == "null") {
+      throw Exception("User is not logged in (Token is null)");
+    }
+
+    // 2. Clean the token (Remove extra quotes if they exist)
+    token = token.replaceAll('"', '').trim();
+
+    // 3. Handle Base URL for Android vs iOS/Web
+    String baseUrl = kIsWeb ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+
+    final uri = Uri.parse('$baseUrl/posts/$postId');
+
+    var request = http.MultipartRequest('PUT', uri);
+
+    // 4. Set Headers CAREFULLY
+    request.headers.addAll({
+      'Authorization': 'Bearer $token', // Ensure only ONE "Bearer "
+      'Content-Type': 'multipart/form-data',
+    });
+
+    request.fields['content'] = content;
+    request.fields['isUrgent'] = isUrgent.toString();
+    request.fields['existingMedia'] = jsonEncode(existingMediaUrls);
+
+    // Add files
+    for (var path in newMediaPaths) {
+      if (path.isNotEmpty) {
+        var file = await http.MultipartFile.fromPath('media', path);
+        request.files.add(file);
+      }
+    }
+
+    print("DEBUG: Sending Update Request to $uri");
+
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('✅ Post updated successfully');
+      } else {
+        print('❌ Failed to update. Status: ${response.statusCode}');
+        print('❌ Body: ${response.body}');
+        throw Exception('Failed to update post: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error updating post: $e');
+      rethrow;
+    }
+  }
+
+  // Helper placeholder if you don't have one
+  Future<String?> _getToken() async {
+    // implementation to get token from storage
+    return "YOUR_TEST_TOKEN";
+  }
+
   // ========================================================================
   // CHAT API
   // ========================================================================
@@ -1537,32 +1619,127 @@ class ApiService {
   }
 
   Future<void> createReview({
-  required int bookingId,
-  required double rating,
-  required String comment,
-}) async {
-  try {
-    debugPrint('⭐ API: POST $apiBaseUrl/reviews');
-    
-    final headers = await _getHeaders(); // Uses your existing helper
-    final response = await http.post(
-      Uri.parse('$apiBaseUrl/reviews'),
-      headers: headers,
-      body: jsonEncode({
-        'bookingId': bookingId,
-        'rating': rating,
-        'comment': comment,
-      }),
-    );
+    required int bookingId,
+    required double rating,
+    required String comment,
+  }) async {
+    try {
+      debugPrint('⭐ API: POST $apiBaseUrl/reviews');
 
-    debugPrint('📦 API Response: ${response.statusCode}');
+      final headers = await _getHeaders(); // Uses your existing helper
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/reviews'),
+        headers: headers,
+        body: jsonEncode({
+          'bookingId': bookingId,
+          'rating': rating,
+          'comment': comment,
+        }),
+      );
 
-    if (response.statusCode != 201 && response.statusCode != 200) {
-      throw Exception('Failed to submit review: ${response.body}');
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        throw Exception('Failed to submit review: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error submitting review: $e');
+      rethrow;
     }
-  } catch (e) {
-    debugPrint('❌ Error submitting review: $e');
-    rethrow;
   }
-}
+
+
+// ========================================================================
+  // SITTER PROFILE API (Current User)
+  // ========================================================================
+
+  /// GET /sitters/my-profile - Fetch the logged-in user's sitter profile
+  /// This replaces the crashing '/sitters/me' call
+  Future<UserProfile?> getMySitterProfile() async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/sitters/my-profile');
+      final headers = await _getHeaders();
+
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/sitters/my-profile'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return UserProfile.fromJson(data);
+      } else if (response.statusCode == 404) {
+        // Profile not found - User needs to register as sitter
+        return null;
+      } else {
+        throw Exception('Failed to load profile: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error in getMySitterProfile: $e');
+      return null;
+    }
+  }
+
+// ========================================================================
+  // SITTER CHECK & REGISTRATION API (Added for Switch Mode)
+  // ========================================================================
+
+  /// GET /sitters/user/:userId - Check if sitter profile exists
+  /// Returns UserProfile if found (Scenario A), returns null if 404 (Scenario B).
+  Future<UserProfile?> getSitterByUserId(int userId) async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/sitters/user/$userId');
+      final headers = await _getHeaders();
+      
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/sitters/user/$userId'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        // ✅ Profile exists!
+        return UserProfile.fromJson(jsonDecode(response.body));
+      } else if (response.statusCode == 404) {
+        // ⚠️ Profile does not exist (User is not a sitter yet)
+        return null; 
+      } else {
+        // Other errors (500, etc)
+        debugPrint('⚠️ Unexpected status checking sitter: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error checking sitter status: $e');
+      return null;
+    }
+  }
+
+  /// POST /sitters - Create a new sitter profile
+  Future<void> createSitterProfile(Map<String, dynamic> payload) async {
+    try {
+      debugPrint('➕ API: POST $apiBaseUrl/sitters');
+      debugPrint('📤 Payload: ${jsonEncode(payload)}');
+      
+      final headers = await _getHeaders();
+      
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/sitters'),
+        headers: headers,
+        body: jsonEncode(payload),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        debugPrint('✅ Sitter profile created successfully');
+      } else {
+        throw Exception('Failed to register as sitter: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error in createSitterProfile: $e');
+      rethrow;
+    }
+  }
 }

@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:pawsure_app/screens/auth/login_screen.dart';
 import 'package:pawsure_app/screens/community/community_screen.dart';
-import 'package:pawsure_app/screens/home/home_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pawsure_app/constants/api_config.dart';
+import 'package:pawsure_app/main_navigation.dart';
+import 'package:pawsure_app/services/api_service.dart';
 
 // Navigation Imports
 import 'sitter_calendar.dart';
@@ -16,6 +14,7 @@ import 'sitter_preview_page.dart';
 import 'sitter_edit_profile.dart';
 import 'sitter_performance_page.dart';
 import '../../models/sitter_model.dart';
+import 'sitter_registration_screen.dart';
 
 class SitterSettingScreen extends StatefulWidget {
   const SitterSettingScreen({super.key});
@@ -37,29 +36,25 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
 
   Future<void> _fetchUserData() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final int? userId = prefs.getInt('userId');
+      // 1. Get the ApiService
+      final apiService = Get.find<ApiService>();
+      
+      // 2. Call the new method we created (getMySitterProfile)
+      // This automatically uses the token and handles the /my-profile endpoint
+      final profile = await apiService.getMySitterProfile();
 
-      if (userId == null) {
-        Get.offAll(() => LoginScreen());
-        throw Exception("User not logged in");
-      }
-
-      final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/sitters/user/$userId'),
-        headers: {'Content-Type': 'application/json'},
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+      if (profile != null) {
         if (mounted) {
           setState(() {
-            currentUser = UserProfile.fromJson(data);
+            currentUser = profile;
             isLoading = false;
           });
         }
       } else {
-        throw Exception('Failed to load: ${response.statusCode}');
+        // ⚠️ Profile is null (404) -> User needs to register
+        if (mounted) {
+           Get.off(() => const SitterRegistrationScreen());
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -156,8 +151,8 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
 
       // 3. Navigate directly to Owner Dashboard
       // Make sure to import your OwnerDashboard file at the top!
-      Get.offAll(() => const HomeScreen());
-
+      Get.offAll(() => const MainNavigation());
+      
       Get.snackbar(
         "Switched to Owner Mode",
         "You can now book other sitters!",

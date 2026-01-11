@@ -249,31 +249,6 @@ class ProfileScreen extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(height: 20),
-                              // Stats Row
-                              Row(
-                                children: [
-                                  _buildStatItem(
-                                    icon: Icons.pets,
-                                    value: '$petsCount',
-                                    label: 'Pets',
-                                    color: const Color(0xFF22C55E),
-                                  ),
-                                  _buildStatDivider(),
-                                  _buildStatItem(
-                                    icon: Icons.calendar_today,
-                                    value: '0',
-                                    label: 'Bookings',
-                                    color: const Color(0xFF3B82F6),
-                                  ),
-                                  _buildStatDivider(),
-                                  _buildStatItem(
-                                    icon: Icons.local_fire_department,
-                                    value: '7',
-                                    label: 'Day Streak',
-                                    color: const Color(0xFFF97316),
-                                  ),
-                                ],
-                              ),
                             ],
                           ),
                         ),
@@ -356,7 +331,7 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFFF59E0B),
                           title: 'Switch to Sitter Mode',
                           subtitle: 'Become a pet sitter',
-                          onTap: () => _showComingSoon('Notifications'),
+                          onTap: () => profileController.handleSitterSwitch(),
                         ),
                         _buildMenuDivider(),
                         _buildMenuItem(
