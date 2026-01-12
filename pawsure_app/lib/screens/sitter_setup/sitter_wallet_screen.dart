@@ -1,65 +1,93 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import 'package:pawsure_app/controllers/sitter_controller.dart';
+import 'package:pawsure_app/services/api_service.dart';
+// ✅ Import your existing payment screen
+import 'package:pawsure_app/screens/profile/payment_methods_screen.dart'; 
 
-class SitterWalletScreen extends StatelessWidget {
+class SitterWalletScreen extends StatefulWidget {
   const SitterWalletScreen({super.key});
 
-  // Mock Data
-  final List<Map<String, dynamic>> transactions = const [
-    {
-      "id": 1,
-      "type": "credit",
-      "amount": 300.00,
-      "description": "From: Max's stay, Oct 20-25",
-      "date": "Oct 26"
-    },
-    {
-      "id": 2,
-      "type": "fee",
-      "amount": 30.00,
-      "description": "PawSure Service Fee",
-      "date": "Oct 26"
-    },
-    {
-      "id": 3,
-      "type": "credit",
-      "amount": 550.00,
-      "description": "From: Bella's stay, Oct 10-20",
-      "date": "Oct 21"
-    },
-    {
-      "id": 4,
-      "type": "debit",
-      "amount": 820.00,
-      "description": "Payout to Maybank, Oct 9",
-      "date": "Oct 9"
-    },
-  ];
+  @override
+  State<SitterWalletScreen> createState() => _SitterWalletScreenState();
+}
 
-  void _handleWithdraw() {
-    Get.snackbar(
-      "Request Submitted",
-      "Funds will be transferred within 3-5 business days.",
-      backgroundColor: Colors.green.withOpacity(0.1),
-      colorText: Colors.green[800],
-      icon: const Icon(Icons.check_circle, color: Colors.green),
-    );
+class _SitterWalletScreenState extends State<SitterWalletScreen> {
+  final SitterController controller = Get.find<SitterController>();
+  final ApiService apiService = Get.find<ApiService>();
+
+  Map<String, dynamic>? defaultPaymentMethod;
+  bool isLoadingPayment = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPaymentMethod();
+    controller.refreshData();
   }
 
-  void _handleChangePayoutMethod() {
+  // Fetch the default card to display on the wallet
+  Future<void> _fetchPaymentMethod() async {
+    setState(() => isLoadingPayment = true);
+    try {
+      final methods = await apiService.getPaymentMethods();
+      if (mounted) {
+        setState(() {
+          if (methods.isNotEmpty) {
+            // Find the one marked isDefault, or take the first one
+            defaultPaymentMethod = methods.firstWhere(
+              (m) => m['isDefault'] == true,
+              orElse: () => methods.first,
+            );
+          } else {
+            defaultPaymentMethod = null;
+          }
+          isLoadingPayment = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching payment methods: $e");
+      if (mounted) setState(() => isLoadingPayment = false);
+    }
+  }
+
+  // ✅ UPDATED: Navigates to your existing screen
+  Future<void> _handleManagePayout() async {
+    // Wait for the user to return from the payment screen
+    await Get.to(() => const PaymentMethodsScreen());
+    
+    // Refresh the view to show changes (e.g. if they added a new default card)
+    _fetchPaymentMethod();
+  }
+
+  void _handleWithdraw() {
+    if (controller.earnings.value <= 0) {
+      Get.snackbar("Balance Empty", "You have no earnings to withdraw yet.",
+          backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+      return;
+    }
+
+    if (defaultPaymentMethod == null) {
+      Get.snackbar("Missing Bank Info", "Please add a payout method first.",
+          backgroundColor: Colors.orange.withOpacity(0.1), colorText: Colors.orange[800]);
+      return;
+    }
+
     Get.snackbar(
-      "Coming Soon",
-      "Bank account management coming soon...",
-      backgroundColor: Colors.blue.withOpacity(0.1),
-      colorText: Colors.blue[800],
-      icon: const Icon(Icons.info, color: Colors.blue),
+      "Request Submitted",
+      "RM ${controller.earnings.value.toStringAsFixed(2)} will be transferred to ${defaultPaymentMethod!['cardType']} ending in ${defaultPaymentMethod!['lastFourDigits']}.",
+      backgroundColor: Colors.green.withOpacity(0.1),
+      colorText: Colors.green[800],
+      duration: const Duration(seconds: 4),
+      icon: const Icon(Icons.check_circle, color: Colors.green),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     const brandColor = Color(0xFF2ECA6A);
-    const accentColor = Color(0xFF1AAF58); // Slightly darker for gradient
+    const accentColor = Color(0xFF1AAF58);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -68,7 +96,7 @@ class SitterWalletScreen extends StatelessWidget {
           children: [
             // --- HEADER ---
             Container(
-            width: double.infinity,
+              width: double.infinity,
               padding: const EdgeInsets.fromLTRB(20, 50, 20, 30),
               decoration: const BoxDecoration(
                 color: brandColor,
@@ -105,73 +133,73 @@ class SitterWalletScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // --- AVAILABLE BALANCE CARD ---
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [brandColor, accentColor],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: brandColor.withOpacity(0.3),
-                          blurRadius: 15,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Available for Payout",
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
+                  Obx(() => Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [brandColor, accentColor],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          "RM 850.00",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 36,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: _handleWithdraw,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: brandColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: brandColor.withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
                             ),
-                            child: const Text(
-                              "WITHDRAW TO BANK",
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Available for Payout",
                               style: TextStyle(
-                                fontWeight: FontWeight.bold,
+                                color: Colors.white70,
                                 fontSize: 14,
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "RM ${controller.earnings.value.toStringAsFixed(2)}",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: _handleWithdraw,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: brandColor,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: const Text(
+                                  "WITHDRAW TO BANK",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
+                      )),
 
                   const SizedBox(height: 24),
 
-                  // --- PAYOUT METHOD ---
+                  // --- PAYOUT METHOD (Dynamic Logic) ---
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -186,43 +214,66 @@ class SitterWalletScreen extends StatelessWidget {
                         )
                       ],
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 45,
-                          height: 45,
-                          decoration: BoxDecoration(
-                            color: brandColor.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.credit_card, color: brandColor, size: 22),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    child: isLoadingPayment
+                        ? const Center(
+                            child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2)))
+                        : Row(
                             children: [
-                              Text(
-                                "Payout Method",
-                                style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                              Container(
+                                width: 45,
+                                height: 45,
+                                decoration: BoxDecoration(
+                                  color: defaultPaymentMethod == null 
+                                      ? Colors.grey.shade100 
+                                      : brandColor.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.credit_card,
+                                  color: defaultPaymentMethod == null 
+                                      ? Colors.grey 
+                                      : brandColor,
+                                  size: 22,
+                                ),
                               ),
-                              const SizedBox(height: 2),
-                              const Text(
-                                "Maybank: **** 1234",
-                                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Payout Method",
+                                      style: TextStyle(
+                                          color: Colors.grey.shade500,
+                                          fontSize: 12),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      defaultPaymentMethod != null
+                                          ? "${defaultPaymentMethod!['cardType']} **** ${defaultPaymentMethod!['lastFourDigits']}"
+                                          : "No method added",
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87),
+                                    ),
+                                  ],
+                                ),
                               ),
+                              // ✅ Dynamic "Add" or "Change" Button
+                              TextButton(
+                                onPressed: _handleManagePayout,
+                                child: Text(
+                                  defaultPaymentMethod == null ? "Add" : "Change",
+                                  style: const TextStyle(
+                                      color: brandColor,
+                                      fontWeight: FontWeight.w600),
+                                ),
+                              )
                             ],
                           ),
-                        ),
-                        TextButton(
-                          onPressed: _handleChangePayoutMethod,
-                          child: const Text(
-                            "Change",
-                            style: TextStyle(color: brandColor, fontWeight: FontWeight.w600),
-                          ),
-                        )
-                      ],
-                    ),
                   ),
 
                   const SizedBox(height: 24),
@@ -238,73 +289,89 @@ class SitterWalletScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  ListView.builder(
-                    padding: EdgeInsets.zero,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: transactions.length,
-                    itemBuilder: (context, index) {
-                      final item = transactions[index];
-                      final isCredit = item['type'] == 'credit';
-                      
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "${isCredit ? '+' : '-'} RM ${item['amount'].toStringAsFixed(2)}",
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          color: isCredit ? Colors.black87 : Colors.black87,
-                                        ),
-                                      ),
-                                      if (!isCredit) ...[
-                                        const SizedBox(width: 8),
-                                        // Optional badge for fees/debits
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey.shade100,
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            item['type'].toString().toUpperCase(),
-                                            style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
-                                          ),
-                                        )
-                                      ]
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item['description'],
-                                    style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Text(
-                              item['date'],
-                              style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-                            ),
-                          ],
+                  Obx(() {
+                    final transactions = controller.bookings.where((b) {
+                      final status = b['status']?.toString().toLowerCase();
+                      return status == 'completed' ||
+                          status == 'paid' ||
+                          b['is_paid'] == true;
+                    }).toList();
+
+                    if (transactions.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 20),
+                          child: Text(
+                            "No earnings yet.",
+                            style: TextStyle(color: Colors.grey.shade500),
+                          ),
                         ),
                       );
-                    },
-                  ),
+                    }
+
+                    return ListView.builder(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: transactions.length,
+                      itemBuilder: (context, index) {
+                        final booking = transactions[index];
+                        final amount =
+                            (booking['total_amount'] ?? 0).toDouble();
+                        final dateStr = booking['end_date'] != null
+                            ? DateFormat('MMM d')
+                                .format(DateTime.parse(booking['end_date']))
+                            : 'Unknown Date';
+                        final ownerName =
+                            booking['owner']?['name'] ?? 'Client';
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "+ RM ${amount.toStringAsFixed(2)}",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "From: $ownerName's Booking",
+                                      style: TextStyle(
+                                          color: Colors.grey.shade500,
+                                          fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                dateStr,
+                                style: TextStyle(
+                                    color: Colors.grey.shade400, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  }),
                 ],
               ),
             ),
