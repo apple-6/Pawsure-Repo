@@ -11,6 +11,8 @@ import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/constants/api_config.dart';
 import 'package:pawsure_app/models/comment_model.dart';
+import 'dart:io';
+import 'package:mime/mime.dart';
 
 String get apiBaseUrl => ApiConfig.baseUrl;
 
@@ -1144,12 +1146,6 @@ class ApiService {
     }
   }
 
-  // Helper placeholder if you don't have one
-  Future<String?> _getToken() async {
-    // implementation to get token from storage
-    return "YOUR_TEST_TOKEN";
-  }
-
   // ========================================================================
   // CHAT API
   // ========================================================================
@@ -1739,6 +1735,49 @@ class ApiService {
     } catch (e) {
       debugPrint('❌ Error in createSitterProfile: $e');
       rethrow;
+    }
+  }
+
+  Future<dynamic> updateProfileMultipart(Map<String, String> fields, File? imageFile) async {
+    final token = _authService.token; // Get token from your AuthService
+    final uri = Uri.parse('$apiBaseUrl/user/update');
+
+    var request = http.MultipartRequest('PUT', uri);
+
+    // 1. Add Headers
+    request.headers.addAll({
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'multipart/form-data',
+    });
+
+    // 2. Add Text Fields
+    fields.forEach((key, value) {
+      request.fields[key] = value;
+    });
+
+    // 3. Add Image File (if provided)
+    if (imageFile != null) {
+      final mimeTypeData = lookupMimeType(imageFile.path)!.split('/');
+      
+      request.files.add(await http.MultipartFile.fromPath(
+        'avatar', // This name must match the NestJS FileInterceptor('avatar')
+        imageFile.path,
+        contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
+      ));
+    }
+
+    // 4. Send Request
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to update profile: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Error updating profile: $e');
     }
   }
 }
