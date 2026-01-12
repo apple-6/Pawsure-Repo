@@ -183,7 +183,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     const brandColor = Color(0xFF2ECA6A);
     const backgroundColor = Color(0xFFF9FAFB);
 
-    final String? currentProfilePicUrl = null;
+    final String? currentProfilePicUrl = widget.user.profilePicture;
 
     return Scaffold(
       backgroundColor: backgroundColor,
