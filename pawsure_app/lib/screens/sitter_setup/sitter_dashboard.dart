@@ -75,13 +75,34 @@ class _SitterDashboardState extends State<SitterDashboard> {
                           ),
                         ],
                       ),
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: Colors.grey.shade300,
-                        child: const Icon(Icons.person, color: Colors.grey),
-                        // TODO: Use NetworkImage if profile pic exists
-                        // backgroundImage: controller.profilePicUrl != null ? NetworkImage(controller.profilePicUrl!) : null,
-                      ),
+                      // ✅ UPDATED PROFILE PICTURE LOGIC
+                      Builder(builder: (context) {
+                        // 1. Safely extract the URL from the controller's map
+                        // It checks inside 'user' object first, then root, handling standard NestJS structure
+                        final String? picUrl = 
+                            controller.sitterProfile['user']?['profile_picture'] ?? 
+                            controller.sitterProfile['profile_picture'];
+
+                        return Container(
+                          padding: const EdgeInsets.all(2), // White border effect
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: CircleAvatar(
+                            radius: 24,
+                            backgroundColor: Colors.grey.shade200,
+                            // 2. Load Network Image if URL exists
+                            backgroundImage: (picUrl != null && picUrl.isNotEmpty)
+                                ? NetworkImage(picUrl)
+                                : null,
+                            // 3. Fallback Icon if URL is null
+                            child: (picUrl == null || picUrl.isEmpty)
+                                ? const Icon(Icons.person, color: Colors.grey)
+                                : null, 
+                          ),
+                        );
+                      }),
                     ],
                   ),
                   const SizedBox(height: 24),

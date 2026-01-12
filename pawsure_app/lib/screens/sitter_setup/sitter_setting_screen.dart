@@ -345,11 +345,18 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                                   child: CircleAvatar(
                                     radius: 30,
                                     backgroundColor: const Color(0xFFE8F5E9),
-                                    child: const Icon(
-                                      Icons.person,
-                                      color: brandColor,
-                                      size: 35,
-                                    ),
+                                    // 1. Load image if it exists
+                                    backgroundImage: (currentUser?.profilePicture != null && currentUser!.profilePicture!.isNotEmpty)
+                                        ? NetworkImage(currentUser!.profilePicture!)
+                                        : null,
+                                    // 2. Show Icon ONLY if image is missing
+                                    child: (currentUser?.profilePicture == null || currentUser!.profilePicture!.isEmpty)
+                                        ? const Icon(
+                                            Icons.person,
+                                            color: brandColor,
+                                            size: 35,
+                                          )
+                                        : null, // Child must be null if backgroundImage is set, otherwise the icon sits on top
                                   ),
                                 ),
                                 const SizedBox(width: 15),

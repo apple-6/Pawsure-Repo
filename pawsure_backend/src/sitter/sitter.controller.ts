@@ -106,9 +106,11 @@ export class SitterController {
   // 🆕 NEW ENDPOINT: Update Sitter Profile by User ID
   @Patch('user/:userId')
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('profile_picture'))
   async updateByUserId(
     @Param('userId', ParseIntPipe) userId: number,
     @Body() updateSitterDto: UpdateSitterDto,
+    @UploadedFile() file: Express.Multer.File,
     @Request() req,
   ) {
     // 1. Find the sitter profile belonging to this User ID
@@ -125,7 +127,7 @@ export class SitterController {
     }
 
     // 3. Call the existing service method using the SITTER'S ID we just found
-    return await this.sitterService.update(sitter.id, updateSitterDto, req.user.id);
+    return await this.sitterService.update(sitter.id, updateSitterDto, req.user.id,file);
   }
 
   @Get(':id')
