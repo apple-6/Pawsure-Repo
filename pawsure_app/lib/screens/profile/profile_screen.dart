@@ -372,7 +372,7 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFF3B82F6),
                           title: 'Help & Support',
                           subtitle: 'Get assistance',
-                          onTap: () {Get.to(() => const HelpSupportScreen());},
+                          onTap: () {Get.to(() => HelpSupportScreen());},
                         ),
                         _buildMenuDivider(),
                         _buildMenuItem(

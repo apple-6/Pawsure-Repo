@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart'; // Add url_launcher to pubspec.yaml
+import 'package:flutter/services.dart'; // For Clipboard
+import 'dart:io'; // To check Platform.isWindows
+import 'package:get/get.dart';
 
 class HelpSupportScreen extends StatelessWidget {
   const HelpSupportScreen({super.key});
@@ -75,14 +78,29 @@ class HelpSupportScreen extends StatelessWidget {
                     icon: Icons.chat_bubble_outline, 
                     title: 'Live Chat', 
                     subtitle: 'Available 9am - 6pm',
-                    onTap: () {}, // Add chat logic later
+                    onTap: () async {
+                        // Use your own phone number in international format without '+'
+                        final Uri whatsappUrl = Uri.parse("https://wa.me/60123456789"); 
+                        if (!await launchUrl(whatsappUrl)) {
+                            Get.snackbar('Error', 'Could not open WhatsApp');
+                        }
+                    },
                   ),
                   const Divider(height: 1),
                   _buildContactTile(
                     icon: Icons.phone_outlined, 
                     title: 'Call Us', 
-                    subtitle: '+60 12-345 6789',
-                    onTap: () => _launchPhone(),
+                    subtitle: '+60 18-299 9589',
+                    onTap: () {
+                        if (Platform.isWindows) {
+                        // On Windows: Copy to clipboard
+                        Clipboard.setData(const ClipboardData(text: '+60123456789'));
+                        Get.snackbar('Copied', 'Phone number copied to clipboard!');
+                        } else {
+                        // On Mobile: Launch dialer
+                        _launchPhone();
+                        }
+                    },
                   ),
                 ],
               ),

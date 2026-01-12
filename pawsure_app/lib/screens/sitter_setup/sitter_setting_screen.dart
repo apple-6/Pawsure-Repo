@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pawsure_app/main_navigation.dart';
 import 'package:pawsure_app/services/api_service.dart';
 import 'package:pawsure_app/controllers/sitter_controller.dart';
+import 'package:pawsure_app/screens/profile/help_support_screen.dart';
 
 // Navigation Imports
 import 'sitter_calendar.dart';
@@ -510,7 +511,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                           iconColor: Colors.indigo,
                           title: "Help & Support",
                           subtitle: "FAQ and Customer Service",
-                          onTap: () {Get.to(() => const HelpSupportScreen());},
+                          onTap: () {Get.to(() => HelpSupportScreen());},
                         ),
                         _buildDivider(),
                         _buildMenuItem(
