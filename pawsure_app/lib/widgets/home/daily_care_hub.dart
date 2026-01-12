@@ -271,45 +271,11 @@ class DailyCareHub extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     child: (() {
-                      final progress = controller.calculateDailyProgress();
                       final stats = controller.todayActivityStats.value;
-                      final todayStr = DateFormat('EEEE, MMM d').format(DateTime.now());
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                todayStr,
-                                style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500),
-                              ),
-                              Text(
-                                '$progress%',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: progress >= 100 ? Colors.green : Colors.orange,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: LinearProgressIndicator(
-                              value: progress / 100,
-                              minHeight: 8,
-                              backgroundColor: Colors.grey[200],
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                progress >= 100 ? Colors.green : Colors.orange,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
                           if (controller.isLoadingActivityStats.value)
                             const Center(
                               child: Padding(
