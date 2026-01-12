@@ -60,7 +60,7 @@ class _AIScanTabState extends State<AIScanTab> {
   Future<void> _processImage(ImageSource source) async {
     final picker = ImagePicker();
     XFile? image;
-    
+
     try {
       debugPrint("📷 Picking image from $source...");
       image = await picker.pickImage(source: source);
@@ -82,7 +82,7 @@ class _AIScanTabState extends State<AIScanTab> {
       final url = '${ApiConfig.baseUrl}/ai/scan';
       debugPrint("🚀 Sending image to AI service at: $url");
 
-      var uri = Uri.parse(url); 
+      var uri = Uri.parse(url);
       var request = http.MultipartRequest('POST', uri);
       request.files.add(await http.MultipartFile.fromPath('image', image.path));
 
@@ -103,7 +103,9 @@ class _AIScanTabState extends State<AIScanTab> {
       }
     } catch (e) {
       debugPrint("❌ Connection Error: $e");
-      _showError("Could not connect to backend at ${ApiConfig.baseUrl}. Is NestJS running?");
+      _showError(
+        "Could not connect to backend at ${ApiConfig.baseUrl}. Is NestJS running?",
+      );
     } finally {
       if (mounted) {
         setState(() => _isScanning = false);
@@ -276,7 +278,9 @@ class _AIScanTabState extends State<AIScanTab> {
     if (petId == null) return [];
 
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/ai/history/$petId'));
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/ai/history/$petId'),
+      );
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -305,16 +309,88 @@ class _AIScanTabState extends State<AIScanTab> {
           ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              Row(
-                children: [
-                  _buildActionCard('Analyze Poop', Icons.analytics_outlined, Colors.orange, () => _showImageSourceSelection(context)),
-                  const SizedBox(width: 16),
-                  _buildActionCard('Check Gait', Icons.directions_walk_outlined, Colors.teal, () {}),
-                ],
+              // --- START UPDATED UI (Compact Version) ---
+              Center(
+                child: Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.symmetric(
+                    vertical: 4,
+                  ), // Reduced margin
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _showImageSourceSelection(context),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        // Reduced padding for a more reasonable size
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 20,
+                          horizontal: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.grey.withOpacity(0.1),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _brandColor.withOpacity(0.1),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(
+                                16,
+                              ), // Smaller icon container
+                              decoration: BoxDecoration(
+                                color: _brandColor.withOpacity(0.08),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.center_focus_strong_rounded,
+                                size: 40, // Smaller icon size
+                                color: _brandColor,
+                              ),
+                            ),
+                            const SizedBox(height: 16), // Reduced gap
+                            const Text(
+                              "Start Health Analysis",
+                              style: TextStyle(
+                                fontSize: 18, // Slightly smaller font
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              "Analyze stool sample for anomalies",
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
+
+              // --- END UPDATED UI ---
               const SizedBox(height: 32),
-              const Text('Past Scans', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+              const Text(
+                'Past Scans',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              ),
               const SizedBox(height: 16),
+
+              // History List
               FutureBuilder<List<dynamic>>(
                 key: ValueKey(currentPetId),
                 future: _fetchScanHistory(),
@@ -357,7 +433,9 @@ class _AIScanTabState extends State<AIScanTab> {
                     itemBuilder: (context, index) {
                       final scan = snapshot.data![index];
                       final isNormal = scan['result'] == 'Normal';
-                      final dateStr = scan['scannedAt'].toString().split('T')[0];
+                      final dateStr = scan['scannedAt'].toString().split(
+                        'T',
+                      )[0];
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -434,29 +512,5 @@ class _AIScanTabState extends State<AIScanTab> {
         ],
       );
     });
-  }
-
-  Widget _buildActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
-    return Expanded(
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        color: color.withOpacity(0.1),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                Icon(icon, size: 38, color: color),
-                const SizedBox(height: 12),
-                Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

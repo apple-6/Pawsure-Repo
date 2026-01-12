@@ -75,13 +75,34 @@ class _SitterDashboardState extends State<SitterDashboard> {
                           ),
                         ],
                       ),
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: Colors.grey.shade300,
-                        child: const Icon(Icons.person, color: Colors.grey),
-                        // TODO: Use NetworkImage if profile pic exists
-                        // backgroundImage: controller.profilePicUrl != null ? NetworkImage(controller.profilePicUrl!) : null,
-                      ),
+                      // ✅ UPDATED PROFILE PICTURE LOGIC
+                      Builder(builder: (context) {
+                        // 1. Safely extract the URL from the controller's map
+                        // It checks inside 'user' object first, then root, handling standard NestJS structure
+                        final String? picUrl = 
+                            controller.sitterProfile['user']?['profile_picture'] ?? 
+                            controller.sitterProfile['profile_picture'];
+
+                        return Container(
+                          padding: const EdgeInsets.all(2), // White border effect
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: CircleAvatar(
+                            radius: 24,
+                            backgroundColor: Colors.grey.shade200,
+                            // 2. Load Network Image if URL exists
+                            backgroundImage: (picUrl != null && picUrl.isNotEmpty)
+                                ? NetworkImage(picUrl)
+                                : null,
+                            // 3. Fallback Icon if URL is null
+                            child: (picUrl == null || picUrl.isEmpty)
+                                ? const Icon(Icons.person, color: Colors.grey)
+                                : null, 
+                          ),
+                        );
+                      }),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -221,7 +242,7 @@ class _SitterDashboardState extends State<SitterDashboard> {
       );
     }
 
-    return Column(
+   return Column(
       children: pendingBookings
           .map(
             (booking) => Padding(
@@ -230,7 +251,10 @@ class _SitterDashboardState extends State<SitterDashboard> {
                 booking: booking,
                 onAccept: () => controller.updateBookingStatus(booking['id'], 'accepted'),
                 onDecline: () => controller.updateBookingStatus(booking['id'], 'declined'),
+                // MODIFIED: Connect the new View Details button to the modal
+                onViewDetails: () => _showBookingDetails(context, booking), 
                 onChat: () {
+                   // ... (keep existing onChat logic) ...
                   final ownerName = booking['owner']?['name'] ?? 'Owner';
                   final pets = booking['pets'] as List? ?? [];
                   final petNames = pets.map((p) => p['name']).join(', ');
@@ -260,7 +284,6 @@ class _SitterDashboardState extends State<SitterDashboard> {
           .toList(),
     );
   }
-
   Widget _buildUpcomingStays(SitterController controller) {
     final stays = controller.bookings
         .where((b) => ['accepted', 'in progress', 'upcoming'].contains(
@@ -315,89 +338,118 @@ class _SitterDashboardState extends State<SitterDashboard> {
     final earnings = "RM ${booking['total_amount']}";
     final status = booking['status']?.toString().toUpperCase() ?? 'UNKNOWN';
 
-    showModalBottomSheet(
+    // MODIFIED: Fetch time fields
+    final dropOffTime = booking['drop_off_time'] ?? '9:00 AM'; 
+    final pickUpTime = booking['pick_up_time'] ?? '5:00 PM';
+
+   // MODIFIED: Changed from showModalBottomSheet to showDialog
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          insetPadding: const EdgeInsets.all(20), // Adds margin from screen edges
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            // Constrain height so it doesn't overflow if list is long
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min, // Shrink wrap the content
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Booking Details',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  // Removed the "drag handle" grey bar as it's not needed for center dialogs
+                  
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Booking Details',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: SitterDashboard._accent.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          status,
+                          style: const TextStyle(
+                            color: SitterDashboard._accent,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 20),
+                  _buildDetailRow(Icons.pets, 'Pets', petNames),
+                  const SizedBox(height: 16),
+                  _buildDetailRow(Icons.person, 'Owner', ownerName),
+                  const SizedBox(height: 16),
+                  _buildDetailRow(Icons.calendar_today, 'Date', dateRange),
+                  
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildDetailRow(Icons.arrow_forward, 'Drop-off', dropOffTime),
+                      ),
+                      Expanded(
+                        child: _buildDetailRow(Icons.arrow_back, 'Pick-up', pickUpTime),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+                  _buildDetailRow(Icons.monetization_on, 'Earnings', earnings),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Remarks / Message',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: SitterDashboard._accent.withOpacity(0.1),
+                      color: Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      status,
-                      style: const TextStyle(
-                        color: SitterDashboard._accent,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
+                      remarks,
+                      style: const TextStyle(fontSize: 14, height: 1.4),
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  
+                  // Optional: Add a close button at the bottom since there's no drag handle
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Close", style: TextStyle(color: Colors.grey)),
+                    ),
+                  )
                 ],
               ),
-              const SizedBox(height: 20),
-              _buildDetailRow(Icons.pets, 'Pets', petNames),
-              const SizedBox(height: 16),
-              _buildDetailRow(Icons.person, 'Owner', ownerName),
-              const SizedBox(height: 16),
-              _buildDetailRow(Icons.calendar_today, 'Date', dateRange),
-              const SizedBox(height: 16),
-              _buildDetailRow(Icons.monetization_on, 'Earnings', earnings),
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 16),
-              const Text(
-                'Remarks / Message',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  remarks,
-                  style: const TextStyle(fontSize: 14, height: 1.4),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
         );
       },
     );
   }
 
+  // MODIFIED: Restored this missing method
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Row(
       children: [
@@ -485,12 +537,14 @@ class _RequestCard extends StatelessWidget {
     required this.onAccept,
     required this.onDecline,
     required this.onChat,
+    required this.onViewDetails,
   });
 
   final dynamic booking;
   final VoidCallback onAccept;
   final VoidCallback onDecline;
   final VoidCallback onChat;
+  final VoidCallback onViewDetails;
 
   @override
   Widget build(BuildContext context) {
@@ -602,6 +656,27 @@ class _RequestCard extends StatelessWidget {
                   label: const Text('Chat'),
                 ),
               ),
+
+              const SizedBox(width: 8), // Spacing
+              // MODIFIED: Added View Details Button
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.grey.shade700, 
+                    elevation: 0,
+                    side: BorderSide(color: Colors.grey.shade400),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: onViewDetails,
+                  icon: const Icon(Icons.visibility_outlined, size: 18),
+                  label: const Text('Details'),
+                ),
+              ),
+
               const SizedBox(width: 8),
               IconButton(
                 onPressed: onAccept,

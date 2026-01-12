@@ -178,11 +178,19 @@ async findAll(minRating?: number): Promise<any[]> {
     }
   }
   
-  async findOne(id: number): Promise<any> {
+ async findOne(id: number): Promise<any> {
     const sitter = await this.sitterRepository.findOne({
       where: { id },
       withDeleted: false,
-      relations: ['user', 'reviews', 'reviews.owner', 'bookings'],
+      // 👇 Updated relations to deeply fetch booking and pets
+      relations: [
+        'user', 
+        'reviews', 
+        'reviews.owner', 
+        'bookings',
+        'reviews.booking',      
+        'reviews.booking.pets', 
+      ],
     });
 
     if (!sitter) {
@@ -214,7 +222,13 @@ async findByUserId(userId: number): Promise<any> {
     // 1. Fetch sitter AND reviews (Just like findOne)
     const sitter = await this.sitterRepository.findOne({
       where: { userId, deleted_at: IsNull() },
-      relations: ['user', 'reviews'], // <--- CRITICAL: This was missing
+      relations: [
+        'user', 
+        'reviews', 
+        'reviews.owner',          
+        'reviews.booking',        
+        'reviews.booking.pets',   
+      ],
     });
 
     if (!sitter) {
@@ -235,9 +249,13 @@ async findByUserId(userId: number): Promise<any> {
     // 3. Return the merged object (Just like findOne)
     return {
       ...sitter,
-      rating: avgRating,       // <--- Now 'rating' exists in the JSON
+      rating: avgRating,
       reviewCount: reviewCount,
       reviews_count: reviewCount,
+      // Sort reviews by newest first
+      reviews: sitter.reviews 
+        ? sitter.reviews.sort((a, b) => b.created_at.getTime() - a.created_at.getTime()) 
+        : []
     };
   }
 
@@ -245,11 +263,44 @@ async findByUserId(userId: number): Promise<any> {
     id: number,
     updateSitterDto: any, // Use 'any' temporarily to allow 'name' property
     userId: number,
+    file?: Express.Multer.File,
   ): Promise<Sitter> {
+    console.log(`[DEBUG] Update Request for User ID: ${userId}`);
     const sitter = await this.findOne(id);
 
     if (sitter.userId !== userId) {
       throw new ForbiddenException('You can only update your own sitter profile');
+    }
+
+    // 🛑 CRITICAL FIX: Parse 'services' if it comes as a string (Multipart)
+    if (updateSitterDto.services && typeof updateSitterDto.services === 'string') {
+      try {
+        updateSitterDto.services = JSON.parse(updateSitterDto.services);
+      } catch (e) {
+        throw new BadRequestException('Invalid JSON format for services');
+      }
+    }
+
+    // 🟢 HANDLE PROFILE PICTURE (User Table)
+    if (file) {
+      console.log(`[DEBUG] File received! Name: ${file.originalname}, Size: ${file.size}`);
+      // 1. Upload the file
+      const photoUrl = await this.fileService.uploadPublicFile(
+        file.buffer,
+        file.originalname,
+        'profile-pictures' // folder name
+      );
+
+      console.log(`[DEBUG] File uploaded to storage. URL: ${photoUrl}`);
+      
+      // 2. Update the User entity
+      await this.userRepository.update(userId, { profile_picture: photoUrl });
+      const updateResult = await this.userRepository.update(userId, { profile_picture: photoUrl });
+      console.log(`[DEBUG] DB Update Result:`, updateResult); // 🔍 Log 4
+      
+    } else {
+      console.log(`[DEBUG] No file received in service.`); // 🔍 Log 5
+    
     }
 
     // 1. 🟢 HANDLE NAME UPDATE (User Table)

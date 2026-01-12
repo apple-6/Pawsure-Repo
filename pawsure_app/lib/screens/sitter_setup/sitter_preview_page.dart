@@ -6,7 +6,7 @@ import '../../constants/api_config.dart';
 
 class SitterPreviewPage extends StatefulWidget {
   final UserProfile user;
-  final List<dynamic> initialReviews; // Renamed to initialReviews
+  final List<dynamic> initialReviews;
 
   const SitterPreviewPage({
     super.key,
@@ -39,13 +39,11 @@ class _SitterPreviewPageState extends State<SitterPreviewPage> {
 
   // ✅ FETCH REVIEWS FROM BACKEND
   Future<void> _fetchReviews() async {
-    if (_reviews.isNotEmpty) return; // Optional: Skip if we already passed data
+    if (_reviews.isNotEmpty) return; 
 
     setState(() => _isLoadingReviews = true);
 
     try {
-      // Assuming widget.user.id is the USER ID. 
-      // We hit the endpoint that gets sitter profile by User ID.
       final url = Uri.parse('${ApiConfig.baseUrl}/sitters/user/${widget.user.id}');
       
       print("Fetching reviews from: $url");
@@ -166,7 +164,6 @@ class _SitterPreviewPageState extends State<SitterPreviewPage> {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      // ✅ UPDATED: Use _reviews.length
                       Text(
                         "(${_reviews.length} Reviews)", 
                         style: TextStyle(color: textGrey),
@@ -471,7 +468,7 @@ class _SitterPreviewPageState extends State<SitterPreviewPage> {
 }
 
 // ===========================================================================
-// EXTERNAL CLASSES
+// EXTERNAL CLASSES (UPDATED TO MATCH SITTER DETAILS)
 // ===========================================================================
 
 class AllReviewsScreen extends StatelessWidget {
@@ -502,6 +499,9 @@ class AllReviewsScreen extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Updated ReviewCard (Matches SitterDetailsScreen implementation)
+// ---------------------------------------------------------------------------
 class ReviewCard extends StatelessWidget {
   final dynamic reviewData;
 
@@ -510,27 +510,51 @@ class ReviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final owner = reviewData['owner'];
-    final String userName =
-        owner != null ? (owner['name'] ?? 'Anonymous') : 'User';
+    final String userName = owner != null ? (owner['name'] ?? 'Anonymous') : 'User';
 
-    // --- Image Logic ---
+    // --- 1. Pet Name Extraction Logic (Added) ---
+    List<String> petNames = [];
+    
+    // Check if the review has a 'booking' object attached
+    if (reviewData['booking'] != null) {
+      final booking = reviewData['booking'];
+      
+      // Scenario A: Backend returns a simple 'pets' array inside booking
+      if (booking['pets'] != null && booking['pets'] is List) {
+        for (var pet in booking['pets']) {
+          if (pet['name'] != null) {
+            petNames.add(pet['name']);
+          }
+        }
+      }
+      // Scenario B: Backend returns the raw Supabase join (booking_pets)
+      else if (booking['booking_pets'] != null && booking['booking_pets'] is List) {
+        for (var bp in booking['booking_pets']) {
+          // Join often looks like: { pet: { name: "Max" } }
+          if (bp['pet'] != null && bp['pet']['name'] != null) {
+            petNames.add(bp['pet']['name']);
+          }
+        }
+      }
+    }
+    
+    // Join names (e.g., "Max, Bella")
+    String petsString = petNames.isNotEmpty ? petNames.join(", ") : "";
+
+    // --- 2. Image Logic ---
     String? finalProfileUrl;
     if (owner != null && owner['profile_picture'] != null) {
       String rawPic = owner['profile_picture'].toString();
       if (rawPic.isNotEmpty) {
-        if (rawPic.startsWith('file:') ||
-            rawPic.contains('C:/') ||
-            rawPic.contains('/Users/')) {
+        if (rawPic.startsWith('file:') || rawPic.contains('C:/') || rawPic.contains('/Users/')) {
           finalProfileUrl = null;
         } else if (rawPic.startsWith('http')) {
           finalProfileUrl = rawPic;
         } else {
-          finalProfileUrl =
-              "${ApiConfig.supabaseUrl}/storage/v1/object/public/profile_pictures/$rawPic";
+          finalProfileUrl = "${ApiConfig.supabaseUrl}/storage/v1/object/public/profile_pictures/$rawPic";
         }
       }
     }
-    // ----------------------------
 
     final String date = reviewData['created_at'] != null
         ? reviewData['created_at'].toString().substring(0, 10)
@@ -554,12 +578,17 @@ class ReviewCard extends StatelessWidget {
                 CircleAvatar(
                   backgroundColor: Colors.grey[200],
                   radius: 20,
+                  // 1. Provide the image (or null)
                   foregroundImage: (finalProfileUrl != null)
                       ? NetworkImage(finalProfileUrl)
                       : null,
-                  onForegroundImageError: (finalProfileUrl != null)
-                      ? (_, __) {}
-                      : null,
+                  
+                  // 2. Only provide the error handler if the image is NOT null
+                  onForegroundImageError: (finalProfileUrl != null) 
+                      ? (_, __) {} 
+                      : null, 
+
+                  // 3. Fallback child
                   child: Icon(Icons.person_outline, color: Colors.grey[600]),
                 ),
                 const SizedBox(width: 12),
@@ -572,16 +601,29 @@ class ReviewCard extends StatelessWidget {
                         children: [
                           Text(
                             userName,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 14),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                           ),
                           Text(
                             date,
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 12),
+                            style: const TextStyle(color: Colors.grey, fontSize: 12),
                           ),
                         ],
                       ),
+                      
+                      // --- Display Pet Name if available (Added) ---
+                      if (petsString.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2.0),
+                          child: Text(
+                            "Pet: $petsString",
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        
                       const SizedBox(height: 4),
                       Row(
                         children: List.generate(5, (index) {

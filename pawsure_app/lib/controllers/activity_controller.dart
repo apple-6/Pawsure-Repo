@@ -153,18 +153,24 @@ class ActivityController extends GetxController {
     }
   }
 
-  Future<void> createActivity(int petId, Map<String, dynamic> payload) async {
+  // ✅ UPDATED: Accepts List<int> for multiple pets
+  Future<void> createActivity(
+    List<int> petIds,
+    Map<String, dynamic> payload,
+  ) async {
     try {
-      await _activityService.createActivity(petId, payload);
-      await loadActivities();
-      // Refresh all stats including month
+      await _activityService.createActivity(petIds, payload);
+      await loadActivities(); // Refresh for all affected pets
+
+      // Refresh stats for all pets (ensures charts stay updated)
       await loadTodayStats();
       await loadWeekStats();
       await loadMonthStats();
+
       Get.back();
       Get.snackbar(
         'Success',
-        'Activity added!',
+        'Activity added for ${petIds.length} pet(s)!',
         backgroundColor: Colors.green.withValues(alpha: 0.1),
       );
     } catch (e) {
