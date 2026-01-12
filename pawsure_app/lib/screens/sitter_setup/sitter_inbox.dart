@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'sitter_dashboard.dart';
+import 'package:pawsure_app/screens/community/community_screen.dart';
 import 'chat_screen.dart';
 import 'sitter_calendar.dart';
 import 'sitter_setting_screen.dart';
@@ -386,7 +387,8 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
             Get.offAll(() => const SitterDashboard());
           }
           if (index == 1) {
-            // Navigate to Discover Screen
+            // Navigate to Community Screen
+            Get.offAll(() => const CommunityScreen());
           }
           if (index == 2) {
             Get.to(() => const SitterCalendar());
@@ -400,7 +402,7 @@ class _SitterInboxState extends State<SitterInbox> with SingleTickerProviderStat
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), label: 'Discover'),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Community'),
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'Calendar'),
           BottomNavigationBarItem(icon: Icon(Icons.chat_bubble), label: 'Inbox'),
           BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Setting'),

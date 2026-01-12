@@ -19,65 +19,6 @@ import 'package:pawsure_app/screens/sitter_setup/sitter_calendar.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_inbox.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_setting_screen.dart';
 
-// --- POST MODEL ---
-class Post {
-  final String id;
-  final String userId;
-  final String userName;
-  final String profilePicture;
-  final String content;
-  final List<String> mediaUrls;
-  final String? location;
-  final DateTime createdAt;
-  int likes;
-  bool isLiked;
-  final bool isUrgent;
-
-  Post({
-    required this.id,
-    required this.userId,
-    required this.userName,
-    required this.profilePicture,
-    required this.content,
-    required this.mediaUrls,
-    this.location,
-    required this.createdAt,
-    this.likes = 0,
-    this.isLiked = false,
-    this.isUrgent = false,
-  });
-
-  factory Post.fromMap(Map<String, dynamic> map) {
-    final userData = map['user'] ?? map['owner'];
-    final List<dynamic> mediaList = map['post_media'] ?? [];
-
-    return Post(
-      id: map['id'].toString(),
-      userId:
-          (map['userId'] ?? map['user_id'] ?? userData?['id'])?.toString() ??
-          '',
-      userName: userData?['name'] ?? 'Unknown User',
-      profilePicture:
-          userData?['profile_picture'] ??
-          "https://cdn-icons-png.flaticon.com/512/194/194279.png",
-      content: map['content'] ?? '',
-      mediaUrls: mediaList
-          .map(
-            (m) => (m is String)
-                ? m
-                : (m['url'] ?? m['media_url'] ?? '').toString(),
-          )
-          .where((url) => url.isNotEmpty)
-          .toList()
-          .cast<String>(),
-      location: map['location_name'] ?? map['location'],
-      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
-      isUrgent: map['is_urgent'] ?? false,
-      likes: map['likes_count'] ?? 0,
-    );
-  }
-}
-
 // --- COMMUNITY SCREEN ---
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
@@ -88,7 +29,6 @@ class CommunityScreen extends StatefulWidget {
 
 class CommunityScreenState extends State<CommunityScreen> {
   final ApiService _apiService = ApiService();
-  final String baseUrl = "http://localhost:3000";
   int _currentSubTabIndex = 0;
   String? _userRole;
 
@@ -160,6 +100,7 @@ class CommunityScreenState extends State<CommunityScreen> {
     return DefaultTabController(
       length: tabCount,
       child: Scaffold(
+        backgroundColor: Colors.white,
         body: SafeArea(
           child: NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -335,8 +276,6 @@ class _FeedTabViewState extends State<FeedTabView>
     with SingleTickerProviderStateMixin {
   late TabController _subTabController;
 
-  Null get currentUserId => null;
-
   @override
   void initState() {
     super.initState();
@@ -388,7 +327,7 @@ class _FeedTabViewState extends State<FeedTabView>
           AlertDialog(
             title: const Text("Delete Post?"),
             content: const Text(
-              "Are you sure you want to remove this vacancy? This action cannot be undone.",
+              "Are you sure you want to remove this post? This action cannot be undone.",
             ),
             actions: [
               TextButton(
@@ -454,7 +393,6 @@ class _FeedTabViewState extends State<FeedTabView>
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        // Assuming CreatePostModal accepts a 'postToEdit' parameter similar to CreateVacancyModal
         return CreatePostModal(
           onPostCreated: () => widget.parentState.setState(() {}),
           postToEdit: post,
@@ -527,10 +465,6 @@ class _FeedTabViewState extends State<FeedTabView>
                       currentUserId != null &&
                       currentUserId == post.userId.toString();
 
-                  debugPrint(
-                    "Post by: ${post.userId} | Me: $currentUserId | Match: $isMyPost",
-                  );
-
                   final bool canManagePost = !isSitter && isMyPost;
 
                   if (tab == 'vacancy') {
@@ -563,10 +497,7 @@ class _FeedTabViewState extends State<FeedTabView>
                       post: post,
                       onLike: (id) => _handleLike(id),
                       onComment: (id) {},
-                      // ✅ Connect Delete (Reuse your existing function)
                       onDelete: canManagePost ? () => _deletePost(post) : null,
-
-                      // ✅ Connect Edit (Use the new helper)
                       onEdit: canManagePost
                           ? () => _editStandardPost(post)
                           : null,
