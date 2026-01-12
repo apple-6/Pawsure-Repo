@@ -9,6 +9,7 @@ import 'package:pawsure_app/controllers/pet_controller.dart';
 import 'package:pawsure_app/controllers/sitter_controller.dart';
 import 'package:pawsure_app/services/storage_service.dart';
 import 'package:pawsure_app/screens/profile/help_support_screen.dart';
+import 'package:pawsure_app/screens/profile/about_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -381,7 +382,7 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFF6366F1),
                           title: 'About Pawsure',
                           subtitle: 'Version 1.0.0',
-                          onTap: () => _showComingSoon('About'),
+                          onTap: () {Get.to(() => AboutScreen());},
                         ),
                       ],
                     ),
