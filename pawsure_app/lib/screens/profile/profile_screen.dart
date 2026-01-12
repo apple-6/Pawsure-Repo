@@ -8,6 +8,7 @@ import 'package:pawsure_app/controllers/home_controller.dart';
 import 'package:pawsure_app/controllers/pet_controller.dart';
 import 'package:pawsure_app/controllers/sitter_controller.dart';
 import 'package:pawsure_app/services/storage_service.dart';
+import 'package:pawsure_app/screens/profile/help_support_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -371,7 +372,7 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFF3B82F6),
                           title: 'Help & Support',
                           subtitle: 'Get assistance',
-                          onTap: () => _showComingSoon('Help & Support'),
+                          onTap: () {Get.to(() => const HelpSupportScreen());},
                         ),
                         _buildMenuDivider(),
                         _buildMenuItem(

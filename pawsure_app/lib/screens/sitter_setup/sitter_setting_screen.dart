@@ -510,7 +510,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                           iconColor: Colors.indigo,
                           title: "Help & Support",
                           subtitle: "FAQ and Customer Service",
-                          onTap: () {},
+                          onTap: () {Get.to(() => const HelpSupportScreen());},
                         ),
                         _buildDivider(),
                         _buildMenuItem(
