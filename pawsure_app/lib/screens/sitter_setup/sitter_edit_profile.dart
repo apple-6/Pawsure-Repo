@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../models/sitter_model.dart';
 import '../../services/api_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class EditProfilePage extends StatefulWidget {
   final UserProfile user;
@@ -29,6 +31,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
     "Pet Daycare",
     "Pet Taxi"
   ];
+
+  // ✅ New State Variable for the Image
+  File? _selectedImage;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery, // Or ImageSource.camera
+        imageQuality: 80, // Compress slightly to save bandwidth
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error picking image: $e");
+      Get.snackbar("Error", "Could not pick image", 
+        backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+    }
+  }
 
   @override
   void initState() {
@@ -123,7 +148,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       };
 
       final apiService = Get.find<ApiService>();
-      final updatedProfile = await apiService.updateSitterProfile(widget.user.id, payload);
+      final updatedProfile = await apiService.updateSitterProfile(widget.user.id, payload, _selectedImage);
 
       // Create optimistic profile for UI (prevents flicker)
       final newProfile = UserProfile(
@@ -157,6 +182,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget build(BuildContext context) {
     const brandColor = Color(0xFF2ECA6A);
     const backgroundColor = Color(0xFFF9FAFB);
+
+    final String? currentProfilePicUrl = null;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -206,6 +233,59 @@ class _EditProfilePageState extends State<EditProfilePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ✅ 3. Updated Profile Picture UI
+              Center(
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 4),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5)),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Container(
+                          color: brandColor.withOpacity(0.2),
+                          alignment: Alignment.center,
+                          child: _buildProfileImage(currentProfilePicUrl, brandColor),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(color: brandColor, shape: BoxShape.circle),
+                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              Center(
+                child: TextButton(
+                  onPressed: _pickImage,
+                  child: const Text(
+                    "Change Profile Picture",
+                    style: TextStyle(
+                      color: brandColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // ✅ END NEW SECTION
+
               // --- SECTION 1: BASIC INFO ---
               const Text("Basic Information",
                   style: TextStyle(
@@ -260,6 +340,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         ),
       ),
+    );
+  }
+
+  // ✅ 4. Helper to decide which image to show
+  Widget _buildProfileImage(String? netUrl, Color brandColor) {
+    // A. If user picked a new file, show that
+    if (_selectedImage != null) {
+      return Image.file(_selectedImage!, fit: BoxFit.cover, width: 110, height: 110);
+    }
+    
+    // B. If no new file, but backend has a URL, show network image
+    if (netUrl != null && netUrl.isNotEmpty) {
+      // Use your backend URL prefix if the DB only stores "uploads/image.jpg"
+      // Example: return Image.network("http://10.0.2.2:3000/$netUrl", fit: BoxFit.cover);
+      return Image.network(netUrl, fit: BoxFit.cover, width: 110, height: 110,
+        errorBuilder: (c, o, s) => Icon(Icons.person, size: 50, color: brandColor));
+    }
+
+    // C. Fallback: Show Initials
+    return Text(
+      widget.user.name.isNotEmpty ? widget.user.name[0].toUpperCase() : "U",
+      style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: brandColor),
     );
   }
 

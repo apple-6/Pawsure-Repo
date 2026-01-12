@@ -85,6 +85,7 @@ class UserProfile {
   double rating;
   int reviewCount;
   List<ReviewModel> reviews; // ✅ ADD THIS
+  final String? profilePicture;
 
   UserProfile({
     required this.id,
@@ -98,10 +99,12 @@ class UserProfile {
     required this.services,
     this.rating = 0.0,
     this.reviewCount = 0,
-    this.reviews = const [], // ✅ Initialize
+    this.reviews = const [], 
+    this.profilePicture,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
+    final userData = json['user'] ?? json;
     return UserProfile(
       // ✅ MAP USER ID to 'id'
       // The backend response for a Sitter object usually has 'userId' field
@@ -125,6 +128,9 @@ class UserProfile {
               ?.map((e) => ReviewModel.fromJson(e))
               .toList() ??
           [],
+
+    profilePicture: userData['profile_picture'] ?? userData['profilePicture'],
     );
+    
   }
 }

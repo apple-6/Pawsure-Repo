@@ -28,7 +28,6 @@ export class User {
   email: string;
 
   @Column({
-    // <-- ADD THIS WHOLE BLOCK
     unique: true,
     nullable: true,
   })

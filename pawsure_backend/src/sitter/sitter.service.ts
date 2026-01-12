@@ -263,11 +263,44 @@ async findByUserId(userId: number): Promise<any> {
     id: number,
     updateSitterDto: any, // Use 'any' temporarily to allow 'name' property
     userId: number,
+    file?: Express.Multer.File,
   ): Promise<Sitter> {
+    console.log(`[DEBUG] Update Request for User ID: ${userId}`);
     const sitter = await this.findOne(id);
 
     if (sitter.userId !== userId) {
       throw new ForbiddenException('You can only update your own sitter profile');
+    }
+
+    // 🛑 CRITICAL FIX: Parse 'services' if it comes as a string (Multipart)
+    if (updateSitterDto.services && typeof updateSitterDto.services === 'string') {
+      try {
+        updateSitterDto.services = JSON.parse(updateSitterDto.services);
+      } catch (e) {
+        throw new BadRequestException('Invalid JSON format for services');
+      }
+    }
+
+    // 🟢 HANDLE PROFILE PICTURE (User Table)
+    if (file) {
+      console.log(`[DEBUG] File received! Name: ${file.originalname}, Size: ${file.size}`);
+      // 1. Upload the file
+      const photoUrl = await this.fileService.uploadPublicFile(
+        file.buffer,
+        file.originalname,
+        'profile-pictures' // folder name
+      );
+
+      console.log(`[DEBUG] File uploaded to storage. URL: ${photoUrl}`);
+      
+      // 2. Update the User entity
+      await this.userRepository.update(userId, { profile_picture: photoUrl });
+      const updateResult = await this.userRepository.update(userId, { profile_picture: photoUrl });
+      console.log(`[DEBUG] DB Update Result:`, updateResult); // 🔍 Log 4
+      
+    } else {
+      console.log(`[DEBUG] No file received in service.`); // 🔍 Log 5
+    
     }
 
     // 1. 🟢 HANDLE NAME UPDATE (User Table)
