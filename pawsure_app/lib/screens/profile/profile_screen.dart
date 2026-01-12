@@ -6,7 +6,11 @@ import 'package:pawsure_app/controllers/profile_controller.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
 import 'package:pawsure_app/controllers/home_controller.dart';
 import 'package:pawsure_app/controllers/pet_controller.dart';
+import 'package:pawsure_app/controllers/sitter_controller.dart';
 import 'package:pawsure_app/services/storage_service.dart';
+import 'package:pawsure_app/screens/profile/help_support_screen.dart';
+import 'package:pawsure_app/screens/profile/about_screen.dart';
+import 'package:pawsure_app/screens/profile/booking_history.dart';
 import 'package:pawsure_app/constants/api_config.dart'; // 1. ADD THIS IMPORT
 import 'edit_profile_screen.dart';
 
@@ -285,6 +289,10 @@ class ProfileScreen extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(height: 20),
+                              
+                              // ✅ Sitter Stats Section (Visible only to Sitters)
+                              if (userRole == 'sitter' && Get.isRegistered<SitterController>())
+                                _buildSitterStats(Get.find<SitterController>()),
                             ],
                           ),
                         ),
@@ -335,7 +343,13 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFF8B5CF6),
                           title: 'Booking History',
                           subtitle: 'Past bookings',
-                          onTap: () => _showComingSoon('Booking History'),
+                         onTap: () {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const BookingHistoryScreen(),
+      ),
+    );
+  },
                         ),
                       ],
                     ),
@@ -402,7 +416,7 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFF3B82F6),
                           title: 'Help & Support',
                           subtitle: 'Get assistance',
-                          onTap: () => _showComingSoon('Help & Support'),
+                          onTap: () {Get.to(() => HelpSupportScreen());},
                         ),
                         _buildMenuDivider(),
                         _buildMenuItem(
@@ -411,7 +425,7 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFF6366F1),
                           title: 'About Pawsure',
                           subtitle: 'Version 1.0.0',
-                          onTap: () => _showComingSoon('About'),
+                          onTap: () {Get.to(() => AboutScreen());},
                         ),
                       ],
                     ),
@@ -448,6 +462,38 @@ class ProfileScreen extends StatelessWidget {
           ),
         );
       }),
+    );
+  }
+
+  Widget _buildSitterStats(SitterController controller) {
+    return Column(
+      children: [
+        const Divider(height: 24),
+        Row(
+          children: [
+            _buildStatItem(
+              icon: Icons.attach_money,
+              value: 'RM${controller.earnings.value.toStringAsFixed(0)}',
+              label: 'Earnings',
+              color: Colors.green,
+            ),
+            _buildStatDivider(),
+            _buildStatItem(
+              icon: Icons.calendar_month,
+              value: controller.activeStaysCount.value.toString(),
+              label: 'Active',
+              color: Colors.blue,
+            ),
+            _buildStatDivider(),
+            _buildStatItem(
+              icon: Icons.star,
+              value: controller.avgRating.value.toStringAsFixed(1),
+              label: 'Rating',
+              color: Colors.orange,
+            ),
+          ],
+        ),
+      ],
     );
   }
 

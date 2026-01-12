@@ -215,7 +215,7 @@ class _RouteViewScreenState extends State<RouteViewScreen> {
                             Text(
                               DateFormat(
                                 'MMM d, yyyy • h:mm a',
-                              ).format(widget.activity.activityDate),
+                              ).format(widget.activity.activityDate.toLocal()),
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.9),
                                 fontSize: 13,

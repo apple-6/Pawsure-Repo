@@ -48,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
           SizedBox(
             height: size.height,
             width: size.width,
-            child: Image.asset('assets/images/dog_auth.png', fit: BoxFit.cover),
+            child: Image.asset('assets/images/cat_login.png', fit: BoxFit.cover),
           ),
 
           // Decorative top-right green shape with logo
@@ -290,20 +290,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
-              ),
-            ),
-          ),
-
-          // Bottom green bar
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              height: 24,
-              decoration: const BoxDecoration(
-                color: Color(0xFF4CAF50),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
               ),
             ),
           ),

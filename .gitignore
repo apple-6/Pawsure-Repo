@@ -144,6 +144,7 @@ my_conflicts.txt
 output.txt
 tree.txt
 
+pawsure_backend/uploads/
 # =========================================================
 # ✅ IMPORTANT: THESE SHOULD STAY IN GIT
 # =========================================================

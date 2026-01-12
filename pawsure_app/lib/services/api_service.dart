@@ -1,5 +1,6 @@
 // Pawsure-Repo\pawsure_app\lib\services\api_service.dart
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart'; // Added for MediaType
 import 'package:flutter/foundation.dart';
@@ -1179,17 +1180,71 @@ class ApiService {
   Future<UserProfile> updateSitterProfile(
     int userId,
     Map<String, dynamic> payload,
+    File? imageFile,
   ) async {
     try {
       // ✅ Calls the new endpoint: /sitters/user/23
       debugPrint('🔄 API: PATCH $apiBaseUrl/sitters/user/$userId');
 
       final headers = await _getHeaders();
-      final response = await http.patch(
+
+      http.Response response;
+
+      if (imageFile != null) {
+        // --- 📸 SCENARIO A: Uploading Image (Multipart) ---
+        debugPrint('📤 Uploading profile with image...');
+        
+        // Remove Content-Type so boundary is set automatically
+        headers.remove('Content-Type'); 
+
+        final request = http.MultipartRequest(
+          'PATCH',
+          Uri.parse('$apiBaseUrl/sitters/user/$userId'),
+        );
+
+        request.headers.addAll(headers);
+
+        // 1. Add Text Fields
+        // We iterate through the payload. If a value is a List (like services),
+        // we must encode it to a JSON string because Multipart fields can only be strings.
+        payload.forEach((key, value) {
+          if (value is String) {
+            request.fields[key] = value;
+          } else {
+            request.fields[key] = jsonEncode(value);
+          }
+        });
+
+        // 2. Add File
+        final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        request.files.add(await http.MultipartFile.fromPath(
+          'profile_picture', // ⚠️ Must match backend @UploadedFile('profile_picture')
+          imageFile.path,
+          filename: fileName,
+          contentType: MediaType('image', 'jpeg'),
+        ));
+
+        final streamedResponse = await request.send();
+        response = await http.Response.fromStream(streamedResponse);
+
+      } else {
+        // --- 📝 SCENARIO B: Text Only (JSON) ---
+        debugPrint('📤 Updating text only...');
+        
+        response = await http.patch(
+          Uri.parse('$apiBaseUrl/sitters/user/$userId'),
+          headers: headers,
+          body: jsonEncode(payload),
+        );
+      }
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      /*final response = await http.patch(
         Uri.parse('$apiBaseUrl/sitters/user/$userId'),
         headers: headers,
         body: jsonEncode(payload),
-      );
+      );*/
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json = jsonDecode(response.body);
@@ -1611,6 +1666,68 @@ class ApiService {
         'totalDaysLogged': 0,
         'lastActivityDate': null,
       };
+    }
+  }
+
+  // ========================================================================
+  // MEAL LOGS API
+  // ========================================================================
+
+  /// POST /pets/:petId/meals - Log a meal for the pet
+  Future<Map<String, dynamic>> logMeal({
+    required int petId,
+    required String mealType,
+  }) async {
+    try {
+      debugPrint('🍲 API: POST $apiBaseUrl/pets/$petId/meals');
+
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/pets/$petId/meals'),
+        headers: headers,
+        body: jsonEncode({
+          'meal_type': mealType,
+        }),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to log meal (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in logMeal: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /pets/:petId/meals/today - Get today's meals
+  Future<List<String>> getTodayMeals(int petId) async {
+    try {
+      debugPrint('📅 API: GET $apiBaseUrl/pets/$petId/meals/today');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/pets/$petId/meals/today'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((e) => e['meal_type'] as String).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('❌ Error in getTodayMeals: $e');
+      return [];
     }
   }
 

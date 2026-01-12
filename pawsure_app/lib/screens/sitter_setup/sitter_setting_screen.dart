@@ -5,6 +5,9 @@ import 'package:pawsure_app/screens/community/community_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pawsure_app/main_navigation.dart';
 import 'package:pawsure_app/services/api_service.dart';
+import 'package:pawsure_app/controllers/sitter_controller.dart';
+import 'package:pawsure_app/screens/profile/help_support_screen.dart';
+import 'package:pawsure_app/screens/profile/about_screen.dart';
 
 // Navigation Imports
 import 'sitter_calendar.dart';
@@ -15,6 +18,8 @@ import 'sitter_edit_profile.dart';
 import 'sitter_performance_page.dart';
 import '../../models/sitter_model.dart';
 import 'sitter_registration_screen.dart';
+
+
 
 class SitterSettingScreen extends StatefulWidget {
   const SitterSettingScreen({super.key});
@@ -28,19 +33,20 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
   bool isLoading = true;
   String? errorMessage;
 
+  double rating = 0.0;
+  int reviewCount = 0;
+
   @override
   void initState() {
     super.initState();
     _fetchUserData();
   }
 
-  Future<void> _fetchUserData() async {
+ Future<void> _fetchUserData() async {
     try {
-      // 1. Get the ApiService
       final apiService = Get.find<ApiService>();
       
-      // 2. Call the new method we created (getMySitterProfile)
-      // This automatically uses the token and handles the /my-profile endpoint
+      // 1. Get the profile (Now includes rating/reviews inside the object)
       final profile = await apiService.getMySitterProfile();
 
       if (profile != null) {
@@ -48,10 +54,14 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
           setState(() {
             currentUser = profile;
             isLoading = false;
+
+            // ✅ FIXED: No more 'toJson' error. Just use the fields directly.
+            rating = profile.rating;
+            reviewCount = profile.reviewCount;
           });
         }
       } else {
-        // ⚠️ Profile is null (404) -> User needs to register
+        // User not found (404)
         if (mounted) {
            Get.off(() => const SitterRegistrationScreen());
         }
@@ -63,6 +73,28 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
           errorMessage = "Error: $e";
         });
       }
+    }
+  }
+
+ // ✅ New Helper to fetch stats specifically
+  Future<void> _fetchSitterStats(ApiService apiService, int sitterId) async {
+    try {
+      // Calls the new API method we added in Step 2
+      final data = await apiService.getSitterDetails(sitterId);
+
+      if (data != null && mounted) {
+        setState(() {
+          // Parse data safely
+          rating = (data['rating'] ?? data['avgRating'] ?? 0).toDouble();
+          
+          reviewCount = data['reviewCount'] ?? 
+                        data['reviews_count'] ?? 
+                        data['review_count'] ?? 
+                        0;
+        });
+      }
+    } catch (e) {
+      print("Error loading stats: $e");
     }
   }
 
@@ -315,11 +347,18 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                                   child: CircleAvatar(
                                     radius: 30,
                                     backgroundColor: const Color(0xFFE8F5E9),
-                                    child: const Icon(
-                                      Icons.person,
-                                      color: brandColor,
-                                      size: 35,
-                                    ),
+                                    // 1. Load image if it exists
+                                    backgroundImage: (currentUser?.profilePicture != null && currentUser!.profilePicture!.isNotEmpty)
+                                        ? NetworkImage(currentUser!.profilePicture!)
+                                        : null,
+                                    // 2. Show Icon ONLY if image is missing
+                                    child: (currentUser?.profilePicture == null || currentUser!.profilePicture!.isEmpty)
+                                        ? const Icon(
+                                            Icons.person,
+                                            color: brandColor,
+                                            size: 35,
+                                          )
+                                        : null, // Child must be null if backgroundImage is set, otherwise the icon sits on top
                                   ),
                                 ),
                                 const SizedBox(width: 15),
@@ -383,30 +422,35 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                               child: Divider(height: 1),
                             ),
                             // Stats Row
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _buildStatColumn(
-                                  icon: Icons.account_balance_wallet,
-                                  value: "RM 120",
-                                  label: "Wallet",
-                                  color: Colors.green,
-                                ),
-                                _buildVerticalDivider(),
-                                _buildStatColumn(
-                                  icon: Icons.star_rounded,
-                                  value: "4.9",
-                                  label: "Rating",
-                                  color: Colors.amber,
-                                ),
-                                _buildVerticalDivider(),
-                                _buildStatColumn(
-                                  icon: Icons.people_alt,
-                                  value: "32",
-                                  label: "Reviews",
-                                  color: Colors.blueAccent,
-                                ),
-                              ],
+                            GetBuilder<SitterController>(
+                              init: Get.isRegistered<SitterController>() ? Get.find<SitterController>() : SitterController(),
+                              builder: (controller) {
+                                return Obx(() => Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                  children: [
+                                    _buildStatColumn(
+                                      icon: Icons.account_balance_wallet,
+                                      value: "RM ${controller.earnings.value.toStringAsFixed(0)}",
+                                      label: "Wallet",
+                                      color: Colors.green,
+                                    ),
+                                    _buildVerticalDivider(),
+                                    _buildStatColumn(
+                                      icon: Icons.star_rounded,
+                                      value: controller.avgRating.value.toStringAsFixed(1),
+                                      label: "Rating",
+                                      color: Colors.amber,
+                                    ),
+                                    _buildVerticalDivider(),
+                                    _buildStatColumn(
+                                      icon: Icons.people_alt,
+                                      value: "${controller.sitterProfile['reviewCount'] ?? 0}",
+                                      label: "Reviews",
+                                      color: Colors.blueAccent,
+                                    ),
+                                  ],
+                                ));
+                              },
                             ),
                           ],
                         ),
@@ -475,7 +519,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                           iconColor: Colors.indigo,
                           title: "Help & Support",
                           subtitle: "FAQ and Customer Service",
-                          onTap: () {},
+                          onTap: () {Get.to(() => HelpSupportScreen());},
                         ),
                         _buildDivider(),
                         _buildMenuItem(
@@ -483,7 +527,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                           iconColor: Colors.grey,
                           title: "About Pawsure",
                           subtitle: "Version 1.0.0",
-                          onTap: () {},
+                          onTap: () {Get.to(() => AboutScreen());},
                         ),
                       ]),
 
