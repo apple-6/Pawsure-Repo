@@ -12,6 +12,8 @@ import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/constants/api_config.dart';
 import 'package:pawsure_app/models/comment_model.dart';
+import 'dart:io';
+import 'package:mime/mime.dart';
 
 String get apiBaseUrl => ApiConfig.baseUrl;
 
@@ -1145,12 +1147,6 @@ class ApiService {
     }
   }
 
-  // Helper placeholder if you don't have one
-  Future<String?> _getToken() async {
-    // implementation to get token from storage
-    return "YOUR_TEST_TOKEN";
-  }
-
   // ========================================================================
   // CHAT API
   // ========================================================================
@@ -1859,27 +1855,46 @@ class ApiService {
     }
   }
 
-  /// GET /sitters/:sitterId - Fetch specific sitter details (including stats)
-  Future<Map<String, dynamic>?> getSitterDetails(int sitterId) async {
-    try {
-      debugPrint('🔍 API: GET $apiBaseUrl/sitters/$sitterId');
-      
-      final headers = await _getHeaders();
-      
-      final response = await http.get(
-        Uri.parse('$apiBaseUrl/sitters/$sitterId'),
-        headers: headers,
-      );
+  Future<dynamic> updateProfileMultipart(Map<String, String> fields, File? imageFile) async {
+    final token = _authService.token; // Get token from your AuthService
+    final uri = Uri.parse('$apiBaseUrl/user/update');
 
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
+    var request = http.MultipartRequest('PUT', uri);
+
+    // 1. Add Headers
+    request.headers.addAll({
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'multipart/form-data',
+    });
+
+    // 2. Add Text Fields
+    fields.forEach((key, value) {
+      request.fields[key] = value;
+    });
+
+    // 3. Add Image File (if provided)
+    if (imageFile != null) {
+      final mimeTypeData = lookupMimeType(imageFile.path)!.split('/');
+      
+      request.files.add(await http.MultipartFile.fromPath(
+        'avatar', // This name must match the NestJS FileInterceptor('avatar')
+        imageFile.path,
+        contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
+      ));
+    }
+
+    // 4. Send Request
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
       } else {
-        debugPrint('⚠️ Failed to load sitter stats: ${response.body}');
-        return null;
+        throw Exception('Failed to update profile: ${response.body}');
       }
     } catch (e) {
-      debugPrint('❌ Error fetching sitter stats: $e');
-      return null;
+      throw Exception('Error updating profile: $e');
     }
   }
 }

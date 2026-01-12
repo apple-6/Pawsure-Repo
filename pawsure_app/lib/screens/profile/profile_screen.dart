@@ -11,6 +11,8 @@ import 'package:pawsure_app/services/storage_service.dart';
 import 'package:pawsure_app/screens/profile/help_support_screen.dart';
 import 'package:pawsure_app/screens/profile/about_screen.dart';
 import 'package:pawsure_app/screens/profile/booking_history.dart';
+import 'package:pawsure_app/constants/api_config.dart'; // 1. ADD THIS IMPORT
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -102,6 +104,24 @@ class ProfileScreen extends StatelessWidget {
         final userRole = profileController.user['role'] as String? ?? 'owner';
         final initial = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
 
+        // --- 2. UPDATED IMAGE LOGIC START ---
+        String? avatarPath = profileController.user['avatar'];
+        String? fullAvatarUrl;
+
+        // Construct the URL dynamically based on environment (Emulator vs Real Device)
+        if (avatarPath != null && avatarPath.isNotEmpty) {
+          if (avatarPath.startsWith('http')) {
+            fullAvatarUrl = avatarPath; // Use existing full URL
+          } else {
+            // Combine API Config Base URL + Relative Path
+            // e.g. http://10.0.2.2:3000/uploads/image.jpg
+            fullAvatarUrl = '${ApiConfig.baseUrl}/$avatarPath';
+          }
+        }
+
+        final bool hasAvatar = fullAvatarUrl != null;
+        // --- UPDATED IMAGE LOGIC END ---
+
         // Get pets count
         int petsCount = 0;
         if (Get.isRegistered<PetController>()) {
@@ -143,13 +163,7 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             IconButton(
                               onPressed: () {
-                                Get.snackbar(
-                                  'Coming Soon',
-                                  'Edit profile feature will be available soon!',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                  backgroundColor: Colors.white,
-                                  colorText: const Color(0xFF22C55E),
-                                );
+                                Get.to(() => const EditProfileScreen());
                               },
                               icon: const Icon(Icons.edit, color: Colors.white),
                             ),
@@ -180,24 +194,46 @@ class ProfileScreen extends StatelessWidget {
                                     width: 72,
                                     height: 72,
                                     decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFF22C55E),
-                                          Color(0xFF86EFAC),
-                                        ],
-                                      ),
                                       borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        initial,
-                                        style: const TextStyle(
-                                          fontSize: 28,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
+                                      // If NO avatar, show the Green Gradient. If avatar exists, remove gradient.
+                                      gradient: hasAvatar
+                                          ? null
+                                          : const LinearGradient(
+                                              colors: [Color(0xFF22C55E), Color(0xFF86EFAC)],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                      // If avatar exists, show the Image
+                                      image: hasAvatar
+                                          ? DecorationImage(
+                                              image: NetworkImage(fullAvatarUrl!), // Use computed URL
+                                              fit: BoxFit.cover,
+                                              onError: (exception, stackTrace) {
+                                                debugPrint("Error loading avatar: $exception");
+                                              },
+                                            )
+                                          : null,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF22C55E).withOpacity(0.2),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 8),
                                         ),
-                                      ),
+                                      ],
                                     ),
+                                    // If NO avatar, show the "Initial" Text
+                                    child: hasAvatar
+                                        ? null
+                                        : Center(
+                                            child: Text(
+                                              initial,
+                                              style: const TextStyle(
+                                                fontSize: 28,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
                                   ),
                                   const SizedBox(width: 16),
                                   // User Info
