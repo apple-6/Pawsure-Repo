@@ -346,6 +346,10 @@ void _connectSocket() {
             Expanded(
               child: TextField(
                 controller: _controller,
+                // ✅ 1. Change keyboard action button to "Send"
+                textInputAction: TextInputAction.send,
+                // ✅ 2. Trigger send when "Enter" is pressed
+                onSubmitted: (_) => _sendMessage(),
                 decoration: InputDecoration(
                   hintText: "Type a message...",
                   hintStyle: TextStyle(color: Colors.grey[400]),

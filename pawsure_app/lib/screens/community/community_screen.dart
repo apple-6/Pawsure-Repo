@@ -160,6 +160,7 @@ class CommunityScreenState extends State<CommunityScreen> {
     return DefaultTabController(
       length: tabCount,
       child: Scaffold(
+        backgroundColor: Colors.white,
         body: SafeArea(
           child: NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) {
