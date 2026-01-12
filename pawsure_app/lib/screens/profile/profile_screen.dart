@@ -10,6 +10,7 @@ import 'package:pawsure_app/controllers/sitter_controller.dart';
 import 'package:pawsure_app/services/storage_service.dart';
 import 'package:pawsure_app/screens/profile/help_support_screen.dart';
 import 'package:pawsure_app/screens/profile/about_screen.dart';
+import 'package:pawsure_app/screens/profile/booking_history.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -306,7 +307,13 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFF8B5CF6),
                           title: 'Booking History',
                           subtitle: 'Past bookings',
-                          onTap: () => _showComingSoon('Booking History'),
+                         onTap: () {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const BookingHistoryScreen(),
+      ),
+    );
+  },
                         ),
                       ],
                     ),
