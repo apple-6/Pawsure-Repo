@@ -1183,8 +1183,8 @@ class _EditDietaryDialogState extends State<_EditDietaryDialog> {
   }
 
   void _saveDietaryInfo() async {
+    // ... (Keep your existing _saveDietaryInfo logic here) ...
     Navigator.pop(context);
-
     try {
       final apiService = Get.find<ApiService>();
       await apiService.updatePet(
@@ -1199,12 +1199,9 @@ class _EditDietaryDialogState extends State<_EditDietaryDialog> {
             ? _allergiesController.text
             : null,
       );
-
-      // Refresh pets data
       if (Get.isRegistered<HealthController>()) {
         Get.find<HealthController>().loadPets();
       }
-
       Get.snackbar(
         'Saved',
         'Dietary information updated!',
@@ -1213,10 +1210,9 @@ class _EditDietaryDialogState extends State<_EditDietaryDialog> {
         colorText: Colors.green[800],
       );
     } catch (e) {
-      debugPrint('❌ Error saving dietary info: $e');
       Get.snackbar(
         'Error',
-        'Failed to save dietary information. Please try again.',
+        'Failed to save dietary information.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red[800],
@@ -1227,12 +1223,15 @@ class _EditDietaryDialogState extends State<_EditDietaryDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      // 1. Reduce insetPadding to give the dialog more room to expand before overflowing
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        // 2. Use ListView with shrinkWrap: true instead of Column
+        // This acts like a Column but scrolls automatically when space runs out
+        child: ListView(
+          shrinkWrap: true,
           children: [
             // Header
             Row(
@@ -1383,23 +1382,19 @@ class _EditVitalsDialogState extends State<_EditVitalsDialog> {
   }
 
   void _saveVitals() async {
+    // ... (Keep existing save logic) ...
     Navigator.pop(context);
-
     try {
       final apiService = Get.find<ApiService>();
       final height = double.tryParse(_heightController.text);
-
       await apiService.updatePet(
         petId: widget.pet.id,
         height: height,
         bodyConditionScore: _bodyConditionScore,
       );
-
-      // Refresh pets data
       if (Get.isRegistered<HealthController>()) {
         Get.find<HealthController>().loadPets();
       }
-
       Get.snackbar(
         'Saved',
         'Vitals updated successfully!',
@@ -1408,10 +1403,9 @@ class _EditVitalsDialogState extends State<_EditVitalsDialog> {
         colorText: Colors.green[800],
       );
     } catch (e) {
-      debugPrint('❌ Error saving vitals: $e');
       Get.snackbar(
         'Error',
-        'Failed to save vitals. Please try again.',
+        'Failed to save vitals.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red[800],
@@ -1422,12 +1416,13 @@ class _EditVitalsDialogState extends State<_EditVitalsDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        // 1. VERTICAL FIX: Use ListView + shrinkWrap to prevent keyboard overflow
+        child: ListView(
+          shrinkWrap: true,
           children: [
             // Header
             Row(
@@ -1501,37 +1496,46 @@ class _EditVitalsDialogState extends State<_EditVitalsDialog> {
               ),
             ),
             const SizedBox(height: 12),
+
+            // 2. HORIZONTAL FIX: Flexible Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: List.generate(5, (index) {
                 final score = index + 1;
                 final isSelected = _bodyConditionScore == score;
-                return GestureDetector(
-                  onTap: () => setState(() => _bodyConditionScore = score),
-                  child: Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFF22C55E)
-                          : const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected
-                            ? const Color(0xFF22C55E)
-                            : const Color(0xFFE5E7EB),
-                        width: 2,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '$score',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                // Wrap in Expanded so they share width equally
+                return Expanded(
+                  child: Padding(
+                    // Add small gap between buttons
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: GestureDetector(
+                      onTap: () => setState(() => _bodyConditionScore = score),
+                      child: Container(
+                        // Removed fixed width: 50
+                        height: 50,
+                        decoration: BoxDecoration(
                           color: isSelected
-                              ? Colors.white
-                              : const Color(0xFF374151),
+                              ? const Color(0xFF22C55E)
+                              : const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF22C55E)
+                                : const Color(0xFFE5E7EB),
+                            width: 2,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$score',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected
+                                  ? Colors.white
+                                  : const Color(0xFF374151),
+                            ),
+                          ),
                         ),
                       ),
                     ),
