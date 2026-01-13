@@ -138,8 +138,13 @@ class BookingCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFF9FAFB), // ✅ CHANGED: New background color,
         borderRadius: BorderRadius.circular(24),
+
+        border: Border.all(
+          color: const Color(0xFFE9E9E9), // The border color you requested
+          width: 1.0, // Thickness of the border
+        ),
         // A softer, more modern shadow
         boxShadow: [
           BoxShadow(
