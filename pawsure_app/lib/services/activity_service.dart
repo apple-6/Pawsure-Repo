@@ -13,6 +13,7 @@ class ActivityService {
     final headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
+      'ngrok-skip-browser-warning': 'true',
     };
     try {
       final authService = Get.find<AuthService>();

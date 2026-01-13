@@ -32,6 +32,7 @@ class ApiService {
     final headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
+      'ngrok-skip-browser-warning': 'true',
     };
 
     try {
@@ -1790,6 +1791,8 @@ class ApiService {
 
   /// GET /sitters/my-profile - Fetch the logged-in user's sitter profile
   /// This replaces the crashing '/sitters/me' call
+  // inside lib/services/api_service.dart
+
   Future<UserProfile?> getMySitterProfile() async {
     try {
       debugPrint('🔍 API: GET $apiBaseUrl/sitters/my-profile');
@@ -1803,10 +1806,16 @@ class ApiService {
       debugPrint('📦 API Response: ${response.statusCode}');
 
       if (response.statusCode == 200) {
+        // ✅ FIX STARTS HERE: Check if body is empty first
+        if (response.body.isEmpty) {
+          debugPrint('⚠️ Sitter profile body is empty, returning null');
+          return null;
+        }
+        // ✅ FIX ENDS
+
         final data = jsonDecode(response.body);
         return UserProfile.fromJson(data);
       } else if (response.statusCode == 404) {
-        // Profile not found - User needs to register as sitter
         return null;
       } else {
         throw Exception('Failed to load profile: ${response.statusCode}');
@@ -1823,6 +1832,9 @@ class ApiService {
 
   /// GET /sitters/user/:userId - Check if sitter profile exists
   /// Returns UserProfile if found (Scenario A), returns null if 404 (Scenario B).
+  // Inside lib/services/api_service.dart
+
+  /// GET /sitters/user/:userId - Check if sitter profile exists
   Future<UserProfile?> getSitterByUserId(int userId) async {
     try {
       debugPrint('🔍 API: GET $apiBaseUrl/sitters/user/$userId');
@@ -1833,14 +1845,27 @@ class ApiService {
         headers: headers,
       );
 
+      debugPrint('📦 API Response: ${response.statusCode}');
+      // debugPrint('📄 Body: ${response.body}'); // Uncomment to see exactly what backend sends
+
       if (response.statusCode == 200) {
-        // ✅ Profile exists!
-        return UserProfile.fromJson(jsonDecode(response.body));
+        // 1. Handle Empty Body (Unlikely based on logs, but good safety)
+        if (response.body.isEmpty) return null;
+
+        final dynamic data = jsonDecode(response.body);
+
+        // 2. Handle "Returning empty list" case from your backend logs
+        if (data is List) {
+          if (data.isEmpty) return null; // It was [], so no profile found
+          // If it's a list but not empty, maybe take the first one?
+          return UserProfile.fromJson(data.first);
+        }
+
+        // 3. Handle Standard Object case
+        return UserProfile.fromJson(data);
       } else if (response.statusCode == 404) {
-        // ⚠️ Profile does not exist (User is not a sitter yet)
         return null;
       } else {
-        // Other errors (500, etc)
         debugPrint(
           '⚠️ Unexpected status checking sitter: ${response.statusCode}',
         );

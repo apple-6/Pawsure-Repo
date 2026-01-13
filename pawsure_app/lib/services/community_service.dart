@@ -1,4 +1,4 @@
-//pawsure_app\lib\services\community_service.dart
+// pawsure_app/lib/services/community_service.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -7,17 +7,22 @@ import 'package:pawsure_app/models/comment_model.dart';
 import 'package:pawsure_app/constants/api_endpoints.dart';
 
 class CommunityService {
+  // ✅ Helper to keep headers consistent in this file
+  Map<String, String> get _headers => {
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true', // ✅ The Magic Header
+  };
+
   Future<List<PostModel>> getAllPosts() async {
     try {
       final response = await http.get(
         Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.posts}'),
+        headers: _headers, // ✅ ADDED
       );
       if (response.statusCode == 200) {
         final List<dynamic> jsonList =
             jsonDecode(response.body) as List<dynamic>;
-        return jsonList
-            .map((post) => PostModel.fromJson(post as Map<String, dynamic>))
-            .toList();
+        return jsonList.map((post) => PostModel.fromJson(post)).toList();
       }
       throw Exception('Failed to load posts (${response.statusCode})');
     } catch (e) {
@@ -42,14 +47,12 @@ class CommunityService {
 
       final response = await http.post(
         Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.addPost}'),
-        headers: const {'Content-Type': 'application/json'},
+        headers: _headers, // ✅ ADDED
         body: jsonEncode(payload),
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        return PostModel.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        return PostModel.fromJson(jsonDecode(response.body));
       }
       throw Exception('Failed to add post (${response.statusCode})');
     } catch (e) {
@@ -62,16 +65,12 @@ class CommunityService {
     try {
       final response = await http.get(
         Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.getComments(postId)}'),
+        headers: _headers, // ✅ ADDED
       );
       if (response.statusCode == 200) {
         final List<dynamic> jsonList =
             jsonDecode(response.body) as List<dynamic>;
-        return jsonList
-            .map(
-              (comment) =>
-                  CommentModel.fromJson(comment as Map<String, dynamic>),
-            )
-            .toList();
+        return jsonList.map((c) => CommentModel.fromJson(c)).toList();
       }
       throw Exception('Failed to load comments (${response.statusCode})');
     } catch (e) {
@@ -89,14 +88,12 @@ class CommunityService {
 
       final response = await http.post(
         Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.addComment}'),
-        headers: const {'Content-Type': 'application/json'},
+        headers: _headers, // ✅ ADDED
         body: jsonEncode(payload),
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        return CommentModel.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        return CommentModel.fromJson(jsonDecode(response.body));
       }
       throw Exception('Failed to add comment (${response.statusCode})');
     } catch (e) {
@@ -109,7 +106,7 @@ class CommunityService {
     try {
       await http.post(
         Uri.parse('${ApiEndpoints.baseUrl}${ApiEndpoints.posts}/$postId/like'),
-        headers: const {'Content-Type': 'application/json'},
+        headers: _headers, // ✅ ADDED
       );
     } catch (e) {
       debugPrint('Error liking post: $e');

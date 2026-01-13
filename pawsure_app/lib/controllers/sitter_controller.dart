@@ -29,15 +29,15 @@ class SitterController extends GetxController {
   Future<void> refreshData() async {
     try {
       isLoading.value = true;
-      await Future.wait([
-        fetchMyProfile(),
-        fetchBookings(),
-      ]);
+      await Future.wait([fetchMyProfile(), fetchBookings()]);
       _calculateStats();
     } catch (e) {
       debugPrint('❌ Error refreshing sitter data: $e');
     } finally {
-      isLoading.value = false;
+      // FIX: Schedule the state update to run after the current build frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        isLoading.value = false;
+      });
     }
   }
 
