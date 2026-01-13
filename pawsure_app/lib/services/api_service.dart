@@ -1176,6 +1176,30 @@ class ApiService {
   // SITTER PROFILE API
   // ========================================================================
 
+  /// GET /sitters/:sitterId - Fetch specific sitter details (including stats)
+  Future<Map<String, dynamic>?> getSitterDetails(int sitterId) async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/sitters/$sitterId');
+
+      final headers = await _getHeaders();
+
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/sitters/$sitterId'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        debugPrint('⚠️ Failed to load sitter stats: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching sitter stats: $e');
+      return null;
+    }
+  }
+
   /// PATCH /sitters/user/:userId - Update sitter profile by USER ID
   Future<UserProfile> updateSitterProfile(
     int userId,
@@ -1193,9 +1217,9 @@ class ApiService {
       if (imageFile != null) {
         // --- 📸 SCENARIO A: Uploading Image (Multipart) ---
         debugPrint('📤 Uploading profile with image...');
-        
+
         // Remove Content-Type so boundary is set automatically
-        headers.remove('Content-Type'); 
+        headers.remove('Content-Type');
 
         final request = http.MultipartRequest(
           'PATCH',
@@ -1217,20 +1241,21 @@ class ApiService {
 
         // 2. Add File
         final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        request.files.add(await http.MultipartFile.fromPath(
-          'profile_picture', // ⚠️ Must match backend @UploadedFile('profile_picture')
-          imageFile.path,
-          filename: fileName,
-          contentType: MediaType('image', 'jpeg'),
-        ));
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'profile_picture', // ⚠️ Must match backend @UploadedFile('profile_picture')
+            imageFile.path,
+            filename: fileName,
+            contentType: MediaType('image', 'jpeg'),
+          ),
+        );
 
         final streamedResponse = await request.send();
         response = await http.Response.fromStream(streamedResponse);
-
       } else {
         // --- 📝 SCENARIO B: Text Only (JSON) ---
         debugPrint('📤 Updating text only...');
-        
+
         response = await http.patch(
           Uri.parse('$apiBaseUrl/sitters/user/$userId'),
           headers: headers,
@@ -1685,9 +1710,7 @@ class ApiService {
       final response = await http.post(
         Uri.parse('$apiBaseUrl/pets/$petId/meals'),
         headers: headers,
-        body: jsonEncode({
-          'meal_type': mealType,
-        }),
+        body: jsonEncode({'meal_type': mealType}),
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
@@ -1750,7 +1773,6 @@ class ApiService {
         }),
       );
 
-
       debugPrint('📦 API Response: ${response.statusCode}');
 
       if (response.statusCode != 201 && response.statusCode != 200) {
@@ -1762,7 +1784,7 @@ class ApiService {
     }
   }
 
-// ========================================================================
+  // ========================================================================
   // SITTER PROFILE API (Current User)
   // ========================================================================
 
@@ -1795,7 +1817,7 @@ class ApiService {
     }
   }
 
-// ========================================================================
+  // ========================================================================
   // SITTER CHECK & REGISTRATION API (Added for Switch Mode)
   // ========================================================================
 
@@ -1805,7 +1827,7 @@ class ApiService {
     try {
       debugPrint('🔍 API: GET $apiBaseUrl/sitters/user/$userId');
       final headers = await _getHeaders();
-      
+
       final response = await http.get(
         Uri.parse('$apiBaseUrl/sitters/user/$userId'),
         headers: headers,
@@ -1816,10 +1838,12 @@ class ApiService {
         return UserProfile.fromJson(jsonDecode(response.body));
       } else if (response.statusCode == 404) {
         // ⚠️ Profile does not exist (User is not a sitter yet)
-        return null; 
+        return null;
       } else {
         // Other errors (500, etc)
-        debugPrint('⚠️ Unexpected status checking sitter: ${response.statusCode}');
+        debugPrint(
+          '⚠️ Unexpected status checking sitter: ${response.statusCode}',
+        );
         return null;
       }
     } catch (e) {
@@ -1833,9 +1857,9 @@ class ApiService {
     try {
       debugPrint('➕ API: POST $apiBaseUrl/sitters');
       debugPrint('📤 Payload: ${jsonEncode(payload)}');
-      
+
       final headers = await _getHeaders();
-      
+
       final response = await http.post(
         Uri.parse('$apiBaseUrl/sitters'),
         headers: headers,
@@ -1855,7 +1879,10 @@ class ApiService {
     }
   }
 
-  Future<dynamic> updateProfileMultipart(Map<String, String> fields, File? imageFile) async {
+  Future<dynamic> updateProfileMultipart(
+    Map<String, String> fields,
+    File? imageFile,
+  ) async {
     final token = _authService.token; // Get token from your AuthService
     final uri = Uri.parse('$apiBaseUrl/user/update');
 
@@ -1875,12 +1902,14 @@ class ApiService {
     // 3. Add Image File (if provided)
     if (imageFile != null) {
       final mimeTypeData = lookupMimeType(imageFile.path)!.split('/');
-      
-      request.files.add(await http.MultipartFile.fromPath(
-        'avatar', // This name must match the NestJS FileInterceptor('avatar')
-        imageFile.path,
-        contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
-      ));
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'avatar', // This name must match the NestJS FileInterceptor('avatar')
+          imageFile.path,
+          contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
+        ),
+      );
     }
 
     // 4. Send Request
