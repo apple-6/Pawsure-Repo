@@ -18,6 +18,7 @@ import 'package:pawsure_app/screens/sitter_setup/sitter_dashboard.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_calendar.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_inbox.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_setting_screen.dart';
+import 'package:pawsure_app/constants/api_config.dart'; 
 
 // --- POST MODEL ---
 class Post {
@@ -51,16 +52,30 @@ class Post {
     final userData = map['user'] ?? map['owner'];
     final List<dynamic> mediaList = map['post_media'] ?? [];
 
+    String rawAvatar = userData?['profile_picture'] ?? '';
+    String finalAvatarUrl;
+
+    if (rawAvatar.isNotEmpty) {
+      if (rawAvatar.startsWith('http')) {
+        finalAvatarUrl = rawAvatar;
+      } else {
+        finalAvatarUrl = '${ApiConfig.baseUrl}/$rawAvatar';
+      }
+    } else {
+      finalAvatarUrl = "https://cdn-icons-png.flaticon.com/512/194/194279.png";
+    }
+
     return Post(
       id: map['id'].toString(),
       userId:
           (map['userId'] ?? map['user_id'] ?? userData?['id'])?.toString() ??
           '',
       userName: userData?['name'] ?? 'Unknown User',
-      profilePicture:
-          userData?['profile_picture'] ??
-          "https://cdn-icons-png.flaticon.com/512/194/194279.png",
+
+      profilePicture: finalAvatarUrl, 
+
       content: map['content'] ?? '',
+
       mediaUrls: mediaList
           .map(
             (m) => (m is String)
@@ -70,8 +85,11 @@ class Post {
           .where((url) => url.isNotEmpty)
           .toList()
           .cast<String>(),
+
       location: map['location_name'] ?? map['location'],
+
       createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+
       isUrgent: map['is_urgent'] ?? false,
       likes: map['likes_count'] ?? 0,
     );
