@@ -693,13 +693,22 @@ class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
         ),
         ButtonSegment(
           value: 'unknown',
-          label: Text('Unknown'),
+          // 🔧 FIX: FittedBox scales the text down if it runs out of space
+          label: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text('Unknown', maxLines: 1),
+          ),
           icon: Icon(Icons.help_outline, size: 18),
         ),
       ],
       selected: {_sterilizationStatus},
       onSelectionChanged: (Set<String> selected) =>
           setState(() => _sterilizationStatus = selected.first),
+      // Optional: Visual polish to ensure the touch targets are comfortable
+      style: ButtonStyle(
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+      ),
     );
   }
 
