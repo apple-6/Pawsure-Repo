@@ -147,39 +147,6 @@ class PetProfileView extends StatelessWidget {
                   ),
 
                   const SizedBox(height: 32),
-
-                  // Action Buttons
-                  _buildActionButton(
-                    "Accept Booking",
-                    _accent,
-                    Colors.white,
-                    () {
-                      if (bookingId != null) {
-                        Get.find<SitterController>().updateBookingStatus(bookingId, 'accepted');
-                        Get.back();
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  _buildActionButton(
-                    "Decline Booking",
-                    Colors.red.shade50,
-                    Colors.red,
-                    () {
-                      if (bookingId != null) {
-                        Get.find<SitterController>().updateBookingStatus(bookingId, 'declined');
-                        Get.back();
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  _buildActionButton(
-                    "Message Owner",
-                    Colors.white,
-                    Colors.black,
-                    () {},
-                    isOutlined: true,
-                  ),
                 ],
               ),
             ),

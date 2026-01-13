@@ -272,15 +272,29 @@ class CommunityScreenState extends State<CommunityScreen> {
         ),
         floatingActionButton: Builder(
           builder: (context) {
-            bool isFeedTab = DefaultTabController.of(context).index == 0;
-            return isFeedTab
-                ? FloatingActionButton(
-                    onPressed: _showCreatePostModal,
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                    child: const Icon(Icons.add),
-                  )
-                : const SizedBox.shrink();
+            // 1. Get the TabController from the context
+            final TabController tabController = DefaultTabController.of(
+              context,
+            );
+
+            // 2. Use AnimatedBuilder to listen to tab changes
+            return AnimatedBuilder(
+              animation: tabController,
+              builder: (context, child) {
+                // 3. Check current index (Feed is always index 0)
+                final bool isFeedTab = tabController.index == 0;
+
+                // 4. Show/Hide button based on index
+                return isFeedTab
+                    ? FloatingActionButton(
+                        onPressed: _showCreatePostModal,
+                        backgroundColor: Theme.of(context).primaryColor,
+                        foregroundColor: Colors.white,
+                        child: const Icon(Icons.add),
+                      )
+                    : const SizedBox.shrink(); // Hide on 'Find a Sitter' (index 1)
+              },
+            );
           },
         ),
         bottomNavigationBar: _userRole == 'sitter'

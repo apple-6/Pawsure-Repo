@@ -57,6 +57,8 @@ class ActivityScreen extends StatelessWidget {
                   petController.selectPet(pet);
                 },
                 child: Container(
+                  // 1. Constrained width to prevent app bar overflow
+                  constraints: const BoxConstraints(maxWidth: 160),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 8,
@@ -71,12 +73,16 @@ class ActivityScreen extends StatelessWidget {
                     children: [
                       Text(emoji, style: const TextStyle(fontSize: 18)),
                       const SizedBox(width: 8),
-                      Text(
-                        selectedPet?.name ?? 'Select',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF374151),
+                      // 2. Flexible Text to prevent weird truncation
+                      Flexible(
+                        child: Text(
+                          selectedPet?.name ?? 'Select',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF374151),
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -270,7 +276,7 @@ class ActivityScreen extends StatelessWidget {
             }),
           ),
 
-          // 2. STICKY BOTTOM ACTION BAR
+          // 2. STICKY BOTTOM ACTION BAR (FIXED)
           Container(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             decoration: BoxDecoration(
@@ -286,7 +292,9 @@ class ActivityScreen extends StatelessWidget {
             child: Row(
               children: [
                 // Manual Log Button
+                // 3. Changed to Expanded(flex: 1) for equal width
                 Expanded(
+                  flex: 1,
                   child: OutlinedButton.icon(
                     onPressed: () async {
                       await _showAddActivityModal(context);
@@ -295,7 +303,11 @@ class ActivityScreen extends StatelessWidget {
                       }
                     },
                     icon: const Icon(Icons.edit_note, size: 20),
-                    label: const Text('Manual Log'),
+                    label: const Text(
+                      'Manual Log',
+                      overflow:
+                          TextOverflow.ellipsis, // Protect against overflow
+                    ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.black87,
                       side: BorderSide(color: Colors.grey.shade300),
@@ -308,9 +320,10 @@ class ActivityScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 16),
 
-                // Start Tracking Button (Prominent)
+                // Start Tracking Button
+                // 4. Changed from flex: 2 to flex: 1 (50/50 split)
                 Expanded(
-                  flex: 2,
+                  flex: 1,
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       await Get.to(() => const GPSTrackingScreen());
@@ -325,9 +338,10 @@ class ActivityScreen extends StatelessWidget {
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: brandColor, // ✅ Changed to Green
+                      backgroundColor: brandColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       elevation: 0,
@@ -358,13 +372,13 @@ class ActivityScreen extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? color : Colors.white, // ✅ Green when selected
+          color: isSelected ? color : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: isSelected ? color : Colors.grey.shade300),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: color.withOpacity(0.3), // ✅ Green Shadow
+                    color: color.withOpacity(0.3),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),

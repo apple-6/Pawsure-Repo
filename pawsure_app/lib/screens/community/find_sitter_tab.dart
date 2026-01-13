@@ -320,7 +320,7 @@ class _SearchBarsRow extends StatelessWidget {
                   size: 20,
                   color: Colors.grey.shade600,
                 ),
-                hintText: 'State/City',
+                hintText: 'City',
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 isDense: true,
@@ -438,7 +438,7 @@ class SitterCard extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // --- Content ---
             Expanded(
               child: Padding(
@@ -450,8 +450,8 @@ class SitterCard extends StatelessWidget {
                     Text(
                       sitter.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

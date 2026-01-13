@@ -1,10 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/home_controller.dart';
 import '../../controllers/pet_controller.dart';
 import '../../controllers/navigation_controller.dart';
-import 'package:intl/intl.dart';
 
 class DailyCareHub extends StatelessWidget {
   const DailyCareHub({super.key});
@@ -12,7 +10,6 @@ class DailyCareHub extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final HomeController controller = Get.find<HomeController>();
-    // Ensure PetController is available
     final PetController petController = Get.find<PetController>();
 
     return Obx(() {
@@ -31,8 +28,10 @@ class DailyCareHub extends StatelessWidget {
           (progressMap['wellbeing'] ?? 0) / (goalsMap['wellbeing'] ?? 1);
 
       final double totalProgress =
-          ((walksProgress + mealsProgress + wellbeingProgress) / 3)
-              .clamp(0.0, 1.0);
+          ((walksProgress + mealsProgress + wellbeingProgress) / 3).clamp(
+            0.0,
+            1.0,
+          );
       final int progressPercent = (totalProgress * 100).round();
 
       return Container(
@@ -50,12 +49,11 @@ class DailyCareHub extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // HEADER
+            // HEADER (Pet Image, Name, Streak)
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
-                  // Pet Image/Initial
                   Container(
                     width: 60,
                     height: 60,
@@ -86,7 +84,6 @@ class DailyCareHub extends StatelessWidget {
                         : null,
                   ),
                   const SizedBox(width: 16),
-                  // Name & Breed
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,7 +108,6 @@ class DailyCareHub extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // Streak Badge
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -141,7 +137,7 @@ class DailyCareHub extends StatelessWidget {
               ),
             ),
 
-            // PROGRESS SECTION
+            // PROGRESS BAR SECTION
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -199,53 +195,80 @@ class DailyCareHub extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // ACTION GRID
+            // ACTION GRID (Walk, Meal, Mood)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start, // Align tops
                 children: [
-                  // Walk Action
+                  // --- WALK ACTION (FIXED) ---
                   Expanded(
                     child: _buildActionCard(
                       icon: Icons.directions_walk,
                       color: Colors.blue,
                       title: 'Walk',
-                      subtitle: (() {
+                      // 🔧 FIX: Using a Column to stack Minutes and Calories vertically
+                      // 🔧 FIX: Fonts are now consistent (same size/weight/color)
+                      content: (() {
                         final stats = controller.todayActivityStats.value;
-                        if (stats == null) return '0 min • 0 cal';
-                        
-                        // Try to get specific walk stats if available in breakdown
-                        // Note: Breakdown keys depend on backend, assuming 'walk' or similar
-                        final walkDuration = stats.activityBreakdown?['walk'] ?? 0; // Duration or count? 
-                        // Actually the breakdown usually gives count per type, but let's stick to total duration 
-                        // for simplicity as 'walk' is the primary activity usually.
-                        // Or just show total duration/calories for the day as requested contextually.
-                        
-                        return '${stats.totalDuration} min • ${stats.totalCalories} cal';
+                        final duration = stats?.totalDuration ?? 0;
+                        final calories = stats?.totalCalories ?? 0;
+
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '$duration min',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[700],
+                                height: 1.2,
+                              ),
+                            ),
+                            Text(
+                              '$calories cal',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[700],
+                                height: 1.2,
+                              ),
+                            ),
+                          ],
+                        );
                       })(),
                       onTap: () {
-                         // Navigate to Activity Screen (index 2 usually in main navigation)
-                         final navController = Get.find<NavigationController>();
-                         navController.changePage(2);
+                        final navController = Get.find<NavigationController>();
+                        navController.changePage(2);
                       },
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Food Action
-                  Expanded(
-                    child: _buildFoodAction(context, controller),
-                  ),
+
+                  // --- FOOD ACTION ---
+                  Expanded(child: _buildFoodAction(context, controller)),
                   const SizedBox(width: 12),
-                  // Mood Action
+
+                  // --- MOOD ACTION ---
                   Expanded(
                     child: _buildActionCard(
-                      icon: null, // Use emoji instead
+                      icon: null,
                       emoji: controller.currentMood.value == '❓'
                           ? '😶'
                           : controller.currentMood.value,
                       color: Colors.purple,
                       title: 'Mood',
-                      subtitle: controller.currentMood.value == '❓' ? 'Pending' : 'Update',
+                      content: Text(
+                        controller.currentMood.value == '❓'
+                            ? 'Pending'
+                            : 'Update',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       onTap: () => _showMoodSelector(context, controller),
                     ),
                   ),
@@ -255,9 +278,11 @@ class DailyCareHub extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // EXPANSION TILE
+            // EXPANSION TILE (Details)
             Theme(
-              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              data: Theme.of(
+                context,
+              ).copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
                 title: const Text(
                   "Today's Activity Details",
@@ -269,7 +294,10 @@ class DailyCareHub extends StatelessWidget {
                 ),
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                     child: (() {
                       final stats = controller.todayActivityStats.value;
 
@@ -304,7 +332,8 @@ class DailyCareHub extends StatelessWidget {
                                   _buildProgressItem(
                                     icon: Icons.straighten,
                                     label: 'Distance',
-                                    value: '${stats.totalDistance.toStringAsFixed(1)} km',
+                                    value:
+                                        '${stats.totalDistance.toStringAsFixed(1)} km',
                                     color: Colors.green,
                                   ),
                                 ],
@@ -389,29 +418,33 @@ class DailyCareHub extends StatelessWidget {
     );
   }
 
+  // 🔧 REFACTORED: Increased height to 140 to prevent overflow
   Widget _buildActionCard({
     IconData? icon,
     String? emoji,
     required Color color,
     required String title,
-    required String subtitle,
+    required Widget content,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        // 1. Increased height from 130 to 140 to fix "Bottom overflowed by 5.0 pixels"
+        height: 140,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: color.withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withOpacity(0.1)),
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (emoji != null)
-              Text(emoji, style: const TextStyle(fontSize: 24))
+              Text(emoji, style: const TextStyle(fontSize: 28))
             else
-              Icon(icon, color: color, size: 24),
+              Icon(icon, color: color, size: 28),
             const SizedBox(height: 8),
             Text(
               title,
@@ -421,34 +454,23 @@ class DailyCareHub extends StatelessWidget {
                 color: Colors.grey[800],
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            const SizedBox(height: 6),
+            content,
           ],
         ),
       ),
     );
   }
 
+  // 🔧 REFACTORED: Matched height to 140 so all cards align
   Widget _buildFoodAction(BuildContext context, HomeController controller) {
     final hour = DateTime.now().hour;
-    final isMorning = hour < 16; // Before 4 PM is "Morning" for this logic
+    final isMorning = hour < 16;
     final mealLabel = isMorning ? "Breakfast" : "Dinner";
-    
-    // Simple logic: 
-    // < 1 meal logged -> Breakfast pending (if morning)
-    // >= 1 meal logged -> Breakfast done (if morning) or Dinner pending (if evening)
-    // >= 2 meals logged -> All done
-    
+
     final mealsLogged = controller.dailyProgress['meals'] ?? 0;
     bool isDone = false;
-    
+
     if (isMorning) {
       isDone = mealsLogged >= 1;
     } else {
@@ -460,20 +482,27 @@ class DailyCareHub extends StatelessWidget {
         _showLogMealDialog(context, controller);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        // 1. Match height to 140
+        height: 140,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: isDone ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.05),
+          color: isDone
+              ? Colors.green.withOpacity(0.1)
+              : Colors.orange.withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isDone ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.1),
+            color: isDone
+                ? Colors.green.withOpacity(0.2)
+                : Colors.orange.withOpacity(0.1),
           ),
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               isDone ? Icons.check_circle : Icons.restaurant,
               color: isDone ? Colors.green : Colors.orange,
-              size: 24,
+              size: 28, // Match icon size
             ),
             const SizedBox(height: 8),
             Text(
@@ -484,11 +513,11 @@ class DailyCareHub extends StatelessWidget {
                 color: Colors.grey[800],
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               isDone ? "Done" : "Pending",
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 color: isDone ? Colors.green : Colors.grey[600],
                 fontWeight: FontWeight.w500,
               ),
@@ -505,58 +534,87 @@ class DailyCareHub extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Obx(() => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Log Meal",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 24),
-              _buildMealOption(context, controller, "Breakfast", Icons.wb_sunny_outlined),
-              const SizedBox(height: 12),
-              _buildMealOption(context, controller, "Dinner", Icons.nightlight_round),
-              const SizedBox(height: 12),
-              _buildMealOption(context, controller, "Snack", Icons.cookie_outlined),
-              const SizedBox(height: 20),
-              TextButton(
-                onPressed: () => Get.back(),
-                child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
-              ),
-            ],
-          )),
+          child: Obx(
+            () => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "Log Meal",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 24),
+                _buildMealOption(
+                  context,
+                  controller,
+                  "Breakfast",
+                  Icons.wb_sunny_outlined,
+                ),
+                const SizedBox(height: 12),
+                _buildMealOption(
+                  context,
+                  controller,
+                  "Dinner",
+                  Icons.nightlight_round,
+                ),
+                const SizedBox(height: 12),
+                _buildMealOption(
+                  context,
+                  controller,
+                  "Snack",
+                  Icons.cookie_outlined,
+                ),
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () => Get.back(),
+                  child: const Text(
+                    "Cancel",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildMealOption(BuildContext context, HomeController controller, String label, IconData icon) {
+  Widget _buildMealOption(
+    BuildContext context,
+    HomeController controller,
+    String label,
+    IconData icon,
+  ) {
     final isLogged = controller.loggedMeals.contains(label);
-    
+
     return InkWell(
-      onTap: isLogged ? null : () {
-        controller.logMeal(label);
-        Get.back();
-      },
+      onTap: isLogged
+          ? null
+          : () {
+              controller.logMeal(label);
+              Get.back();
+            },
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: isLogged ? Colors.green.withOpacity(0.1) : Colors.transparent,
-          border: Border.all(color: isLogged ? Colors.green.withOpacity(0.3) : Colors.grey[300]!),
+          border: Border.all(
+            color: isLogged ? Colors.green.withOpacity(0.3) : Colors.grey[300]!,
+          ),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
             Icon(
-              isLogged ? Icons.check_circle : icon, 
-              color: isLogged ? Colors.green : Colors.orange
+              isLogged ? Icons.check_circle : icon,
+              color: isLogged ? Colors.green : Colors.orange,
             ),
             const SizedBox(width: 12),
             Text(
               label,
               style: TextStyle(
-                fontSize: 16, 
+                fontSize: 16,
                 fontWeight: isLogged ? FontWeight.bold : FontWeight.w500,
                 color: isLogged ? Colors.green[800] : Colors.black87,
               ),
@@ -565,77 +623,6 @@ class DailyCareHub extends StatelessWidget {
             if (!isLogged)
               const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
           ],
-        ),
-      ),
-    );
-  }
-
-  void _showLogWalkDialog(BuildContext context, HomeController controller) {
-    final TextEditingController durationController = TextEditingController();
-    
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Log Walk",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: durationController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: "Duration (minutes)",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  suffixText: "min",
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Get.back(),
-                    child: const Text("Cancel"),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      final duration = int.tryParse(durationController.text);
-                      if (duration != null && duration > 0) {
-                        // TODO: Call controller.logActivity()
-                        // Since LogActivity is usually complex, we might want to redirect to activity page
-                        // or call a specific service method.
-                        // For this prototype, we'll close and show a message.
-                         Get.back();
-                         Get.snackbar(
-                          "Walk Logged",
-                          "Added $duration mins walk!",
-                          snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: Colors.blue.withOpacity(0.1),
-                          colorText: Colors.blue[800],
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text("Save"),
-                  ),
-                ],
-              ),
-            ],
-          ),
         ),
       ),
     );
