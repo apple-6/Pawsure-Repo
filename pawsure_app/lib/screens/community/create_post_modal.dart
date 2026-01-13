@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-// Ensure these imports match your project structure
 import 'package:pawsure_app/services/api_service.dart';
 import 'package:pawsure_app/models/post_model.dart';
 
 class CreatePostModal extends StatefulWidget {
   final VoidCallback onPostCreated;
-  final PostModel? postToEdit; // <--- 1. Add optional parameter for editing
+  final PostModel? postToEdit;
 
   const CreatePostModal({
     super.key,
@@ -24,30 +23,22 @@ class _CreatePostModalState extends State<CreatePostModal> {
   final ApiService _apiService = ApiService();
 
   bool _isUrgent = false;
-
-  // We need two lists now: one for existing server URLs, one for new local files
   List<String> _existingMediaUrls = [];
-  final List<XFile> _newSelectedMedia =
-      []; // Renamed from _selectedMedia for clarity
-
+  final List<XFile> _newSelectedMedia = [];
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
 
-  // Helper to check if we are in Edit Mode
   bool get _isEditing => widget.postToEdit != null;
 
   @override
   void initState() {
     super.initState();
-    // 2. Pre-fill data if editing
     if (_isEditing) {
       _captionController.text = widget.postToEdit!.content;
       _isUrgent = widget.postToEdit!.isUrgent;
-      _existingMediaUrls = List.from(widget.postToEdit!.mediaUrls); // Copy list
+      _existingMediaUrls = List.from(widget.postToEdit!.mediaUrls);
     }
   }
-
-  // --- Media Selection Logic ---
 
   int get _totalMediaCount =>
       _existingMediaUrls.length + _newSelectedMedia.length;
@@ -115,15 +106,11 @@ class _CreatePostModalState extends State<CreatePostModal> {
     }
   }
 
-  // 3. Logic to remove media from either list
   void _removeMedia(int index) {
     setState(() {
       if (index < _existingMediaUrls.length) {
-        // Removing an existing remote image
         _existingMediaUrls.removeAt(index);
       } else {
-        // Removing a newly added local image
-        // Adjust index by subtracting the length of existing items
         _newSelectedMedia.removeAt(index - _existingMediaUrls.length);
       }
     });
@@ -135,8 +122,6 @@ class _CreatePostModalState extends State<CreatePostModal> {
       SnackBar(content: Text(message), backgroundColor: backgroundColor),
     );
   }
-
-  // --- Submit Logic (Create or Update) ---
 
   Future<void> _handleSubmit() async {
     if (_isLoading) return;
@@ -154,20 +139,18 @@ class _CreatePostModalState extends State<CreatePostModal> {
           .toList();
 
       if (_isEditing) {
-        // --- UPDATE EXISTING POST ---
         await _apiService.updatePost(
           postId: widget.postToEdit!.id,
           content: _captionController.text.trim(),
           isUrgent: _isUrgent,
-          existingMediaUrls: _existingMediaUrls, // Send back what we kept
-          newMediaPaths: newMediaPaths, // Send new files
+          existingMediaUrls: _existingMediaUrls,
+          newMediaPaths: newMediaPaths,
         );
         _showSnackBar(
           'Post updated successfully!',
           backgroundColor: Colors.blue,
         );
       } else {
-        // --- CREATE NEW POST ---
         await _apiService.createPost(
           content: _captionController.text.trim(),
           isUrgent: _isUrgent,
@@ -179,7 +162,7 @@ class _CreatePostModalState extends State<CreatePostModal> {
         );
       }
 
-      widget.onPostCreated(); // Refresh the feed
+      widget.onPostCreated();
       if (mounted) Navigator.pop(context);
     } catch (e) {
       _showSnackBar('Error: $e', backgroundColor: Colors.red);
@@ -261,20 +244,16 @@ class _CreatePostModalState extends State<CreatePostModal> {
                     scrollDirection: Axis.horizontal,
                     itemCount: _totalMediaCount,
                     itemBuilder: (context, index) {
-                      // Logic to determine if we are showing an Existing URL or a New File
                       final bool isExisting = index < _existingMediaUrls.length;
-
                       dynamic imageSource;
                       bool isVideo = false;
 
                       if (isExisting) {
                         imageSource = _existingMediaUrls[index];
-                        // Simple check for video extension in URL
                         isVideo = imageSource.toString().toLowerCase().endsWith(
                           '.mp4',
                         );
                       } else {
-                        // Adjust index for new media array
                         final file =
                             _newSelectedMedia[index -
                                 _existingMediaUrls.length];
@@ -306,9 +285,50 @@ class _CreatePostModalState extends State<CreatePostModal> {
                                         ),
                                       )
                                     : (isExisting
+                                          // 🔧 FIX: Added Error Builder to Image.network
                                           ? Image.network(
                                               imageSource,
                                               fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                    return const Center(
+                                                      child: Column(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .center,
+                                                        children: [
+                                                          Icon(
+                                                            Icons.broken_image,
+                                                            color: Colors.grey,
+                                                          ),
+                                                          SizedBox(height: 4),
+                                                          Text(
+                                                            'Error',
+                                                            style: TextStyle(
+                                                              fontSize: 10,
+                                                              color:
+                                                                  Colors.grey,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                  },
+                                              loadingBuilder:
+                                                  (
+                                                    context,
+                                                    child,
+                                                    loadingProgress,
+                                                  ) {
+                                                    if (loadingProgress == null)
+                                                      return child;
+                                                    return const Center(
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                            strokeWidth: 2,
+                                                          ),
+                                                    );
+                                                  },
                                             )
                                           : Image.file(
                                               imageSource,

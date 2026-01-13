@@ -18,7 +18,7 @@ import 'package:pawsure_app/screens/sitter_setup/sitter_dashboard.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_calendar.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_inbox.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_setting_screen.dart';
-import 'package:pawsure_app/constants/api_config.dart'; 
+import 'package:pawsure_app/constants/api_config.dart';
 
 // --- POST MODEL ---
 class Post {
@@ -52,6 +52,7 @@ class Post {
     final userData = map['user'] ?? map['owner'];
     final List<dynamic> mediaList = map['post_media'] ?? [];
 
+    // --- PROFILE PICTURE FIX ---
     String rawAvatar = userData?['profile_picture'] ?? '';
     String finalAvatarUrl;
 
@@ -59,6 +60,7 @@ class Post {
       if (rawAvatar.startsWith('http')) {
         finalAvatarUrl = rawAvatar;
       } else {
+        // Appends Base URL if it's a relative path
         finalAvatarUrl = '${ApiConfig.baseUrl}/$rawAvatar';
       }
     } else {
@@ -71,11 +73,8 @@ class Post {
           (map['userId'] ?? map['user_id'] ?? userData?['id'])?.toString() ??
           '',
       userName: userData?['name'] ?? 'Unknown User',
-
-      profilePicture: finalAvatarUrl, 
-
+      profilePicture: finalAvatarUrl,
       content: map['content'] ?? '',
-
       mediaUrls: mediaList
           .map(
             (m) => (m is String)
@@ -85,11 +84,8 @@ class Post {
           .where((url) => url.isNotEmpty)
           .toList()
           .cast<String>(),
-
       location: map['location_name'] ?? map['location'],
-
       createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
-
       isUrgent: map['is_urgent'] ?? false,
       likes: map['likes_count'] ?? 0,
     );
@@ -106,7 +102,6 @@ class CommunityScreen extends StatefulWidget {
 
 class CommunityScreenState extends State<CommunityScreen> {
   final ApiService _apiService = ApiService();
-  final String baseUrl = "http://localhost:3000";
   int _currentSubTabIndex = 0;
   String? _userRole;
 
@@ -170,7 +165,6 @@ class CommunityScreenState extends State<CommunityScreen> {
   Widget build(BuildContext context) {
     debugPrint("🔨 CommunityScreen BUILD - _userRole = $_userRole");
 
-    // ✅ ADDED: Determine number of tabs based on user role
     // Owners: 2 tabs (Feed, Find a Sitter)
     // Sitters: 1 tab (Feed only)
     final int tabCount = _userRole == 'sitter' ? 1 : 2;
@@ -197,7 +191,7 @@ class CommunityScreenState extends State<CommunityScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          // ✅ ADDED: Show chat icon only for owners
+                          // Show chat icon only for owners
                           _userRole == 'owner'
                               ? IconButton(
                                   icon: const Icon(Icons.chat_bubble_outline),
@@ -272,19 +266,15 @@ class CommunityScreenState extends State<CommunityScreen> {
         ),
         floatingActionButton: Builder(
           builder: (context) {
-            // 1. Get the TabController from the context
             final TabController tabController = DefaultTabController.of(
               context,
             );
 
-            // 2. Use AnimatedBuilder to listen to tab changes
             return AnimatedBuilder(
               animation: tabController,
               builder: (context, child) {
-                // 3. Check current index (Feed is always index 0)
                 final bool isFeedTab = tabController.index == 0;
 
-                // 4. Show/Hide button based on index
                 return isFeedTab
                     ? FloatingActionButton(
                         onPressed: _showCreatePostModal,
@@ -292,7 +282,7 @@ class CommunityScreenState extends State<CommunityScreen> {
                         foregroundColor: Colors.white,
                         child: const Icon(Icons.add),
                       )
-                    : const SizedBox.shrink(); // Hide on 'Find a Sitter' (index 1)
+                    : const SizedBox.shrink();
               },
             );
           },
@@ -443,9 +433,9 @@ class _FeedTabViewState extends State<FeedTabView>
     try {
       final authService = Get.find<AuthService>();
       final token = await authService.getToken();
-      String baseUrl = Platform.isAndroid
-          ? 'http://10.0.2.2:3000'
-          : 'http://127.0.0.1:3000';
+
+      // Uses dynamic Base URL
+      final String baseUrl = ApiConfig.baseUrl;
 
       final response = await http.delete(
         Uri.parse('$baseUrl/posts/${post.id}'),
@@ -481,13 +471,11 @@ class _FeedTabViewState extends State<FeedTabView>
     }
   }
 
-  // Add this inside _FeedTabViewState
   void _editStandardPost(PostModel post) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        // Assuming CreatePostModal accepts a 'postToEdit' parameter similar to CreateVacancyModal
         return CreatePostModal(
           onPostCreated: () => widget.parentState.setState(() {}),
           postToEdit: post,
@@ -560,10 +548,6 @@ class _FeedTabViewState extends State<FeedTabView>
                       currentUserId != null &&
                       currentUserId == post.userId.toString();
 
-                  debugPrint(
-                    "Post by: ${post.userId} | Me: $currentUserId | Match: $isMyPost",
-                  );
-
                   final bool canManagePost = !isSitter && isMyPost;
 
                   if (tab == 'vacancy') {
@@ -596,10 +580,7 @@ class _FeedTabViewState extends State<FeedTabView>
                       post: post,
                       onLike: (id) => _handleLike(id),
                       onComment: (id) {},
-                      // ✅ Connect Delete (Reuse your existing function)
                       onDelete: canManagePost ? () => _deletePost(post) : null,
-
-                      // ✅ Connect Edit (Use the new helper)
                       onEdit: canManagePost
                           ? () => _editStandardPost(post)
                           : null,
@@ -617,8 +598,7 @@ class _FeedTabViewState extends State<FeedTabView>
   void _handleLike(String postId) async {
     try {
       final apiService = ApiService();
-      final result = await apiService.toggleLike(postId);
-      debugPrint("New Like Status from Server: ${result['isLiked']}");
+      await apiService.toggleLike(postId);
     } catch (e) {
       debugPrint("Error liking post: $e");
       rethrow;

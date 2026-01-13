@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:pawsure_app/models/post_model.dart';
 import 'package:pawsure_app/services/auth_service.dart';
+// 1. ✅ Added Import for ApiConfig
+import 'package:pawsure_app/constants/api_config.dart';
 
 class CreateVacancyModal extends StatefulWidget {
   final VoidCallback onVacancyCreated;
@@ -33,14 +34,8 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
   bool _isLoading = true;
   bool _isSubmitting = false;
 
-  String get apiBaseUrl {
-    if (Platform.isAndroid) {
-      // ⚠️ IMPORTANT: If using a PHYSICAL PHONE, change this to your PC's IP (e.g., 'http://192.168.1.15:3000')
-      // '10.0.2.2' only works on the Android Emulator.
-      return 'http://10.0.2.2:3000';
-    }
-    return 'http://127.0.0.1:3000';
-  }
+  // 2. ✅ Removed local apiBaseUrl getter
+  // Accessing ApiConfig.baseUrl directly in the code below
 
   @override
   void initState() {
@@ -90,9 +85,9 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
         return;
       }
 
-      // ✅ Added timeout to prevent infinite loading on wrong IP
+      // 3. ✅ Updated URI to use ApiConfig.baseUrl
       final response = await http
-          .get(Uri.parse('$apiBaseUrl/pets'), headers: headers)
+          .get(Uri.parse('${ApiConfig.baseUrl}/pets'), headers: headers)
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -179,9 +174,10 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
       final headers = await _getHeaders();
       final bool isEditing = widget.postToEdit != null;
 
+      // 4. ✅ Updated URI to use ApiConfig.baseUrl
       final String url = isEditing
-          ? '$apiBaseUrl/posts/${widget.postToEdit!.id}'
-          : '$apiBaseUrl/posts';
+          ? '${ApiConfig.baseUrl}/posts/${widget.postToEdit!.id}'
+          : '${ApiConfig.baseUrl}/posts';
 
       final body = json.encode({
         'content': _captionController.text.trim(),
@@ -193,7 +189,6 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
         'pet_id': _selectedPetIds,
       });
 
-      // ✅ Added timeout
       final response =
           await (isEditing
                   ? http.put(Uri.parse(url), headers: headers, body: body)
