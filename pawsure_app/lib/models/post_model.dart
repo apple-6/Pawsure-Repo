@@ -1,16 +1,17 @@
 import 'package:pawsure_app/models/pet_model.dart';
+import 'package:pawsure_app/constants/api_config.dart';
 
 class PostModel {
   final String id;
   final String userId;
   final String userName;
-  final String profilePicture;
+  final String profilePicture; // This will now always be a valid URL
   final String content;
   final List<String> mediaUrls;
   final String? location;
   final bool isUrgent;
   bool isLiked;
-  int likes; //remove final
+  int likes;
   final DateTime createdAt;
   int commentsCount;
 
@@ -18,8 +19,8 @@ class PostModel {
   final bool isVacancy;
   final DateTime? startDate;
   final DateTime? endDate;
-  final List<String> petIds; // Changed from String? petId
-  final List<String> petNames; // Added to display tags (e.g., "Buddy", "Luna")
+  final List<String> petIds;
+  final List<String> petNames;
   final double ratePerNight;
   final List<Pet> pets;
 
@@ -53,16 +54,35 @@ class PostModel {
     final List<dynamic> rawMedia =
         json['post_media'] ?? json['mediaUrls'] ?? [];
 
-    // 3. Extract Pets (Mapped from the @ManyToMany relation in TypeORM)
+    // 3. Extract Pets
     final List<dynamic> rawPets = json['pets'] ?? [];
+
+    // --- 4. IMAGE FIX LOGIC START ---
+    String rawAvatar = userData['profile_picture'] ?? '';
+    String finalAvatarUrl;
+
+    if (rawAvatar.isNotEmpty) {
+      if (rawAvatar.startsWith('http')) {
+        // It is already a full URL (e.g., Google login photo)
+        finalAvatarUrl = rawAvatar;
+      } else {
+        // It is a local path (e.g., uploads/avatar.jpg) -> Add Base URL
+        finalAvatarUrl = '${ApiConfig.baseUrl}/$rawAvatar';
+      }
+    } else {
+      // Default image
+      finalAvatarUrl = "https://cdn-icons-png.flaticon.com/512/194/194279.png";
+    }
+    // --- IMAGE FIX LOGIC END ---
 
     return PostModel(
       id: json['id'].toString(),
       userId: (json['userId'] ?? userData['id'] ?? '').toString(),
       userName: userData['name'] ?? 'Unknown User',
-      profilePicture:
-          userData['profile_picture'] ??
-          "https://cdn-icons-png.flaticon.com/512/194/194279.png",
+      
+      // ✅ ASSIGN THE FIXED URL
+      profilePicture: finalAvatarUrl,
+      
       content: json['content'] ?? '',
 
       // Media mapping logic
@@ -77,7 +97,6 @@ class PostModel {
 
       location: json['location_name'] ?? json['location'],
       isUrgent: json['is_urgent'] ?? false,
-      //likes: json['likes_count'] ?? json['likes'] ?? 0,
       likes: json['likesCount'] ?? json['likes_count'] ?? json['likes'] ?? 0,
       isLiked: json['isLiked'] ?? false,
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
