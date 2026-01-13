@@ -381,15 +381,27 @@ class _FeedTabViewState extends State<FeedTabView>
   Widget build(BuildContext context) {
     return Column(
       children: [
-        TabBar(
-          controller: _subTabController,
-          isScrollable: true,
-          labelColor: Theme.of(context).primaryColor,
-          tabs: const [
-            Tab(text: 'For You'),
-            Tab(text: 'Urgent 🚨'),
-            Tab(text: 'Sitter Vacancy'),
-          ],
+        // ✅ MODIFIED: Centered and responsive TabBar
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Container(
+            alignment: Alignment.center,
+            width: MediaQuery.of(context).size.width,
+            child: TabBar(
+              controller: _subTabController,
+              isScrollable: false,
+              labelColor: Theme.of(context).primaryColor,
+              unselectedLabelColor: Colors.grey,
+              indicatorSize: TabBarIndicatorSize.label,
+              // ✅ Optional: Add padding for better spacing
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              tabs: const [
+                Tab(text: 'For You'),
+                Tab(text: 'Urgent 🚨'),
+                Tab(text: 'Sitter Vacancy'),
+              ],
+            ),
+          ),
         ),
         Expanded(
           child: TabBarView(
