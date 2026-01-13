@@ -68,7 +68,10 @@ class AuthService {
       resp = await http
           .post(
             uri,
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true', // ✅ ADDED HERE
+            },
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 10));
@@ -246,7 +249,13 @@ class AuthService {
 
     try {
       final resp = await http
-          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .get(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'ngrok-skip-browser-warning': 'true', // ✅ ADDED HERE
+            },
+          )
           .timeout(const Duration(seconds: 10));
 
       debugPrint('📦 Profile Response: ${resp.statusCode}');
@@ -315,7 +324,10 @@ class AuthService {
       resp = await http
           .post(
             uri,
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true', // ✅ ADDED HERE
+            },
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 10));
@@ -368,6 +380,7 @@ class AuthService {
     var request = http.MultipartRequest('POST', uri);
     request.headers['Authorization'] = 'Bearer $token';
     request.headers['Content-Type'] = 'multipart/form-data';
+    request.headers['ngrok-skip-browser-warning'] = 'true';
 
     setupData.forEach((key, value) {
       if (key != 'idDocumentUrl' &&

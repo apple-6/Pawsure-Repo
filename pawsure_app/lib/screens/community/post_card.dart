@@ -1,3 +1,4 @@
+import 'dart:io'; // ✅ Added for File handling
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:pawsure_app/models/post_model.dart';
@@ -41,14 +42,63 @@ class _PostCardState extends State<PostCard> {
   @override
   void didUpdateWidget(covariant PostCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // If the post object passed from the parent changes (e.g. after a refresh or edit),
-    // we need to sync our local state variables with the new data.
     if (widget.post != oldWidget.post) {
       setState(() {
         _isLiked = widget.post.isLiked;
         _likesCount = widget.post.likes;
         _commentsCount = widget.post.commentsCount ?? 0;
       });
+    }
+  }
+
+  // ✅ HELPER: Smart Image Provider (Handles Web URL vs Local File)
+  ImageProvider _getProfileImage(String path) {
+    if (path.startsWith('http') || path.startsWith('https')) {
+      return NetworkImage(path);
+    } else {
+      // If it's a local file path (file:/// or C:/)
+      try {
+        if (path.startsWith('file://')) {
+          return FileImage(File(Uri.parse(path).toFilePath()));
+        }
+        return FileImage(File(path));
+      } catch (e) {
+        // Fallback if path parsing fails
+        return const AssetImage('assets/images/default_profile.png');
+      }
+    }
+  }
+
+  // ✅ HELPER: Smart Image Widget for Carousel
+  Widget _buildCarouselImage(String path, BuildContext context) {
+    if (path.startsWith('http') || path.startsWith('https')) {
+      return Image.network(
+        path,
+        fit: BoxFit.cover,
+        width: MediaQuery.of(context).size.width,
+        errorBuilder: (context, error, stackTrace) => const Center(
+          child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
+        ),
+      );
+    } else {
+      File file;
+      try {
+        if (path.startsWith('file://')) {
+          file = File(Uri.parse(path).toFilePath());
+        } else {
+          file = File(path);
+        }
+        return Image.file(
+          file,
+          fit: BoxFit.cover,
+          width: MediaQuery.of(context).size.width,
+          errorBuilder: (context, error, stackTrace) => const Center(
+            child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
+          ),
+        );
+      } catch (e) {
+        return const Center(child: Icon(Icons.error));
+      }
     }
   }
 
@@ -67,12 +117,8 @@ class _PostCardState extends State<PostCard> {
       backgroundColor: Colors.transparent,
       builder: (context) => CommentModal(
         postId: widget.post.id,
-        // 🆕 Pass a callback that increments BOTH the model and the UI
         onCommentPosted: () {
-          // 1. Update the Memory Model (This makes it persist like Likes)
           widget.post.commentsCount++;
-
-          // 2. Update the Local UI
           setState(() {
             _commentsCount = widget.post.commentsCount;
           });
@@ -93,8 +139,12 @@ class _PostCardState extends State<PostCard> {
           // --- User Header ---
           ListTile(
             leading: CircleAvatar(
-              backgroundImage: NetworkImage(widget.post.profilePicture),
+              // ✅ Updated to use helper
+              backgroundImage: _getProfileImage(widget.post.profilePicture),
               backgroundColor: Colors.grey[200],
+              onBackgroundImageError: (_, __) {
+                // Handle loading errors silently
+              },
             ),
             title: Text(
               widget.post.userName,
@@ -170,15 +220,8 @@ class _PostCardState extends State<PostCard> {
                   items: widget.post.mediaUrls.map((url) {
                     return Builder(
                       builder: (BuildContext context) {
-                        return Image.network(
-                          url,
-                          fit: BoxFit.cover,
-                          width: MediaQuery.of(context).size.width,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Center(
-                                child: Icon(Icons.broken_image, size: 50),
-                              ),
-                        );
+                        // ✅ Updated to use helper
+                        return _buildCarouselImage(url, context);
                       },
                     );
                   }).toList(),
@@ -222,14 +265,13 @@ class _PostCardState extends State<PostCard> {
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             child: Row(
               children: [
-                // 1. Like Button (Removed Flexible)
+                // 1. Like Button
                 IconButton(
                   icon: Icon(
                     _isLiked ? Icons.favorite : Icons.favorite_border,
                     color: _isLiked ? Colors.red : Colors.grey,
                   ),
                   onPressed: _handleLikePress,
-                  // Ensure touch target is big enough
                   constraints: const BoxConstraints(
                     minWidth: 40,
                     minHeight: 40,
@@ -238,7 +280,7 @@ class _PostCardState extends State<PostCard> {
                 Text('$_likesCount'),
                 const SizedBox(width: 16),
 
-                // 2. Comment Button (Removed Flexible)
+                // 2. Comment Button
                 IconButton(
                   icon: const Icon(
                     Icons.chat_bubble_outline,
@@ -246,7 +288,6 @@ class _PostCardState extends State<PostCard> {
                     color: Colors.grey,
                   ),
                   onPressed: _handleCommentPress,
-                  // Ensure touch target is big enough
                   constraints: const BoxConstraints(
                     minWidth: 40,
                     minHeight: 40,
@@ -255,7 +296,7 @@ class _PostCardState extends State<PostCard> {
                 const SizedBox(width: 4),
                 Text('$_commentsCount'),
 
-                const Spacer(), // Pushes everything to the left
+                const Spacer(),
               ],
             ),
           ),
