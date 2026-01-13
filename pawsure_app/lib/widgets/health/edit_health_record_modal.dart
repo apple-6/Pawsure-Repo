@@ -22,7 +22,7 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
   late DateTime _selectedDate;
   late TextEditingController _descriptionController;
   late TextEditingController _clinicController;
-  DateTime? _nextDueDate;
+  //DateTime? _nextDueDate;
 
   // 🔧 FIX: Track operation states separately
   bool _submitting = false;
@@ -40,7 +40,7 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
       text: widget.record.description ?? '',
     );
     _clinicController = TextEditingController(text: widget.record.clinic ?? '');
-    _nextDueDate = widget.record.nextDueDate;
+    //_nextDueDate = widget.record.nextDueDate;
 
     debugPrint('🏥 EditHealthRecordModal initialized');
     debugPrint('   Record ID: ${widget.record.id}');
@@ -70,25 +70,6 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
     if (picked != null && mounted) {
       setState(() {
         _selectedDate = picked;
-      });
-    }
-  }
-
-  Future<void> _pickNextDueDate() async {
-    final DateTime now = DateTime.now();
-    final DateTime first = DateTime(now.year);
-    final DateTime last = DateTime(now.year + 10);
-
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _nextDueDate ?? now,
-      firstDate: first,
-      lastDate: last,
-    );
-
-    if (picked != null && mounted) {
-      setState(() {
-        _nextDueDate = picked;
       });
     }
   }
@@ -264,12 +245,6 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
       final clinic = _clinicController.text.trim();
       if (clinic.isNotEmpty) {
         payload['clinic'] = clinic;
-      }
-
-      if (_nextDueDate != null) {
-        payload['next_due_date'] = _nextDueDate!.toIso8601String().split(
-          'T',
-        )[0];
       }
 
       debugPrint('💾 Updating health record ${widget.record.id}...');
@@ -469,43 +444,6 @@ class _EditHealthRecordModalState extends State<EditHealthRecordModal> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Next Due Date
-                InkWell(
-                  onTap: _pickNextDueDate,
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Next Due Date (Optional)',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.event),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _nextDueDate != null
-                              ? '${_nextDueDate!.day}/${_nextDueDate!.month}/${_nextDueDate!.year}'
-                              : 'Not set',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: _nextDueDate == null
-                                ? Colors.grey
-                                : Colors.black,
-                          ),
-                        ),
-                        if (_nextDueDate != null)
-                          IconButton(
-                            icon: const Icon(Icons.clear, size: 20),
-                            onPressed: () {
-                              setState(() {
-                                _nextDueDate = null;
-                              });
-                            },
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
 
                 const SizedBox(height: 24),
 
