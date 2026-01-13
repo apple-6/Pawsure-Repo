@@ -15,6 +15,7 @@ class AIScanTab extends StatefulWidget {
 }
 
 class _AIScanTabState extends State<AIScanTab> {
+  bool _isScanning = false;
   final HealthController healthController = Get.find<HealthController>();
 
   // Colors
@@ -75,6 +76,7 @@ class _AIScanTabState extends State<AIScanTab> {
     }
 
     debugPrint("✅ Image picked: ${image.path}");
+    setState(() => _isScanning = true);
 
     try {
       final url = '${ApiConfig.baseUrl}/ai/scan';
@@ -92,6 +94,8 @@ class _AIScanTabState extends State<AIScanTab> {
 
       if (!mounted) return;
 
+      setState(() => _isScanning = false);
+
       if (response.statusCode == 201 || response.statusCode == 200) {
         final result = jsonDecode(response.body);
         _showResultDialog(result['prediction'], result['confidence']);
@@ -104,6 +108,9 @@ class _AIScanTabState extends State<AIScanTab> {
       _showError(
         "Could not connect to backend at ${ApiConfig.baseUrl}. Is NestJS running?",
       );
+      if (mounted) {
+        setState(() => _isScanning = false);
+      }
     }
   }
 
@@ -214,6 +221,7 @@ class _AIScanTabState extends State<AIScanTab> {
               const SizedBox(height: 24),
               Text(
                 label,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
@@ -309,7 +317,9 @@ class _AIScanTabState extends State<AIScanTab> {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => _showImageSourceSelection(context),
+                  onTap: _isScanning
+                      ? null
+                      : () => _showImageSourceSelection(context),
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -336,11 +346,22 @@ class _AIScanTabState extends State<AIScanTab> {
                             color: _brandColor.withOpacity(0.08),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
-                            Icons.center_focus_strong_rounded,
-                            size: 40,
-                            color: _brandColor,
-                          ),
+                          child: _isScanning
+                              ? SizedBox(
+                                  height: 40,
+                                  width: 40,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      _brandColor,
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.center_focus_strong_rounded,
+                                  size: 40,
+                                  color: _brandColor,
+                                ),
                         ),
                         const SizedBox(height: 16),
                         const Text(
@@ -353,7 +374,9 @@ class _AIScanTabState extends State<AIScanTab> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          "Analyze stool sample for anomalies",
+                          _isScanning
+                              ? "Analyzing..."
+                              : "Analyze stool sample for anomalies",
                           style: TextStyle(
                             color: Colors.grey[500],
                             fontSize: 13,
