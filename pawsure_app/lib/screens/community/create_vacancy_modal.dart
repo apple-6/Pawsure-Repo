@@ -9,7 +9,7 @@ import 'package:pawsure_app/services/auth_service.dart';
 
 class CreateVacancyModal extends StatefulWidget {
   final VoidCallback onVacancyCreated;
-  final PostModel? postToEdit; // ✅ Added to handle editing
+  final PostModel? postToEdit;
 
   const CreateVacancyModal({
     super.key,
@@ -34,7 +34,11 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
   bool _isSubmitting = false;
 
   String get apiBaseUrl {
-    if (Platform.isAndroid) return 'http://10.0.2.2:3000';
+    if (Platform.isAndroid) {
+      // ⚠️ IMPORTANT: If using a PHYSICAL PHONE, change this to your PC's IP (e.g., 'http://192.168.1.15:3000')
+      // '10.0.2.2' only works on the Android Emulator.
+      return 'http://10.0.2.2:3000';
+    }
     return 'http://127.0.0.1:3000';
   }
 
@@ -43,7 +47,6 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
     super.initState();
     _fetchMyPets();
 
-    // ✅ PRE-FILL DATA IF EDITING
     if (widget.postToEdit != null) {
       _captionController.text = widget.postToEdit!.content;
       _rateController.text = widget.postToEdit!.ratePerNight.toString();
@@ -87,10 +90,10 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
         return;
       }
 
-      final response = await http.get(
-        Uri.parse('$apiBaseUrl/pets'),
-        headers: headers,
-      );
+      // ✅ Added timeout to prevent infinite loading on wrong IP
+      final response = await http
+          .get(Uri.parse('$apiBaseUrl/pets'), headers: headers)
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -104,6 +107,7 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
         if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
+      debugPrint("Error fetching pets: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -111,9 +115,7 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
   Future<void> _selectDateRange() async {
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
-      firstDate: DateTime.now().subtract(
-        const Duration(days: 365),
-      ), // Allow past dates for editing existing posts
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
 
@@ -155,12 +157,11 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
       return "0.00";
     }
     final days = _endDate!.difference(_startDate!).inDays;
-    final nights = days <= 0 ? 1 : days; // Ensure at least 1 night is counted
+    final nights = days <= 0 ? 1 : days;
     final dailyRate = double.tryParse(_rateController.text) ?? 0.0;
     return (nights * dailyRate).toStringAsFixed(2);
   }
 
-  // ✅ Consolidated Create/Update Logic
   Future<void> _submitVacancy() async {
     if (_startDate == null ||
         _endDate == null ||
@@ -178,7 +179,6 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
       final headers = await _getHeaders();
       final bool isEditing = widget.postToEdit != null;
 
-      // ✅ Switch URL and Method based on mode
       final String url = isEditing
           ? '$apiBaseUrl/posts/${widget.postToEdit!.id}'
           : '$apiBaseUrl/posts';
@@ -193,10 +193,12 @@ class _CreateVacancyModalState extends State<CreateVacancyModal> {
         'pet_id': _selectedPetIds,
       });
 
-      // ✅ Use PUT for editing, POST for new
-      final response = await (isEditing
-          ? http.put(Uri.parse(url), headers: headers, body: body)
-          : http.post(Uri.parse(url), headers: headers, body: body));
+      // ✅ Added timeout
+      final response =
+          await (isEditing
+                  ? http.put(Uri.parse(url), headers: headers, body: body)
+                  : http.post(Uri.parse(url), headers: headers, body: body))
+              .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         widget.onVacancyCreated();
