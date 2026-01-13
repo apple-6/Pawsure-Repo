@@ -39,7 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           SizedBox(
             height: size.height,
             width: size.width,
-            child: Image.asset('assets/images/kittyy.png', fit: BoxFit.cover),
+            child: Image.asset('assets/images/regcat.png', fit: BoxFit.cover),
           ),
           // Decorative top-right green shape with centered logo
           Positioned(
@@ -335,7 +335,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
           ),
-
         ],
       ),
     );
