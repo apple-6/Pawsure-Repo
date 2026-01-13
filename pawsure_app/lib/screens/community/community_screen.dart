@@ -398,7 +398,7 @@ class _FeedTabViewState extends State<FeedTabView>
               tabs: const [
                 Tab(text: 'For You'),
                 Tab(text: 'Urgent 🚨'),
-                Tab(text: 'Sitter Vacancy'),
+                Tab(text: 'Vacancy'),
               ],
             ),
           ),
