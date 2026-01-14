@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
 import 'package:pawsure_app/constants/api_config.dart';
 import 'package:intl/intl.dart';
+import 'package:lottie/lottie.dart'; // <--- Add this line
 
 class AIScanTab extends StatefulWidget {
   const AIScanTab({super.key});
@@ -343,18 +344,20 @@ class _AIScanTabState extends State<AIScanTab> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: _brandColor.withOpacity(0.08),
+                            // I made the background slightly lighter so the animation pops
+                            color: _brandColor.withOpacity(0.05),
                             shape: BoxShape.circle,
                           ),
                           child: _isScanning
                               ? SizedBox(
-                                  height: 40,
-                                  width: 40,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 3,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      _brandColor,
-                                    ),
+                                  // Adjusted size: 80 is usually perfect for icon-style loaders
+                                  height: 80,
+                                  width: 80,
+                                  child: Lottie.asset(
+                                    'assets/animations/loadcat.json',
+                                    fit: BoxFit.contain,
+                                    // Optional: If the animation is too fast/slow, you can change speed here
+                                    // controller: _controller,
                                   ),
                                 )
                               : Icon(
