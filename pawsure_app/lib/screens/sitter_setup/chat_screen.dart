@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:pawsure_app/constants/api_config.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:pawsure_app/services/api_service.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart'; // Kept for time formatting
+import 'package:pawsure_app/constants/api_config.dart'; // Kept for connection fix
 
 class ChatScreen extends StatefulWidget {
   final String ownerName;
@@ -45,7 +45,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _connectSocket();
   }
 
-  // --- LOGIC SECTION (Keep your existing logic) ---
+  // --- LOGIC SECTION ---
 
   Future<void> _fetchMessages() async {
     try {
@@ -80,6 +80,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _connectSocket() {
+    // ✅ CONNECTION FIX: Use ApiConfig to get the NGROK URL
     String socketUrl = ApiConfig.baseUrl;
 
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -120,6 +121,7 @@ class _ChatScreenState extends State<ChatScreen> {
           _messages.add({
             "text": data['text'],
             "isMe": data['senderId'] == widget.currentUserId,
+            // Robust time parsing
             "time": data['timestamp'] != null
                 ? DateTime.parse(data['timestamp']).toLocal().toString()
                 : DateTime.now().toString(),
@@ -182,7 +184,7 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
-  // --- UI SECTION (Beautified) ---
+  // --- UI SECTION ---
 
   @override
   Widget build(BuildContext context) {
@@ -336,10 +338,15 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildMessageBubble(Map<String, dynamic> msg) {
     final bool isMe = msg['isMe'];
     String time = "";
+
+    // Uses the cleaner DateFormat logic (Requires intl package)
     if (msg['time'] != null && msg['time'].toString().isNotEmpty) {
-      final DateTime date = DateTime.parse(msg['time']);
-      time = DateFormat('HH:mm').format(date); // Formats to 14:30
-      // OR use DateFormat('h:mm a').format(date) for 2:30 PM
+      try {
+        final DateTime date = DateTime.parse(msg['time']);
+        time = DateFormat('HH:mm').format(date); // Formats to 14:30
+      } catch (e) {
+        time = ""; // Fallback if parsing fails
+      }
     }
 
     return Align(
@@ -358,14 +365,8 @@ class _ChatScreenState extends State<ChatScreen> {
             bottomLeft: isMe ? const Radius.circular(12) : Radius.zero,
             bottomRight: isMe ? Radius.zero : const Radius.circular(12),
           ),
-          boxShadow: [
-            if (!isMe)
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-          ],
+          // ✅ CRASH FIX: Removed BoxShadow, added Border instead (from Teammate's fix)
+          border: isMe ? null : Border.all(color: Colors.grey.shade200),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

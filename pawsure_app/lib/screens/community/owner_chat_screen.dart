@@ -1,15 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:pawsure_app/constants/api_config.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:pawsure_app/services/api_service.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart'; // Kept for robust time formatting
+import 'package:pawsure_app/constants/api_config.dart'; // Kept for connection fix
 
 class OwnerChatScreen extends StatefulWidget {
-  final String sitterName; // Renamed from ownerName
+  final String sitterName;
   final String petName;
   final String dates;
-  final bool isRequest; // If true, shows "Cancel" option instead of nothing
+  final bool isRequest;
   final String room;
   final int currentUserId;
   final int bookingId;
@@ -44,7 +44,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
     _connectSocket();
   }
 
-  // --- LOGIC SECTION (Same as before) ---
+  // --- LOGIC SECTION ---
 
   Future<void> _fetchMessages() async {
     try {
@@ -78,6 +78,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
   }
 
   void _connectSocket() {
+    // ✅ CONNECTION FIX: Use ApiConfig to get the NGROK URL
     String socketUrl = ApiConfig.baseUrl;
 
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -118,6 +119,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
           _messages.add({
             "text": data['text'],
             "isMe": data['senderId'] == widget.currentUserId,
+            // Robust time parsing
             "time": data['timestamp'] != null
                 ? DateTime.parse(data['timestamp']).toLocal().toString()
                 : DateTime.now().toString(),
@@ -158,7 +160,6 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
     });
 
     _controller.clear();
-    // No setState here (relying on socket event to avoid duplicates)
   }
 
   void _scrollToBottom() {
@@ -211,7 +212,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.sitterName, // Shows Sitter Name
+                    widget.sitterName,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -232,7 +233,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
       ),
       body: Column(
         children: [
-          // 1. Status Header (Different for Owner)
+          // 1. Status Header
           if (widget.isRequest) _buildOwnerHeader(),
 
           // 2. Chat List
@@ -254,7 +255,6 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
     );
   }
 
-  // HEADER: Shows status or Cancel button
   Widget _buildOwnerHeader() {
     return Container(
       color: Colors.white,
@@ -303,15 +303,20 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
     );
   }
 
-  // CHAT BUBBLE (Same as Sitter)
   Widget _buildMessageBubble(Map<String, dynamic> msg) {
     final bool isMe = msg['isMe'];
     String time = "";
+
+    // Uses the cleaner DateFormat logic (Requires intl package)
     if (msg['time'] != null && msg['time'].toString().isNotEmpty) {
-      final DateTime date = DateTime.parse(msg['time']);
-      time = DateFormat('HH:mm').format(date); // Formats to 14:30
-      // OR use DateFormat('h:mm a').format(date) for 2:30 PM
+      try {
+        final DateTime date = DateTime.parse(msg['time']);
+        time = DateFormat('HH:mm').format(date); // Formats to 14:30
+      } catch (e) {
+        time = ""; // Fallback
+      }
     }
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -328,14 +333,8 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
             bottomLeft: isMe ? const Radius.circular(12) : Radius.zero,
             bottomRight: isMe ? Radius.zero : const Radius.circular(12),
           ),
-          boxShadow: [
-            if (!isMe)
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-          ],
+          // ✅ CRASH FIX: Removed BoxShadow which causes 'PaintingContext' errors on some phones
+          border: isMe ? null : Border.all(color: Colors.grey.shade200),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,7 +361,6 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
     );
   }
 
-  // INPUT AREA (Same as Sitter)
   Widget _buildInputArea() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -380,9 +378,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
             Expanded(
               child: TextField(
                 controller: _controller,
-                // ✅ 1. Change keyboard action button to "Send"
                 textInputAction: TextInputAction.send,
-                // ✅ 2. Trigger send when "Enter" is pressed
                 onSubmitted: (_) => _sendMessage(),
                 decoration: InputDecoration(
                   hintText: "Type a message...",
@@ -421,7 +417,6 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
     );
   }
 
-  // Handle Cancel Logic
   Future<void> _cancelBooking() async {
     try {
       await ApiService().updateBookingStatus(widget.bookingId, 'cancelled');
@@ -433,7 +428,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
             backgroundColor: Colors.grey,
           ),
         );
-        Navigator.pop(context); // Go back to Inbox
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
