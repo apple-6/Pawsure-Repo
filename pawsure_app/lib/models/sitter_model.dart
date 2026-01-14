@@ -1,6 +1,5 @@
 // pawsure_app/lib/models/sitter_model.dart
 
-// 1. ADD THIS NEW CLASS
 class ReviewModel {
   final int id;
   final double rating;
@@ -17,7 +16,7 @@ class ReviewModel {
   });
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) {
-    // Extract owner name safely (backend usually sends 'owner': { 'name': '...' })
+    // Extract owner name safely
     String extractedName = "Anonymous";
     if (json['owner'] != null && json['owner']['name'] != null) {
       extractedName = json['owner']['name'];
@@ -75,62 +74,92 @@ class ServiceModel {
 class UserProfile {
   final int id;
   String name;
-  String email; 
+  String email;
   String phone;
   String location;
   String bio;
   int experienceYears;
-  int staysCompleted;
+  int bookingsCompleted; // ✅ RENAMED (was staysCompleted)
   List<ServiceModel> services;
   double rating;
   int reviewCount;
-  List<ReviewModel> reviews; // ✅ ADD THIS
+  List<ReviewModel> reviews;
   final String? profilePicture;
 
   UserProfile({
     required this.id,
     required this.name,
-    required this.email, 
+    required this.email,
     required this.phone,
     required this.location,
     required this.bio,
     required this.experienceYears,
-    required this.staysCompleted,
+    required this.bookingsCompleted, // ✅ UPDATED CONSTRUCTOR
     required this.services,
     this.rating = 0.0,
     this.reviewCount = 0,
-    this.reviews = const [], 
+    this.reviews = const [],
     this.profilePicture,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     final userData = json['user'] ?? json;
+
+    // --- HELPER 1: Extract number from "8 years" string ---
+    int parseExperience(dynamic value) {
+      if (value == null) return 0;
+      final String str = value.toString();
+      final RegExp regExp = RegExp(r'\d+'); // Finds the first number
+      final match = regExp.firstMatch(str);
+      if (match != null) {
+        return int.tryParse(match.group(0)!) ?? 0;
+      }
+      return 0;
+    }
+
+    // --- HELPER 2: Calculate booking list length ---
+    int calculateBookings(dynamic bookingsData) {
+      if (bookingsData != null && bookingsData is List) {
+        return bookingsData.length;
+      }
+      return 0;
+    }
+
     return UserProfile(
-      // ✅ MAP USER ID to 'id'
-      // The backend response for a Sitter object usually has 'userId' field
-      id: json['userId'] ?? 0, 
-      name: json['user']?['name'] ?? '',
-      email: json['user']?['email'] ?? '', 
-      phone: json['user']?['phone_number'] ?? '',
+      // ID: fallback checks
+      id: json['userId'] ?? json['id'] ?? 0,
+      
+      // User Info
+      name: userData['name'] ?? '',
+      email: userData['email'] ?? '',
+      phone: userData['phone_number'] ?? '',
+      profilePicture: userData['profile_picture'] ?? userData['profilePicture'],
+
+      // Sitter Info
       location: json['address'] ?? json['location'] ?? '',
       bio: json['bio'] ?? '',
-      experienceYears: json['experienceYears'] ?? 0,
-      staysCompleted: json['staysCompleted'] ?? 0,
+
+      // ✅ FIX 1: Use helper to parse 'experience' column from DB
+      experienceYears: parseExperience(json['experience']),
+
+      // ✅ FIX 2: Calculate bookings from the list length
+      bookingsCompleted: calculateBookings(json['bookings']),
+
+      // Services
       services: (json['services'] as List<dynamic>?)
               ?.map((e) => ServiceModel.fromJson(e))
               .toList() ??
           [],
 
-          // ✅ Capture dynamic rating and review count from backend
+      // Ratings
       rating: double.tryParse(json['rating']?.toString() ?? '0') ?? 0.0,
       reviewCount: int.tryParse(json['reviewCount']?.toString() ?? '0') ?? 0,
-    reviews: (json['reviews'] as List<dynamic>?)
+      
+      // Reviews
+      reviews: (json['reviews'] as List<dynamic>?)
               ?.map((e) => ReviewModel.fromJson(e))
               .toList() ??
           [],
-
-    profilePicture: userData['profile_picture'] ?? userData['profilePicture'],
     );
-    
   }
 }

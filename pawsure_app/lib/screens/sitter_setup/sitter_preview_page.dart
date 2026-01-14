@@ -273,7 +273,7 @@ class _SitterPreviewPageState extends State<SitterPreviewPage> {
                       const SizedBox(width: 24),
                       _buildStatItem(
                         Icons.calendar_today_outlined,
-                        "${widget.user.staysCompleted} stays completed",
+                        "${widget.user.bookingsCompleted}+ bookings",
                         textGrey,
                       ),
                     ],

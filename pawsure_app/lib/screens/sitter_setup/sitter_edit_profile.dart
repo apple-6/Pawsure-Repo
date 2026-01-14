@@ -175,7 +175,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         bio: _bioController.text,
         services: updatedServices,
         experienceYears: widget.user.experienceYears,
-        staysCompleted: widget.user.staysCompleted,
+        bookingsCompleted: widget.user.bookingsCompleted,
         email: widget.user.email,
         phone: widget.user.phone,
         profilePicture: newProfilePic,
