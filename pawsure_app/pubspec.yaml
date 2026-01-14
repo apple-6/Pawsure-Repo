@@ -10,16 +10,21 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  dropdown_button2: ^2.3.9
+  lottie: ^3.1.0
+  
+  # ✅ ADDED THIS FOR IMAGE CACHING
+  cached_network_image: ^3.3.0
     
   # Networking
   http: ^1.1.0
   supabase_flutter: ^2.5.3
- 
+  
 
   # State Management
   get: ^4.7.2
 
-  # UI & Utilities
+# UI & Utilities
   table_calendar: ^3.0.0
   path_provider: ^2.1.0
   cupertino_icons: ^1.0.8
@@ -32,7 +37,7 @@ dependencies:
   shared_preferences: ^2.5.4
 
   # To pick files from the device
-  file_picker: ^10.3.3 
+  file_picker: ^10.3.3
 
   # Maps & Charts
   geolocator: ^13.0.2
@@ -46,6 +51,7 @@ dependencies:
   # message
   socket_io_client: ^2.0.3+1
   http_parser: ^4.1.2
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -56,3 +62,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/animations/

@@ -7,7 +7,6 @@ import 'package:pawsure_app/services/api_service.dart'; // To access apiBaseUrl
 import 'package:pawsure_app/services/auth_service.dart';
 
 class BookingService {
-
   final ApiService _apiService = ApiService();
 
   Future<void> createBooking({
@@ -36,6 +35,7 @@ class BookingService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
+          'ngrok-skip-browser-warning': 'true',
         },
         body: jsonEncode({
           'start_date': DateFormat('yyyy-MM-dd').format(startDate),
@@ -69,6 +69,7 @@ class BookingService {
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
         },
       );
 
@@ -82,7 +83,7 @@ class BookingService {
     }
   }
 
-  /// Fetch bookings specifically for the Owner 
+  /// Fetch bookings specifically for the Owner
   Future<List<dynamic>> fetchOwnerBookings() async {
     // Delegates to the ApiService method
     return await _apiService.getOwnerBookings();

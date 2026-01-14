@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // ← ADD THIS IMPORT
 import '../sitter_setup/sitter_dashboard.dart';
 import '../../services/auth_service.dart';
+import '../../controllers/profile_controller.dart'; // 🆕 Added for reloading profile
 import 'register_screen.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_setup_screen.dart';
 import '../../models/role.dart';
@@ -47,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
           SizedBox(
             height: size.height,
             width: size.width,
-            child: Image.asset('assets/images/dog_auth.png', fit: BoxFit.cover),
+            child: Image.asset('assets/images/cat_login.png', fit: BoxFit.cover),
           ),
 
           // Decorative top-right green shape with logo
@@ -228,36 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-
-                      // Divider
-                      Row(
-                        children: <Widget>[
-                          Expanded(child: Divider(color: Colors.grey[300])),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8.0),
-                            child: Text(
-                              'or login with',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          Expanded(child: Divider(color: Colors.grey[300])),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Social Login Icons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildSocialButton(Icons.g_mobiledata, Colors.red),
-                          _buildSocialButton(Icons.facebook, Colors.blue),
-                          _buildSocialButton(Icons.apple, Colors.black),
-                        ],
-                      ),
+              
                       const SizedBox(height: 24),
 
                       // Login Button
@@ -321,41 +293,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-
-          // Bottom green bar
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              height: 24,
-              decoration: const BoxDecoration(
-                color: Color(0xFF4CAF50),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-              ),
-            ),
-          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSocialButton(IconData icon, Color color) {
-    return InkWell(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Social login coming soon')),
-        );
-      },
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.grey[300]!),
-        ),
-        child: Icon(icon, color: color, size: 28),
       ),
     );
   }
@@ -394,14 +332,19 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
 
-        // Navigate to home
-        Get.offAllNamed('/home');
-      } 
-      if (role == 'sitter') {
-        // ✅ SITTER: Go to Sitter Dashboard
-        Get.offAll(() => const SitterDashboard());
-      } else {
-        Get.offAllNamed('/home');
+        // 🆕 RELOAD ProfileController with the NEW user's data
+        if (Get.isRegistered<ProfileController>()) {
+          final profileController = Get.find<ProfileController>();
+          await profileController.loadProfile();
+        }
+
+        // Navigate based on role
+        if (role == 'sitter') {
+          // ✅ SITTER: Go to Sitter Dashboard
+          Get.offAll(() => const SitterDashboard());
+        } else {
+          Get.offAllNamed('/home');
+        }
       }
     } catch (e) {
       setState(() => _isLoading = false);

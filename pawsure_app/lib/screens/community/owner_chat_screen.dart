@@ -2,12 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:pawsure_app/services/api_service.dart';
+import 'package:intl/intl.dart'; // Kept for robust time formatting
+import 'package:pawsure_app/constants/api_config.dart'; // Kept for connection fix
 
 class OwnerChatScreen extends StatefulWidget {
-  final String sitterName; // Renamed from ownerName
+  final String sitterName;
   final String petName;
   final String dates;
-  final bool isRequest; // If true, shows "Cancel" option instead of nothing
+  final bool isRequest;
   final String room;
   final int currentUserId;
   final int bookingId;
@@ -32,7 +34,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   List<Map<String, dynamic>> _messages = [];
-  
+
   final Color _brandGreen = const Color(0xFF1CCA5B);
 
   @override
@@ -42,11 +44,13 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
     _connectSocket();
   }
 
-  // --- LOGIC SECTION (Same as before) ---
+  // --- LOGIC SECTION ---
 
   Future<void> _fetchMessages() async {
     try {
-      final List<dynamic> history = await ApiService().getChatHistory(widget.room);
+      final List<dynamic> history = await ApiService().getChatHistory(
+        widget.room,
+      );
       if (mounted) {
         setState(() {
           _messages = history.map((msg) {
@@ -56,11 +60,13 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
             } else if (msg['sender'] is int) {
               senderId = msg['sender'];
             }
-            
+
             return {
               "text": msg['text'],
               "isMe": senderId == widget.currentUserId,
-              "time": msg['created_at'] ?? DateTime.now().toString(),
+              "time": msg['created_at'] != null
+                  ? DateTime.parse(msg['created_at']).toLocal().toString()
+                  : DateTime.now().toString(),
             };
           }).toList();
         });
@@ -72,30 +78,75 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
   }
 
   void _connectSocket() {
-    String socketUrl = Platform.isAndroid ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
-    
+    // ✅ CONNECTION FIX: Use ApiConfig to get the NGROK URL
+    String socketUrl = ApiConfig.baseUrl;
+
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('🔌 Initializing socket connection');
+    print('   URL: $socketUrl');
+    print('   Room: ${widget.room}');
+    print('   User ID: ${widget.currentUserId}');
+
     socket = IO.io(socketUrl, <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
+      'reconnection': true,
+      'reconnectionAttempts': 5,
+      'reconnectionDelay': 1000,
     });
 
     socket.connect();
+
     socket.onConnect((_) {
+      print('✅ SOCKET CONNECTED!');
+      print('   Socket ID: ${socket.id}');
+      print('   Joining room: ${widget.room}');
       socket.emit('joinRoom', widget.room);
+      print('   Join room emitted');
     });
 
     socket.on('receiveMessage', (data) {
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      print('📨 MESSAGE RECEIVED VIA SOCKET');
+      print('   Text: ${data['text']}');
+      print('   Sender ID: ${data['senderId']}');
+      print('   My User ID: ${widget.currentUserId}');
+      print('   Is Me: ${data['senderId'] == widget.currentUserId}');
+      print('   Timestamp: ${data['timestamp']}');
+
       if (mounted) {
         setState(() {
           _messages.add({
             "text": data['text'],
             "isMe": data['senderId'] == widget.currentUserId,
-            "time": DateTime.now().toString(),
+            // Robust time parsing
+            "time": data['timestamp'] != null
+                ? DateTime.parse(data['timestamp']).toLocal().toString()
+                : DateTime.now().toString(),
           });
         });
+        print('✅ Message added to list. Total messages: ${_messages.length}');
         _scrollToBottom();
+      } else {
+        print('⚠️ Widget not mounted, message ignored');
       }
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     });
+
+    socket.onDisconnect((_) {
+      print('❌ SOCKET DISCONNECTED');
+    });
+
+    socket.onError((error) {
+      print('🔴 SOCKET ERROR: $error');
+    });
+
+    socket.onReconnect((_) {
+      print('🔄 SOCKET RECONNECTED');
+      socket.emit('joinRoom', widget.room);
+    });
+
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   }
 
   void _sendMessage() {
@@ -107,9 +158,8 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
       "text": text,
       "senderId": widget.currentUserId,
     });
-    
+
     _controller.clear();
-    // No setState here (relying on socket event to avoid duplicates)
   }
 
   void _scrollToBottom() {
@@ -137,7 +187,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), 
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
@@ -147,8 +197,13 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
             CircleAvatar(
               backgroundColor: const Color(0xFFE8F5E9),
               child: Text(
-                widget.sitterName.isNotEmpty ? widget.sitterName[0].toUpperCase() : "?",
-                style: TextStyle(color: _brandGreen, fontWeight: FontWeight.bold),
+                widget.sitterName.isNotEmpty
+                    ? widget.sitterName[0].toUpperCase()
+                    : "?",
+                style: TextStyle(
+                  color: _brandGreen,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -157,8 +212,12 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.sitterName, // Shows Sitter Name
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                    widget.sitterName,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
@@ -174,7 +233,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
       ),
       body: Column(
         children: [
-          // 1. Status Header (Different for Owner)
+          // 1. Status Header
           if (widget.isRequest) _buildOwnerHeader(),
 
           // 2. Chat List
@@ -196,7 +255,6 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
     );
   }
 
-  // HEADER: Shows status or Cancel button
   Widget _buildOwnerHeader() {
     return Container(
       color: Colors.white,
@@ -210,7 +268,11 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
               Expanded(
                 child: Text(
                   "Waiting for ${widget.sitterName} to accept.",
-                  style: TextStyle(color: Colors.orange[800], fontSize: 13, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    color: Colors.orange[800],
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
@@ -224,9 +286,14 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
                 foregroundColor: Colors.red,
                 side: const BorderSide(color: Colors.red),
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              child: const Text("CANCEL REQUEST", style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                "CANCEL REQUEST",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -236,18 +303,27 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
     );
   }
 
-  // CHAT BUBBLE (Same as Sitter)
   Widget _buildMessageBubble(Map<String, dynamic> msg) {
     final bool isMe = msg['isMe'];
-    final String time = msg['time'].toString().length > 16 
-        ? msg['time'].toString().substring(11, 16) 
-        : "";
+    String time = "";
+
+    // Uses the cleaner DateFormat logic (Requires intl package)
+    if (msg['time'] != null && msg['time'].toString().isNotEmpty) {
+      try {
+        final DateTime date = DateTime.parse(msg['time']);
+        time = DateFormat('HH:mm').format(date); // Formats to 14:30
+      } catch (e) {
+        time = ""; // Fallback
+      }
+    }
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isMe ? _brandGreen : Colors.white,
@@ -257,10 +333,8 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
             bottomLeft: isMe ? const Radius.circular(12) : Radius.zero,
             bottomRight: isMe ? Radius.zero : const Radius.circular(12),
           ),
-          boxShadow: [
-            if (!isMe)
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
-          ],
+          // ✅ CRASH FIX: Removed BoxShadow which causes 'PaintingContext' errors on some phones
+          border: isMe ? null : Border.all(color: Colors.grey.shade200),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,7 +361,6 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
     );
   }
 
-  // INPUT AREA (Same as Sitter)
   Widget _buildInputArea() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -305,12 +378,17 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
             Expanded(
               child: TextField(
                 controller: _controller,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _sendMessage(),
                 decoration: InputDecoration(
                   hintText: "Type a message...",
                   hintStyle: TextStyle(color: Colors.grey[400]),
                   filled: true,
                   fillColor: const Color(0xFFF5F6F8),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,
@@ -325,7 +403,11 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
-                icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                icon: const Icon(
+                  Icons.send_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 onPressed: _sendMessage,
               ),
             ),
@@ -335,21 +417,26 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
     );
   }
 
-  // Handle Cancel Logic
   Future<void> _cancelBooking() async {
     try {
       await ApiService().updateBookingStatus(widget.bookingId, 'cancelled');
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Request Cancelled"), backgroundColor: Colors.grey),
+          const SnackBar(
+            content: Text("Request Cancelled"),
+            backgroundColor: Colors.grey,
+          ),
         );
-        Navigator.pop(context); // Go back to Inbox
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to cancel: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("Failed to cancel: $e"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }

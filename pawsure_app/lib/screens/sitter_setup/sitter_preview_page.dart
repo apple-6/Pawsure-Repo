@@ -1,34 +1,88 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../../models/sitter_model.dart';
+import '../../constants/api_config.dart';
 
-class SitterPreviewPage extends StatelessWidget {
+class SitterPreviewPage extends StatefulWidget {
   final UserProfile user;
-  const SitterPreviewPage({super.key, required this.user});
+  final List<dynamic> initialReviews;
+
+  const SitterPreviewPage({
+    super.key,
+    required this.user,
+    this.initialReviews = const [],
+  });
+
+  @override
+  State<SitterPreviewPage> createState() => _SitterPreviewPageState();
+}
+
+class _SitterPreviewPageState extends State<SitterPreviewPage> {
+  late List<dynamic> _reviews;
+  bool _isLoadingReviews = false;
+
+  // Colors
+  final Color brandColor = const Color(0xFF2ECA6A);
+  final Color brandLight = const Color(0xFFE8F5E9);
+  final Color textDark = const Color(0xFF1F2937);
+  final Color textGrey = const Color(0xFF6B7280);
+  final Color starColor = const Color(0xFFFBBF24);
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with passed reviews, then fetch fresh ones
+    _reviews = widget.initialReviews;
+    _fetchReviews();
+  }
+
+  // ✅ FETCH REVIEWS FROM BACKEND
+  Future<void> _fetchReviews() async {
+    if (_reviews.isNotEmpty) return; 
+
+    setState(() => _isLoadingReviews = true);
+
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/sitters/user/${widget.user.id}');
+      
+      print("Fetching reviews from: $url");
+      
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['reviews'] != null) {
+          setState(() {
+            _reviews = data['reviews'];
+          });
+        }
+      } else {
+        print("Failed to load reviews: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error fetching reviews: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingReviews = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Colors extracted from your images
-    const Color brandColor = Color(0xFF2ECA6A);
-    const Color brandLight = Color(0xFFE8F5E9);
-    const Color textDark = Color(0xFF1F2937);
-    const Color textGrey = Color(0xFF6B7280);
-    const Color starColor = Color(0xFFFBBF24);
-
     return Scaffold(
-      // ✅ CHANGE 1: Use a standard "Off-White/Grey" background.
-      // This provides the best contrast for white cards.
-      backgroundColor: const Color(0xFFF3F4F6), 
-      
+      backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
-        title: const Text(
+        title: Text(
           "Preview as Owner",
           style: TextStyle(color: textGrey, fontSize: 16),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: textDark),
+          icon: Icon(Icons.arrow_back, color: textDark),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -57,7 +111,7 @@ class SitterPreviewPage extends StatelessWidget {
                     child: CircleAvatar(
                       radius: 40,
                       backgroundColor: brandLight,
-                      child: const Icon(
+                      child: Icon(
                         Icons.person_outline,
                         size: 40,
                         color: brandColor,
@@ -68,8 +122,8 @@ class SitterPreviewPage extends StatelessWidget {
 
                   // Name
                   Text(
-                    user.name,
-                    style: const TextStyle(
+                    widget.user.name,
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: textDark,
@@ -81,15 +135,15 @@ class SitterPreviewPage extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.location_on_outlined,
                         size: 16,
                         color: textGrey,
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        user.location,
-                        style: const TextStyle(color: textGrey),
+                        widget.user.location,
+                        style: TextStyle(color: textGrey),
                       ),
                     ],
                   ),
@@ -97,20 +151,23 @@ class SitterPreviewPage extends StatelessWidget {
                   const SizedBox(height: 8),
 
                   // Rating
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.star, color: starColor, size: 20),
-                      SizedBox(width: 4),
+                      const SizedBox(width: 4),
                       Text(
-                        "4.9",
-                        style: TextStyle(
+                        widget.user.rating.toStringAsFixed(1),
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
-                      SizedBox(width: 4),
-                      Text("(32 Reviews)", style: TextStyle(color: textGrey)),
+                      const SizedBox(width: 4),
+                      Text(
+                        "(${_reviews.length} Reviews)", 
+                        style: TextStyle(color: textGrey),
+                      ),
                     ],
                   ),
 
@@ -120,7 +177,6 @@ class SitterPreviewPage extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Verified Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -130,14 +186,14 @@ class SitterPreviewPage extends StatelessWidget {
                           color: brandLight,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
                             Icon(
                               Icons.verified_user_outlined,
                               size: 16,
                               color: brandColor,
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
                               "Verified",
                               style: TextStyle(
@@ -150,7 +206,6 @@ class SitterPreviewPage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      // Super Sitter Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -161,14 +216,14 @@ class SitterPreviewPage extends StatelessWidget {
                           border: Border.all(color: Colors.grey.shade300),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
                             Icon(
                               Icons.favorite_border,
                               size: 16,
                               color: textGrey,
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
                               "Super Sitter",
                               style: TextStyle(
@@ -194,7 +249,7 @@ class SitterPreviewPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     "About Me",
                     style: TextStyle(
                       fontSize: 18,
@@ -203,24 +258,22 @@ class SitterPreviewPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-
                   Text(
-                    user.bio,
-                    style: const TextStyle(color: textGrey, height: 1.5),
+                    widget.user.bio,
+                    style: TextStyle(color: textGrey, height: 1.5),
                   ),
                   const SizedBox(height: 20),
-
                   Row(
                     children: [
                       _buildStatItem(
                         Icons.access_time,
-                        "${user.experienceYears} years exp.",
+                        "${widget.user.experienceYears} years exp.",
                         textGrey,
                       ),
                       const SizedBox(width: 24),
                       _buildStatItem(
                         Icons.calendar_today_outlined,
-                        "${user.staysCompleted} stays completed",
+                        "${widget.user.bookingsCompleted}+ bookings",
                         textGrey,
                       ),
                     ],
@@ -236,7 +289,7 @@ class SitterPreviewPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     "Services & Rates",
                     style: TextStyle(
                       fontSize: 18,
@@ -245,18 +298,19 @@ class SitterPreviewPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  if (user.services.isEmpty)
-                    const Text("No services listed yet.",
+                  if (widget.user.services.isEmpty)
+                    Text("No services listed yet.",
                         style: TextStyle(color: textGrey))
                   else
-                    ...user.services.where((s) => s.isActive).map((service) {
+                    ...widget.user.services
+                        .where((s) => s.isActive)
+                        .map((service) {
                       return Column(
                         children: [
                           _buildServiceRow(
                             service.name,
-                            "RM ${service.price}${service.unit}", 
-                            brandColor
+                            "RM ${service.price}${service.unit}",
+                            brandColor,
                           ),
                           const Divider(height: 24),
                         ],
@@ -275,7 +329,7 @@ class SitterPreviewPage extends StatelessWidget {
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text(
                         "Reviews",
                         style: TextStyle(
@@ -284,21 +338,48 @@ class SitterPreviewPage extends StatelessWidget {
                           color: textDark,
                         ),
                       ),
-                      Text("32 total", style: TextStyle(color: textGrey)),
+                      // Only show "See more" if > 2 reviews
+                      if (_reviews.length > 2)
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    AllReviewsScreen(reviews: _reviews),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            "See more",
+                            style: TextStyle(
+                              color: brandColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        )
+                      else
+                        Text("${_reviews.length} total",
+                            style: TextStyle(color: textGrey)),
                     ],
                   ),
                   const SizedBox(height: 20),
 
-                  _buildReviewItem(
-                    name: "Sarah M.",
-                    petName: "Max",
-                    date: "Oct 2024",
-                    rating: 5,
-                    comment:
-                        "Aisha was amazing with Max! She sent daily updates and photos. Highly recommend!",
-                    starColor: starColor,
-                    textGrey: textGrey,
-                  ),
+                  // Show Loading or Data
+                  if (_isLoadingReviews)
+                    const Center(child: CircularProgressIndicator())
+                  else if (_reviews.isEmpty)
+                    Text("No reviews yet.",
+                        style: TextStyle(
+                            color: textGrey, fontStyle: FontStyle.italic))
+                  else
+                    Column(
+                      children: _reviews
+                          .take(2)
+                          .map((review) => ReviewCard(reviewData: review))
+                          .toList(),
+                    ),
                 ],
               ),
             ),
@@ -336,20 +417,18 @@ class SitterPreviewPage extends StatelessWidget {
 
   // --- HELPER WIDGETS ---
 
-  // ✅ CHANGE 3: Improved Card shadow to make it pop against the grey background
   Widget _buildCard({required Widget child}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white, // White card
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        // Deeper, softer shadow
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05), // Darker opacity
-            blurRadius: 15, // Spread the shadow more
-            offset: const Offset(0, 5), // Push it down slightly
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -386,62 +465,188 @@ class SitterPreviewPage extends StatelessWidget {
       ],
     );
   }
+}
 
-  Widget _buildReviewItem({
-    required String name,
-    required String petName,
-    required String date,
-    required int rating,
-    required String comment,
-    required Color starColor,
-    required Color textGrey,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+// ===========================================================================
+// EXTERNAL CLASSES (UPDATED TO MATCH SITTER DETAILS)
+// ===========================================================================
+
+class AllReviewsScreen extends StatelessWidget {
+  final List<dynamic> reviews;
+
+  const AllReviewsScreen({super.key, required this.reviews});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text("All Reviews", style: TextStyle(color: Colors.black)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
+      ),
+      body: reviews.isEmpty
+          ? const Center(child: Text("No reviews yet."))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: reviews.length,
+              itemBuilder: (context, index) {
+                return ReviewCard(reviewData: reviews[index]);
+              },
+            ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Updated ReviewCard (Matches SitterDetailsScreen implementation)
+// ---------------------------------------------------------------------------
+class ReviewCard extends StatelessWidget {
+  final dynamic reviewData;
+
+  const ReviewCard({super.key, required this.reviewData});
+
+  @override
+  Widget build(BuildContext context) {
+    final owner = reviewData['owner'];
+    final String userName = owner != null ? (owner['name'] ?? 'Anonymous') : 'User';
+
+    // --- 1. Pet Name Extraction Logic (Added) ---
+    List<String> petNames = [];
+    
+    // Check if the review has a 'booking' object attached
+    if (reviewData['booking'] != null) {
+      final booking = reviewData['booking'];
+      
+      // Scenario A: Backend returns a simple 'pets' array inside booking
+      if (booking['pets'] != null && booking['pets'] is List) {
+        for (var pet in booking['pets']) {
+          if (pet['name'] != null) {
+            petNames.add(pet['name']);
+          }
+        }
+      }
+      // Scenario B: Backend returns the raw Supabase join (booking_pets)
+      else if (booking['booking_pets'] != null && booking['booking_pets'] is List) {
+        for (var bp in booking['booking_pets']) {
+          // Join often looks like: { pet: { name: "Max" } }
+          if (bp['pet'] != null && bp['pet']['name'] != null) {
+            petNames.add(bp['pet']['name']);
+          }
+        }
+      }
+    }
+    
+    // Join names (e.g., "Max, Bella")
+    String petsString = petNames.isNotEmpty ? petNames.join(", ") : "";
+
+    // --- 2. Image Logic ---
+    String? finalProfileUrl;
+    if (owner != null && owner['profile_picture'] != null) {
+      String rawPic = owner['profile_picture'].toString();
+      if (rawPic.isNotEmpty) {
+        if (rawPic.startsWith('file:') || rawPic.contains('C:/') || rawPic.contains('/Users/')) {
+          finalProfileUrl = null;
+        } else if (rawPic.startsWith('http')) {
+          finalProfileUrl = rawPic;
+        } else {
+          finalProfileUrl = "${ApiConfig.supabaseUrl}/storage/v1/object/public/profile_pictures/$rawPic";
+        }
+      }
+    }
+
+    final String date = reviewData['created_at'] != null
+        ? reviewData['created_at'].toString().substring(0, 10)
+        : 'Recent';
+    final double rating = (reviewData['rating'] ?? 5).toDouble();
+    final String comment = reviewData['comment'] ?? '';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
               children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
+                CircleAvatar(
+                  backgroundColor: Colors.grey[200],
+                  radius: 20,
+                  // 1. Provide the image (or null)
+                  foregroundImage: (finalProfileUrl != null)
+                      ? NetworkImage(finalProfileUrl)
+                      : null,
+                  
+                  // 2. Only provide the error handler if the image is NOT null
+                  onForegroundImageError: (finalProfileUrl != null) 
+                      ? (_, __) {} 
+                      : null, 
+
+                  // 3. Fallback child
+                  child: Icon(Icons.person_outline, color: Colors.grey[600]),
                 ),
-                Text(
-                  "Pet: $petName",
-                  style: TextStyle(color: textGrey, fontSize: 12),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            userName,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          Text(
+                            date,
+                            style: const TextStyle(color: Colors.grey, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      
+                      // --- Display Pet Name if available (Added) ---
+                      if (petsString.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2.0),
+                          child: Text(
+                            "Pet: $petsString",
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        
+                      const SizedBox(height: 4),
+                      Row(
+                        children: List.generate(5, (index) {
+                          return Icon(
+                            index < rating ? Icons.star : Icons.star_border,
+                            color: Colors.amber,
+                            size: 14,
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-            Row(
-              children: [
-                Row(
-                  children: List.generate(
-                    5,
-                    (index) => Icon(
-                      Icons.star,
-                      size: 16,
-                      color: index < rating ? starColor : Colors.grey[300],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(date, style: TextStyle(color: textGrey, fontSize: 12)),
-              ],
+            const SizedBox(height: 8),
+            Text(
+              comment,
+              style: const TextStyle(fontSize: 13, color: Colors.black87),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        Text(
-          comment,
-          style: TextStyle(color: textGrey, height: 1.4, fontSize: 14),
-        ),
-      ],
+      ),
     );
   }
 }

@@ -13,6 +13,7 @@ class ActivityService {
     final headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
+      'ngrok-skip-browser-warning': 'true',
     };
     try {
       final authService = Get.find<AuthService>();
@@ -93,23 +94,28 @@ class ActivityService {
     throw Exception('Failed to load stats');
   }
 
-  Future<ActivityLog> createActivity(
-    int petId,
+  // ✅ UPDATED: Supports multiple pets and returns a List
+  Future<List<ActivityLog>> createActivity(
+    List<int> petIds, // Accepts list of IDs
     Map<String, dynamic> payload,
   ) async {
     final headers = await _getHeaders();
     final response = await http.post(
-      Uri.parse('$apiBaseUrl/activity-logs/pets/$petId'),
+      Uri.parse('$apiBaseUrl/activity-logs'), // Generic endpoint
       headers: headers,
-      body: jsonEncode(payload),
+      body: jsonEncode({
+        ...payload,
+        'pet_ids': petIds, // Payload includes pet_ids array
+      }),
     );
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return ActivityLog.fromJson(jsonDecode(response.body));
+
+    if (response.statusCode == 201) {
+      final List data = jsonDecode(response.body);
+      return data.map((json) => ActivityLog.fromJson(json)).toList();
     }
-    throw Exception('Create failed');
+    throw Exception('Failed to create activity');
   }
 
-  // 🔧 FIX: Added the missing updateActivity method
   Future<ActivityLog> updateActivity(
     int id,
     Map<String, dynamic> payload,

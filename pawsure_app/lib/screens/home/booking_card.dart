@@ -7,16 +7,16 @@ class BookingCard extends StatelessWidget {
   final dynamic booking;
   final VoidCallback? onPaymentComplete;
 
-  const BookingCard({
-    super.key,
-    required this.booking,
-    this.onPaymentComplete,
-  });
+  const BookingCard({super.key, required this.booking, this.onPaymentComplete});
 
   ({Color color, IconData icon, String text}) _getStatusDetails(String status) {
     switch (status.toLowerCase()) {
       case 'completed':
-        return (color: Colors.blue, icon: Icons.check_circle_outline, text: 'COMPLETED');
+        return (
+          color: Colors.blue,
+          icon: Icons.check_circle_outline,
+          text: 'COMPLETED',
+        );
       case 'paid':
         return (color: Colors.green, icon: Icons.check_circle, text: 'PAID');
       case 'accepted':
@@ -42,7 +42,7 @@ class BookingCard extends StatelessWidget {
         return pets.map((p) => p['name'].toString()).join(', ');
       }
     }
-    
+
     // 2. Fallback for old data structure (single pet)
     if (booking['pet'] != null && booking['pet']['name'] != null) {
       return booking['pet']['name'];
@@ -53,7 +53,7 @@ class BookingCard extends StatelessWidget {
 
   Future<void> _handlePayment(BuildContext context) async {
     final bookingId = booking['id'];
-    
+
     // Show confirmation dialog
     final confirm = await showDialog<bool>(
       context: context,
@@ -69,9 +69,7 @@ class BookingCard extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
             child: const Text('Pay Now'),
           ),
         ],
@@ -85,9 +83,7 @@ class BookingCard extends StatelessWidget {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        builder: (ctx) => const Center(child: CircularProgressIndicator()),
       );
 
       final apiService = Get.find<ApiService>();
@@ -95,7 +91,7 @@ class BookingCard extends StatelessWidget {
 
       if (context.mounted) {
         Navigator.pop(context); // Close loading
-        
+
         Get.snackbar(
           '✅ Payment Successful',
           'Payment has been processed successfully!',
@@ -109,7 +105,7 @@ class BookingCard extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context); // Close loading
-        
+
         Get.snackbar(
           '❌ Payment Failed',
           e.toString().replaceAll('Exception: ', ''),
@@ -121,7 +117,6 @@ class BookingCard extends StatelessWidget {
     }
   }
 
- 
   String _formatDate(String dateStr) {
     try {
       final date = DateTime.parse(dateStr);
@@ -143,8 +138,13 @@ class BookingCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFF9FAFB), // ✅ CHANGED: New background color,
         borderRadius: BorderRadius.circular(24),
+
+        border: Border.all(
+          color: const Color(0xFFE9E9E9), // The border color you requested
+          width: 1.0, // Thickness of the border
+        ),
         // A softer, more modern shadow
         boxShadow: [
           BoxShadow(
@@ -161,33 +161,45 @@ class BookingCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start, // Aligns items to top if text wraps
               children: [
                 // Pet Info with subtle icon
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.deepPurple.withOpacity(0.05),
-                        shape: BoxShape.circle,
+                Expanded(
+                  // <--- 1. Allows this section to take available space
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.deepPurple.withOpacity(0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.pets_rounded,
+                          size: 20,
+                          color: Colors.deepPurple,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.pets_rounded,
-                        size: 20,
-                        color: Colors.deepPurple,
+                      const SizedBox(width: 12),
+                      Flexible(
+                        // <--- 2. Allows text to shrink/wrap
+                        child: Text(
+                          petName,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black87,
+                          ),
+                          maxLines: null, // <--- 3. Enables unlimited lines
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      petName,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(
+                  width: 8,
+                ), // Prevents status pill from touching text
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -233,7 +245,6 @@ class BookingCard extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -344,10 +355,11 @@ class BookingCard extends StatelessWidget {
                     ),
                   ),
                 ],
-                
+
                 // 💳 PAY NOW BUTTON (Show only if service is completed and not paid)
-                if (statusRaw.toLowerCase() == 'completed' && 
-                    (booking['is_paid'] == false || booking['is_paid'] == null)) ...[
+                if (statusRaw.toLowerCase() == 'completed' &&
+                    (booking['is_paid'] == false ||
+                        booking['is_paid'] == null)) ...[
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
@@ -373,9 +385,10 @@ class BookingCard extends StatelessWidget {
                     ),
                   ),
                 ],
-                
+
                 // Show payment received status
-                if (statusRaw.toLowerCase() == 'paid' || booking['is_paid'] == true) ...[
+                if (statusRaw.toLowerCase() == 'paid' ||
+                    booking['is_paid'] == true) ...[
                   const SizedBox(height: 16),
                   Container(
                     width: double.infinity,

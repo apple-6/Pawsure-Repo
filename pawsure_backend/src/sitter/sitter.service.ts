@@ -137,50 +137,170 @@ export class SitterService {
     return finalSitter;
   }
 
-  async findAll(minRating?: number): Promise<Sitter[]> {
+async findAll(minRating?: number): Promise<any[]> {
     const query = this.sitterRepository
       .createQueryBuilder('sitter')
       .leftJoinAndSelect('sitter.user', 'user')
+      .leftJoin('sitter.reviews', 'review')
+      // 1. Standardize aliases to snake_case to match raw results
+      .addSelect('COUNT(review.id)', 'review_count')
+      .addSelect('COALESCE(AVG(review.rating), 0)', 'avg_rating')
       .where('sitter.deleted_at IS NULL')
-      .orderBy('sitter.rating', 'DESC');
+      .groupBy('sitter.id')
+      .addGroupBy('user.id')
+      // 2. Quote alias in orderBy for Postgres safety
+      .orderBy('"avg_rating"', 'DESC');
 
     if (minRating) {
-      query.where('sitter.rating >= :minRating', { minRating });
+      query.having('COALESCE(AVG(review.rating), 0) >= :minRating', { minRating });
     }
 
-    return await query.getMany();
-  }
+    try {
+      const { entities, raw } = await query.getRawAndEntities();
 
-  async findOne(id: number): Promise<Sitter> {
+      return entities.map((sitter) => {
+        const rawData = raw.find(r => r.sitter_id === sitter.id);
+        let ratingVal = rawData ? parseFloat(rawData.avg_rating) : 0.0;
+        ratingVal = parseFloat(ratingVal.toFixed(1));
+        
+        // 🔴 FIX: Added 'as any' here to solve Error 2561
+        return {
+          ...sitter,
+          // Map raw 'review_count' (string) to 'reviewCount' (number)
+          reviewCount: rawData ? parseInt(rawData.review_count, 10) : 0,
+          // Map raw 'avg_rating' (string) to 'rating' (number)
+          rating: rawData ? parseFloat(rawData.avg_rating) : 0.0,
+        } as any; 
+      });
+    } catch (error) {
+      console.error("Error in findAll sitters:", error);
+      throw new BadRequestException("Could not fetch sitters");
+    }
+  }
+  
+ async findOne(id: number): Promise<any> {
     const sitter = await this.sitterRepository.findOne({
       where: { id },
       withDeleted: false,
-      relations: ['user', 'reviews', 'bookings'],
+      // 👇 Updated relations to deeply fetch booking and pets
+      relations: [
+        'user', 
+        'reviews', 
+        'reviews.owner', 
+        'bookings',
+        'reviews.booking',      
+        'reviews.booking.pets', 
+      ],
     });
 
     if (!sitter) {
       throw new NotFoundException(`Sitter with ID ${id} not found`);
     }
 
-    return sitter;
+    // 1. Calculate fresh stats from the reviews array
+    const reviewCount = sitter.reviews ? sitter.reviews.length : 0;
+
+    const totalRating = sitter.reviews
+      ? sitter.reviews.reduce((sum, review) => sum + review.rating, 0)
+      : 0;
+
+    let avgRating = reviewCount > 0 ? totalRating / reviewCount : 0;
+    avgRating = parseFloat(avgRating.toFixed(1));
+    return {
+      ...sitter,
+      rating: avgRating,  
+      reviewCount: reviewCount, 
+      reviews_count: reviewCount,
+      
+      reviews: sitter.reviews 
+        ? sitter.reviews.sort((a, b) => b.created_at.getTime() - a.created_at.getTime()) 
+        : []
+    } as any;
   }
 
-  async findByUserId(userId: number): Promise<Sitter | null> {
-    return await this.sitterRepository.findOne({
+async findByUserId(userId: number): Promise<any> {
+    // 1. Fetch sitter AND reviews (Just like findOne)
+    const sitter = await this.sitterRepository.findOne({
       where: { userId, deleted_at: IsNull() },
-      relations: ['user'],
+      relations: [
+        'user', 
+        'reviews', 
+        'reviews.owner',          
+        'reviews.booking',        
+        'reviews.booking.pets',   
+      ],
     });
+
+    if (!sitter) {
+      return null;
+    }
+
+    // 2. Calculate Stats (Exact copy from findOne)
+    // We wrap review.rating in Number() to prevent string concatenation bugs
+    const reviewCount = sitter.reviews ? sitter.reviews.length : 0;
+
+    const totalRating = sitter.reviews
+      ? sitter.reviews.reduce((sum, review) => sum + Number(review.rating), 0)
+      : 0;
+
+    let avgRating = reviewCount > 0 ? totalRating / reviewCount : 0;
+    avgRating = parseFloat(avgRating.toFixed(1));
+
+    // 3. Return the merged object (Just like findOne)
+    return {
+      ...sitter,
+      rating: avgRating,
+      reviewCount: reviewCount,
+      reviews_count: reviewCount,
+      // Sort reviews by newest first
+      reviews: sitter.reviews 
+        ? sitter.reviews.sort((a, b) => b.created_at.getTime() - a.created_at.getTime()) 
+        : []
+    };
   }
 
   async update(
     id: number,
     updateSitterDto: any, // Use 'any' temporarily to allow 'name' property
     userId: number,
+    file?: Express.Multer.File,
   ): Promise<Sitter> {
+    console.log(`[DEBUG] Update Request for User ID: ${userId}`);
     const sitter = await this.findOne(id);
 
     if (sitter.userId !== userId) {
       throw new ForbiddenException('You can only update your own sitter profile');
+    }
+
+    // 🛑 CRITICAL FIX: Parse 'services' if it comes as a string (Multipart)
+    if (updateSitterDto.services && typeof updateSitterDto.services === 'string') {
+      try {
+        updateSitterDto.services = JSON.parse(updateSitterDto.services);
+      } catch (e) {
+        throw new BadRequestException('Invalid JSON format for services');
+      }
+    }
+
+    // 🟢 HANDLE PROFILE PICTURE (User Table)
+    if (file) {
+      console.log(`[DEBUG] File received! Name: ${file.originalname}, Size: ${file.size}`);
+      // 1. Upload the file
+      const photoUrl = await this.fileService.uploadPublicFile(
+        file.buffer,
+        file.originalname,
+        'profile-pictures' // folder name
+      );
+
+      console.log(`[DEBUG] File uploaded to storage. URL: ${photoUrl}`);
+      
+      // 2. Update the User entity
+      await this.userRepository.update(userId, { profile_picture: photoUrl });
+      const updateResult = await this.userRepository.update(userId, { profile_picture: photoUrl });
+      console.log(`[DEBUG] DB Update Result:`, updateResult); // 🔍 Log 4
+      
+    } else {
+      console.log(`[DEBUG] No file received in service.`); // 🔍 Log 5
+    
     }
 
     // 1. 🟢 HANDLE NAME UPDATE (User Table)
@@ -247,14 +367,18 @@ export class SitterService {
 
   // --- SEARCH METHOD (From Version M - The "Feature") ---
   // This uses the advanced range search and exclusion logic.
-  async searchByAvailability(startDate: string, endDate: string): Promise<Sitter[]> {
+  async searchByAvailability(startDate: string, endDate: string): Promise<any[]> {
     // 1. Generate the required arrays for the search range
     const { searchDates, searchDays } = generateSearchRangeArrays(startDate, endDate);
 
     // 2. Build the query to find sitters NOT overlapping with any unavailability
-    return await this.sitterRepository
+   // return await this.sitterRepository
+   const query = this.sitterRepository
         .createQueryBuilder('sitter')
         .leftJoinAndSelect('sitter.user', 'user')
+        .leftJoin('sitter.reviews', 'review')
+        .addSelect('COUNT(review.id)', 'reviewCountRaw')
+        .addSelect('COALESCE(AVG(review.rating), 0)', 'averageRatingRaw')
         
         // --- Unavailability Check 1: Specific Dates ---
         // Filter OUT sitters where their unavailable_dates array OVERLAPS (&&) the requested searchDates array.
@@ -270,31 +394,54 @@ export class SitterService {
         
         // --- General Filtering ---
         .andWhere('sitter.deleted_at IS NULL')
-        .orderBy('sitter.rating', 'DESC')
-        .getMany();
-  }
+        .groupBy('sitter.id')
+        .addGroupBy('user.id')
+        .orderBy('"averageRatingRaw"', 'DESC');
+try {
+      const { entities, raw } = await query.getRawAndEntities();
 
+      return entities.map((sitter) => {
+        const rawData = raw.find(r => r.sitter_id === sitter.id);
+      
+        let ratingVal = rawData ? parseFloat(rawData.averageRatingRaw) : 0.0;
+        ratingVal = parseFloat(ratingVal.toFixed(1));
+        
+        return {
+          ...sitter,
+          reviewCount: rawData ? parseInt(rawData.reviewCountRaw, 10) : 0, 
+  rating: rawData ? parseFloat(rawData.averageRatingRaw) : 0.0,
+        } as any;
+      });
+    } catch (error) {
+      console.error("Error in searchByAvailability:", error);
+      throw new BadRequestException("Search failed.");
+    }
+  }
   async updateAvailability(
     userId: number,
     dto: UpdateAvailabilityDto,
   ): Promise<Sitter> {
-    // 1. Find the sitter profile associated with this user
     const sitter = await this.findByUserId(userId);
 
     if (!sitter) {
-      throw new NotFoundException('Sitter profile not found for this user.');
+      throw new NotFoundException('Sitter profile not found');
     }
 
-    // 2. Update only the relevant fields
-    if (dto.unavailable_dates !== undefined) {
-      sitter.unavailable_dates = dto.unavailable_dates;
+    // Ensure we are saving clean strings. 
+    // If the frontend sends full ISO strings, we strip the time.
+    if (dto.unavailable_dates) {
+      sitter.unavailable_dates = dto.unavailable_dates.map(date => {
+        // If it comes in as "2026-03-05T00:00...", slice it to "2026-03-05"
+        // If it's already "2026-03-05", this leaves it alone.
+        return date.toString().split('T')[0];
+      });
     }
 
-    if (dto.unavailable_days !== undefined) {
+    if (dto.unavailable_days) {
       sitter.unavailable_days = dto.unavailable_days;
     }
 
-    // 3. Save and return the updated profile
     return await this.sitterRepository.save(sitter);
   }
+  
 }

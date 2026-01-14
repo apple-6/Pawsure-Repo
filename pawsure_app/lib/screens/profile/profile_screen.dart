@@ -6,7 +6,13 @@ import 'package:pawsure_app/controllers/profile_controller.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
 import 'package:pawsure_app/controllers/home_controller.dart';
 import 'package:pawsure_app/controllers/pet_controller.dart';
+// import 'package:pawsure_app/controllers/sitter_controller.dart';
 import 'package:pawsure_app/services/storage_service.dart';
+import 'package:pawsure_app/screens/profile/help_support_screen.dart';
+import 'package:pawsure_app/screens/profile/about_screen.dart';
+import 'package:pawsure_app/screens/profile/booking_history.dart';
+import 'package:pawsure_app/constants/api_config.dart'; // 1. ADD THIS IMPORT
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -98,6 +104,24 @@ class ProfileScreen extends StatelessWidget {
         final userRole = profileController.user['role'] as String? ?? 'owner';
         final initial = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
 
+        // --- 2. UPDATED IMAGE LOGIC START ---
+        String? avatarPath = profileController.user['avatar'];
+        String? fullAvatarUrl;
+
+        // Construct the URL dynamically based on environment (Emulator vs Real Device)
+        if (avatarPath != null && avatarPath.isNotEmpty) {
+          if (avatarPath.startsWith('http')) {
+            fullAvatarUrl = avatarPath; // Use existing full URL
+          } else {
+            // Combine API Config Base URL + Relative Path
+            // e.g. http://10.0.2.2:3000/uploads/image.jpg
+            fullAvatarUrl = '${ApiConfig.baseUrl}/$avatarPath';
+          }
+        }
+
+        final bool hasAvatar = fullAvatarUrl != null;
+        // --- UPDATED IMAGE LOGIC END ---
+
         // Get pets count
         int petsCount = 0;
         if (Get.isRegistered<PetController>()) {
@@ -113,10 +137,7 @@ class ProfileScreen extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF22C55E),
-                      Color(0xFF16A34A),
-                    ],
+                    colors: [Color(0xFF22C55E), Color(0xFF16A34A)],
                   ),
                 ),
                 child: SafeArea(
@@ -139,13 +160,7 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             IconButton(
                               onPressed: () {
-                                Get.snackbar(
-                                  'Coming Soon',
-                                  'Edit profile feature will be available soon!',
-                                  snackPosition: SnackPosition.BOTTOM,
-                                  backgroundColor: Colors.white,
-                                  colorText: const Color(0xFF22C55E),
-                                );
+                                Get.to(() => const EditProfileScreen());
                               },
                               icon: const Icon(Icons.edit, color: Colors.white),
                             ),
@@ -176,33 +191,67 @@ class ProfileScreen extends StatelessWidget {
                                     width: 72,
                                     height: 72,
                                     decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFF22C55E),
-                                          Color(0xFF86EFAC),
-                                        ],
-                                      ),
                                       borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        initial,
-                                        style: const TextStyle(
-                                          fontSize: 28,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
+                                      // If NO avatar, show the Green Gradient. If avatar exists, remove gradient.
+                                      gradient: hasAvatar
+                                          ? null
+                                          : const LinearGradient(
+                                              colors: [
+                                                Color(0xFF22C55E),
+                                                Color(0xFF86EFAC),
+                                              ],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                      // If avatar exists, show the Image
+                                      image: hasAvatar
+                                          ? DecorationImage(
+                                              image: NetworkImage(
+                                                fullAvatarUrl!,
+                                              ), // Use computed URL
+                                              fit: BoxFit.cover,
+                                              onError: (exception, stackTrace) {
+                                                debugPrint(
+                                                  "Error loading avatar: $exception",
+                                                );
+                                              },
+                                            )
+                                          : null,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(
+                                            0xFF22C55E,
+                                          ).withOpacity(0.2),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 8),
                                         ),
-                                      ),
+                                      ],
                                     ),
+                                    // If NO avatar, show the "Initial" Text
+                                    child: hasAvatar
+                                        ? null
+                                        : Center(
+                                            child: Text(
+                                              initial,
+                                              style: const TextStyle(
+                                                fontSize: 28,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
                                   ),
                                   const SizedBox(width: 16),
                                   // User Info
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          userName.isNotEmpty ? userName : 'User',
+                                          userName.isNotEmpty
+                                              ? userName
+                                              : 'User',
                                           style: const TextStyle(
                                             fontSize: 20,
                                             fontWeight: FontWeight.bold,
@@ -228,7 +277,9 @@ class ProfileScreen extends StatelessWidget {
                                             color: userRole == 'sitter'
                                                 ? const Color(0xFFDCFCE7)
                                                 : const Color(0xFFEDE9FE),
-                                            borderRadius: BorderRadius.circular(20),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
                                           ),
                                           child: Text(
                                             userRole == 'sitter'
@@ -249,31 +300,10 @@ class ProfileScreen extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(height: 20),
-                              // Stats Row
-                              Row(
-                                children: [
-                                  _buildStatItem(
-                                    icon: Icons.pets,
-                                    value: '$petsCount',
-                                    label: 'Pets',
-                                    color: const Color(0xFF22C55E),
-                                  ),
-                                  _buildStatDivider(),
-                                  _buildStatItem(
-                                    icon: Icons.calendar_today,
-                                    value: '0',
-                                    label: 'Bookings',
-                                    color: const Color(0xFF3B82F6),
-                                  ),
-                                  _buildStatDivider(),
-                                  _buildStatItem(
-                                    icon: Icons.local_fire_department,
-                                    value: '7',
-                                    label: 'Day Streak',
-                                    color: const Color(0xFFF97316),
-                                  ),
-                                ],
-                              ),
+
+                              // ✅ Sitter Stats Section (Visible only to Sitters)
+                              // if (userRole == 'sitter' && Get.isRegistered<SitterController>())
+                              //   _buildSitterStats(Get.find<SitterController>()),
                             ],
                           ),
                         ),
@@ -324,7 +354,14 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFF8B5CF6),
                           title: 'Booking History',
                           subtitle: 'Past bookings',
-                          onTap: () => _showComingSoon('Booking History'),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const BookingHistoryScreen(),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -344,16 +381,26 @@ class ProfileScreen extends StatelessWidget {
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (context) => const PaymentMethodsScreen(),
+                                builder: (context) =>
+                                    const PaymentMethodsScreen(),
                               ),
                             );
                           },
                         ),
                         _buildMenuDivider(),
                         _buildMenuItem(
-                          icon: Icons.notifications,
+                          icon: Icons.swap_horiz,
                           iconBg: const Color(0xFFFEF3C7),
                           iconColor: const Color(0xFFF59E0B),
+                          title: 'Switch to Sitter Mode',
+                          subtitle: 'Become a pet sitter',
+                          onTap: () => profileController.handleSitterSwitch(),
+                        ),
+                        _buildMenuDivider(),
+                        _buildMenuItem(
+                          icon: Icons.notifications,
+                          iconBg: const Color.fromARGB(160, 178, 230, 224),
+                          iconColor: Colors.teal,
                           title: 'Notifications',
                           subtitle: 'Manage alerts',
                           onTap: () => _showComingSoon('Notifications'),
@@ -382,7 +429,9 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFF3B82F6),
                           title: 'Help & Support',
                           subtitle: 'Get assistance',
-                          onTap: () => _showComingSoon('Help & Support'),
+                          onTap: () {
+                            Get.to(() => HelpSupportScreen());
+                          },
                         ),
                         _buildMenuDivider(),
                         _buildMenuItem(
@@ -391,7 +440,9 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFF6366F1),
                           title: 'About Pawsure',
                           subtitle: 'Version 1.0.0',
-                          onTap: () => _showComingSoon('About'),
+                          onTap: () {
+                            Get.to(() => AboutScreen());
+                          },
                         ),
                       ],
                     ),
@@ -431,6 +482,38 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  // Widget _buildSitterStats(SitterController controller) {
+  //   return Column(
+  //     children: [
+  //       const Divider(height: 24),
+  //       Row(
+  //         children: [
+  //           _buildStatItem(
+  //             icon: Icons.attach_money,
+  //             value: 'RM${controller.earnings.value.toStringAsFixed(0)}',
+  //             label: 'Earnings',
+  //             color: Colors.green,
+  //           ),
+  //           _buildStatDivider(),
+  //           _buildStatItem(
+  //             icon: Icons.calendar_month,
+  //             value: controller.activeStaysCount.value.toString(),
+  //             label: 'Active',
+  //             color: Colors.blue,
+  //           ),
+  //           _buildStatDivider(),
+  //           _buildStatItem(
+  //             icon: Icons.star,
+  //             value: controller.avgRating.value.toStringAsFixed(1),
+  //             label: 'Rating',
+  //             color: Colors.orange,
+  //           ),
+  //         ],
+  //       ),
+  //     ],
+  //   );
+  // }
+
   Widget _buildStatItem({
     required IconData icon,
     required String value,
@@ -451,24 +534,14 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
+          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
         ],
       ),
     );
   }
 
   Widget _buildStatDivider() {
-    return Container(
-      height: 40,
-      width: 1,
-      color: Colors.grey[200],
-    );
+    return Container(height: 40, width: 1, color: Colors.grey[200]);
   }
 
   Widget _buildSectionTitle(String title) {
@@ -542,19 +615,12 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[500],
-                      ),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[500]),
                     ),
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                color: Colors.grey[400],
-                size: 22,
-              ),
+              Icon(Icons.chevron_right, color: Colors.grey[400], size: 22),
             ],
           ),
         ),

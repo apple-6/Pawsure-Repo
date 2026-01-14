@@ -18,7 +18,7 @@ class Step4Rates extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Step 4: Bio & Rates',
+              'Step 4: Bio & Experience',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
@@ -56,12 +56,12 @@ class Step4Rates extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            const Text('Rate per Night (RM)',
+            const Text('Experience (Years)',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             TextFormField(
               decoration: InputDecoration(
-                hintText: '50',
+                hintText: 'How many years of experience do you have?',
                 filled: true,
                 fillColor: Colors.grey[100],
                 border: OutlineInputBorder(
@@ -76,40 +76,24 @@ class Step4Rates extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
                 prefixText: '',
               ),
-              initialValue: formData['ratePerNight']?.toString(),
+              initialValue: formData['experience']?.toString().replaceAll(' years', ''),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Rate is required';
+                  return 'Experience is required';
                 }
-                if (double.tryParse(value) == null) {
+                if (int.tryParse(value) == null) {
                   return 'Please enter a valid number';
-                }
-                if (double.parse(value) <= 0) {
-                  return 'Rate must be greater than 0';
                 }
                 return null;
               },
-              // Save the value to the map as a double
+              // Save the value to the map as an integer
               onSaved: (value) =>
-                  formData['ratePerNight'] = double.parse(value!),
+                  formData['experience'] = "$value years",
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Text('Tip: ',
-                    style: TextStyle(
-                        color: Colors.grey.shade600, fontWeight: FontWeight.w600, fontSize: 12)),
-                Expanded(
-                  child: Text(
-                    'New sitters in Johor Bahru often charge between RM30 and RM80 per night',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),

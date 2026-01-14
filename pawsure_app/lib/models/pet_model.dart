@@ -1,5 +1,6 @@
-//pawsure_app\lib\models\pet_model.dart
 import 'dart:convert';
+// 1. IMPORT ApiConfig to access the current dynamic Base URL
+import 'package:pawsure_app/constants/api_config.dart';
 
 class Pet {
   final int id;
@@ -43,6 +44,19 @@ class Pet {
   });
 
   factory Pet.fromJson(Map<String, dynamic> json) {
+    // 2. DYNAMIC FIX: Uses ApiConfig.baseUrl instead of hardcoded IP
+    String? cleanPhotoUrl(String? url) {
+      if (url == null) return null;
+
+      // If the database gave us a localhost URL, we must swap it
+      // with whatever Base URL the app is currently using (Ngrok, 10.0.2.2, etc.)
+      if (url.contains('localhost:3000')) {
+        return url.replaceAll('http://localhost:3000', ApiConfig.baseUrl);
+      }
+
+      return url;
+    }
+
     return Pet(
       id: json['id'] as int,
       name: json['name'] as String,
@@ -64,8 +78,53 @@ class Pet {
           ? _parseDouble(json['mood_rating'])
           : null,
       streak: json['streak'] as int? ?? 0,
-      photoUrl: json['photoUrl'] as String?,
+
+      // 3. APPLY THE SMART CLEANER HERE
+      photoUrl: cleanPhotoUrl(json['photoUrl'] as String?),
+
       sterilizationStatus: json['sterilization_status'] as String?,
+    );
+  }
+
+  Pet copyWith({
+    int? id,
+    String? name,
+    String? species,
+    String? breed,
+    String? dob,
+    double? weight,
+    double? height,
+    int? bodyConditionScore,
+    List<WeightRecord>? weightHistory,
+    String? allergies,
+    String? foodBrand,
+    String? dailyFoodAmount,
+    List<String>? vaccinationDates,
+    String? lastVetVisit,
+    double? moodRating,
+    int? streak,
+    String? photoUrl,
+    String? sterilizationStatus,
+  }) {
+    return Pet(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      species: species ?? this.species,
+      breed: breed ?? this.breed,
+      dob: dob ?? this.dob,
+      weight: weight ?? this.weight,
+      height: height ?? this.height,
+      bodyConditionScore: bodyConditionScore ?? this.bodyConditionScore,
+      weightHistory: weightHistory ?? this.weightHistory,
+      allergies: allergies ?? this.allergies,
+      foodBrand: foodBrand ?? this.foodBrand,
+      dailyFoodAmount: dailyFoodAmount ?? this.dailyFoodAmount,
+      vaccinationDates: vaccinationDates ?? this.vaccinationDates,
+      lastVetVisit: lastVetVisit ?? this.lastVetVisit,
+      moodRating: moodRating ?? this.moodRating,
+      streak: streak ?? this.streak,
+      photoUrl: photoUrl ?? this.photoUrl,
+      sterilizationStatus: sterilizationStatus ?? this.sterilizationStatus,
     );
   }
 
@@ -163,9 +222,6 @@ class WeightRecord {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'date': date,
-      'weight': weight,
-    };
+    return {'date': date, 'weight': weight};
   }
 }

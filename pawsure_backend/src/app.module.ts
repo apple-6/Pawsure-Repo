@@ -4,6 +4,11 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+// 👇 1. ADD THESE IMPORTS
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+// 👆 END ADDITION
+
 import { AiModule } from './ai/ai.module';
 import { UserModule } from './user/user.module';
 import { PetModule } from './pet/pet.module';
@@ -26,6 +31,7 @@ import { FileModule } from './file/file.module';
 import { EventsModule } from './events/events.module';
 import { ChatModule } from './chat/chat.module';
 import { MoodLogModule } from './mood-log/mood-log.module';
+import { MealLogModule } from './meal-log/meal-log.module';
 
 @Module({
   imports: [
@@ -33,6 +39,16 @@ import { MoodLogModule } from './mood-log/mood-log.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    
+    // 👇 2. STATIC FILE CONFIGURATION (The 404 Fix)
+    ServeStaticModule.forRoot({
+      // "process.cwd()" is safer than "__dirname" here. 
+      // It points to your project root where the 'uploads' folder actually lives.
+      rootPath: join(process.cwd(), 'uploads'), 
+      serveRoot: '/uploads',                    
+    }),
+    // 👆 END ADDITION
+
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -66,7 +82,8 @@ import { MoodLogModule } from './mood-log/mood-log.module';
     AuthModule,
     EventsModule,
     ChatModule,
-    MoodLogModule, // 🆕 Mood & Streak tracking
+    MoodLogModule, 
+    MealLogModule,
   ],
   controllers: [AppController],
   providers: [AppService, FileService],

@@ -28,6 +28,18 @@
       "cwd": "${workspaceFolder}/pawsure_app",
       "program": "lib/main.dart"
     },
+    // ✅ NEW: Mobile Mode (Asks for Ngrok URL)
+    {
+      "name": "Pawsure (Mobile - Ngrok)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "${workspaceFolder}/pawsure_app",
+      "program": "lib/main.dart",
+      "args": [
+        "--dart-define",
+        "API_BASE_URL=${input:ngrokUrl}"
+      ]
+    },
     
     // --- BACKEND SERVER LAUNCHER ---
     {
@@ -38,6 +50,15 @@
       "args": ["run", "start:dev"],
       "cwd": "${workspaceFolder}/pawsure_backend",
       "console": "integratedTerminal"
+    }
+  ],
+  // ✅ NEW: The popup box configuration
+  "inputs": [
+    {
+      "id": "ngrokUrl",
+      "description": "Paste your Ngrok URL (e.g. https://xxxx.ngrok-free.app)",
+      "default": "",
+      "type": "promptString"
     }
   ]
 }

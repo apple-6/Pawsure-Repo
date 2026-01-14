@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:pawsure_app/constants/api_config.dart';
+import 'package:pawsure_app/screens/community/community_screen.dart';
 import 'package:pawsure_app/services/auth_service.dart';
 // Note: Ensure these imports point to your actual file locations
 import 'sitter_dashboard.dart';
@@ -89,15 +90,14 @@ class _SitterCalendarState extends State<SitterCalendar> {
 
   Future<void> _fetchAvailability() async {
     if (!mounted) return;
-
     setState(() => _isLoading = true);
 
     try {
-      // 1. Get the real token (make sure this is implemented)
       final token = await _getAuthToken();
-      final url = Uri.parse('${ApiConfig.baseUrl}/sitters/me');
+      final url = Uri.parse('${ApiConfig.baseUrl}/sitters/my-profile');
 
-      debugPrint("Fetching from: $url");
+      // DEBUG: Print where we are fetching from
+      debugPrint("🔍 Fetching availability from: $url");
 
       final response = await http
           .get(
@@ -107,24 +107,58 @@ class _SitterCalendarState extends State<SitterCalendar> {
               "Content-Type": "application/json",
             },
           )
-          .timeout(
-            const Duration(seconds: 10),
-          ); // Add a timeout so it doesn't spin forever
+          .timeout(const Duration(seconds: 10));
+
+      debugPrint("📩 Response Status: ${response.statusCode}");
+      debugPrint("📩 Response Body: ${response.body}"); // <--- THIS IS CRITICAL
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<dynamic> dbDates = data['unavailable_dates'] ?? [];
-        final List<dynamic> dbDays = data['unavailable_days'] ?? [];
+
+        // ✅ FIX 1: Handle "Wrapped" responses (optional, but safe)
+        // If the data is inside a 'data' wrapper, unwrap it.
+        final actualData = (data is Map && data.containsKey('data'))
+            ? data['data']
+            : data;
+
+        // ✅ FIX 2: Check for BOTH snake_case and camelCase keys
+        final List<dynamic> dbDates =
+            actualData['unavailable_dates'] ??
+            actualData['unavailableDates'] ??
+            [];
+        final List<dynamic> dbDays =
+            actualData['unavailable_days'] ??
+            actualData['unavailableDays'] ??
+            [];
+
+        debugPrint("✅ Found Dates: ${dbDates.length}");
+        debugPrint("✅ Found Days: ${dbDays.length}");
 
         setState(() {
           _dateStatuses.clear();
+
           for (var dateStr in dbDates) {
-            DateTime parsed = DateTime.parse(dateStr);
-            _dateStatuses[dateStr] = DateInfo(
-              date: parsed,
-              status: DateStatus.unavailable,
-            );
+            try {
+              // ✅ FIX 3: Robust Parsing
+              // Convert to string first to handle any weird JSON types
+              String rawString = dateStr.toString();
+
+              // Parse the date (Works for "2026-03-05" OR "2026-03-05T00:00:00Z")
+              DateTime parsed = DateTime.parse(rawString);
+
+              // Standardize the key for the Map lookup
+              String formattedKey = DateFormat('yyyy-MM-dd').format(parsed);
+
+              _dateStatuses[formattedKey] = DateInfo(
+                date: parsed,
+                status: DateStatus.unavailable,
+              );
+              debugPrint("   mapped $rawString -> $formattedKey"); // debug log
+            } catch (e) {
+              debugPrint("❌ Error parsing date: $dateStr - $e");
+            }
           }
+
           _recurringUnavailableDays = dbDays
               .map((dayName) => _daysOfWeek.indexOf(dayName))
               .where((index) => index != -1)
@@ -132,12 +166,11 @@ class _SitterCalendarState extends State<SitterCalendar> {
               .toList();
         });
       } else {
-        debugPrint("Server Error: ${response.statusCode} - ${response.body}");
+        debugPrint("❌ Server Error: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      debugPrint("Connection Error: $e");
+      debugPrint("❌ Connection Error: $e");
     } finally {
-      // This runs no matter what, stopping the loading spinner
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -148,15 +181,19 @@ class _SitterCalendarState extends State<SitterCalendar> {
     try {
       final token = await _getAuthToken();
       final url = Uri.parse('${ApiConfig.baseUrl}/sitters/availability');
+
       List<String> unavailableDates = _dateStatuses.entries
           .where((e) => e.value.status == DateStatus.unavailable)
           .map((e) => e.key)
           .toList();
+
       List<String> unavailableDays = _recurringUnavailableDays
           .map((index) => _daysOfWeek[index])
           .toList();
 
-      await http.put(
+      debugPrint("Syncing: $unavailableDates, $unavailableDays"); // DEBUG LOG
+
+      final response = await http.put(
         url,
         headers: {
           "Content-Type": "application/json",
@@ -167,6 +204,14 @@ class _SitterCalendarState extends State<SitterCalendar> {
           "unavailable_days": unavailableDays,
         }),
       );
+
+      // Check if the server actually accepted the request
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        debugPrint("FAILED TO SYNC: ${response.body}");
+        // Optional: Show a snackbar to the user telling them save failed
+      } else {
+        debugPrint("Sync Successful");
+      }
     } catch (e) {
       debugPrint("Sync Error: $e");
     }
@@ -176,6 +221,13 @@ class _SitterCalendarState extends State<SitterCalendar> {
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  // ✅ NEW: Check if a date is in the past
+  bool _isPastDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return date.isBefore(today);
   }
 
   DateInfo _getDateStatus(DateTime date) {
@@ -189,6 +241,11 @@ class _SitterCalendarState extends State<SitterCalendar> {
   }
 
   void _handleDateClick(DateTime date) {
+    // ✅ NEW: Prevent clicking on past dates
+    if (_isPastDate(date)) {
+      return;
+    }
+
     if (_isEditMode) {
       setState(() {
         if (_selectedDates.any((d) => _isSameDay(d, date))) {
@@ -281,6 +338,9 @@ class _SitterCalendarState extends State<SitterCalendar> {
           if (index == 0) {
             Get.offAll(() => const SitterDashboard());
           }
+          if (index == 1) {
+            Get.offAll(() => const CommunityScreen());
+          }
           if (index == 2) {
             Get.to(() => const SitterCalendar());
           }
@@ -296,10 +356,7 @@ class _SitterCalendarState extends State<SitterCalendar> {
             icon: Icon(Icons.home_filled),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            label: 'Discover',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Community'),
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today_outlined),
             label: 'Calendar',
@@ -424,23 +481,34 @@ class _SitterCalendarState extends State<SitterCalendar> {
     final statusInfo = _getDateStatus(date);
     final isSelected = _selectedDates.any((d) => _isSameDay(d, date));
     final isToday = _isSameDay(date, DateTime.now());
+    final isPast = _isPastDate(date); // ✅ NEW: Check if date is past
 
-    // FIXED: Use .withValues(alpha: ...) instead of .withOpacity(...)
-    Color bgColor = isSelected
-        ? _accentColor.withValues(alpha: 0.15)
-        : (statusInfo.status == DateStatus.booked
-              ? _accentColor
-              : (statusInfo.status == DateStatus.unavailable
-                    ? Colors.grey.shade200
-                    : Colors.transparent));
+    // ✅ UPDATED: Grey out past dates
+    Color bgColor;
+    if (isPast) {
+      bgColor = Colors.grey.shade300;
+    } else if (isSelected) {
+      bgColor = _accentColor.withValues(alpha: 0.15);
+    } else if (statusInfo.status == DateStatus.booked) {
+      bgColor = _accentColor;
+    } else if (statusInfo.status == DateStatus.unavailable) {
+      bgColor = Colors.grey.shade200;
+    } else {
+      bgColor = Colors.transparent;
+    }
 
-    Color textColor = isSelected
-        ? _accentColor
-        : (statusInfo.status == DateStatus.booked
-              ? Colors.white
-              : (statusInfo.status == DateStatus.unavailable
-                    ? Colors.grey.shade400
-                    : Colors.black87));
+    Color textColor;
+    if (isPast) {
+      textColor = Colors.grey.shade500;
+    } else if (isSelected) {
+      textColor = _accentColor;
+    } else if (statusInfo.status == DateStatus.booked) {
+      textColor = Colors.white;
+    } else if (statusInfo.status == DateStatus.unavailable) {
+      textColor = Colors.grey.shade400;
+    } else {
+      textColor = Colors.black87;
+    }
 
     return GestureDetector(
       onTap: () => _handleDateClick(date),
@@ -449,7 +517,7 @@ class _SitterCalendarState extends State<SitterCalendar> {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(10),
-          border: isSelected || isToday
+          border: (isSelected || isToday) && !isPast
               ? Border.all(color: _accentColor, width: isSelected ? 2 : 1)
               : null,
         ),
@@ -458,7 +526,7 @@ class _SitterCalendarState extends State<SitterCalendar> {
           style: TextStyle(
             color: textColor,
             fontWeight: FontWeight.w600,
-            decoration: statusInfo.status == DateStatus.unavailable
+            decoration: (statusInfo.status == DateStatus.unavailable || isPast)
                 ? TextDecoration.lineThrough
                 : null,
           ),
@@ -466,10 +534,6 @@ class _SitterCalendarState extends State<SitterCalendar> {
       ),
     );
   }
-
-  // (Remaining UI helper methods like _buildMonthControls, _buildLegend, _buildCalendarGrid go here...)
-  // Note: Inside _showWeeklySettingsSheet and _buildBulkEditBar,
-  // also update .withOpacity to .withValues(alpha: 0.1) as indicated in your diagnostics.
 
   Widget _buildBulkEditBar() {
     return Container(
@@ -603,9 +667,6 @@ class _SitterCalendarState extends State<SitterCalendar> {
     );
   }
 
-  // (Include _buildMonthControls, _buildLegend, _buildWeeklySettingsButton, _buildCalendarGrid, _changeMonth, _legendItem)
-  // These were omitted here for brevity but are required for the full UI.
-
   void _changeMonth(int offset) {
     setState(() {
       _currentDate = DateTime(
@@ -678,6 +739,7 @@ class _SitterCalendarState extends State<SitterCalendar> {
         _legendItem(_accentColor, "Booked"),
         const SizedBox(width: 16),
         _legendItem(Colors.grey.shade300, "Unavailable"),
+        const SizedBox(width: 16),
       ],
     );
   }

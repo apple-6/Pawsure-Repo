@@ -14,6 +14,7 @@ class PetController extends GetxController {
   var pets = <Pet>[].obs;
   var selectedPet = Rx<Pet?>(null);
   var isLoadingPets = true.obs;
+  var healthTabIndex = 0.obs;
 
   @override
   void onInit() {
@@ -78,6 +79,21 @@ class PetController extends GetxController {
     }
   }
 
+  /// 🆕 Update a pet's streak in the list and if selected
+  void updatePetStreak(int petId, int newStreak) {
+    // 1. Update in the list
+    final index = pets.indexWhere((p) => p.id == petId);
+    if (index != -1) {
+      pets[index] = pets[index].copyWith(streak: newStreak);
+      debugPrint('🔥 Updated streak for ${pets[index].name} to $newStreak');
+    }
+
+    // 2. Update selectedPet if it's the same pet
+    if (selectedPet.value?.id == petId) {
+      selectedPet.value = selectedPet.value!.copyWith(streak: newStreak);
+    }
+  }
+
   /// Refresh pets from database
   Future<void> refreshPets() async {
     await loadPets();
@@ -129,5 +145,9 @@ class PetController extends GetxController {
     } catch (e) {
       Get.snackbar("Error", "Failed to accept booking");
     }
+  }
+
+  void setHealthTab(int index) {
+    healthTabIndex.value = index;
   }
 }

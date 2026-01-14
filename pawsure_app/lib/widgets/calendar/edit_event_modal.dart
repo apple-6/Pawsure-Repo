@@ -35,8 +35,11 @@ class _EditEventModalState extends State<EditEventModal> {
     );
     _notesController = TextEditingController(text: widget.event.notes ?? '');
 
-    _selectedDate = widget.event.dateTime;
-    _selectedTime = TimeOfDay.fromDateTime(widget.event.dateTime);
+    // ✅ Convert to Local Time
+    final localDateTime = widget.event.dateTime.toLocal();
+
+    _selectedDate = localDateTime;
+    _selectedTime = TimeOfDay.fromDateTime(localDateTime);
     _selectedType = widget.event.eventType;
     _selectedStatus = widget.event.status;
   }
@@ -47,6 +50,160 @@ class _EditEventModalState extends State<EditEventModal> {
     _locationController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  // ✅ Applied "Await Result" pattern for delete confirmation
+  Future<void> _confirmDelete() async {
+    if (_isLoading) return;
+
+    final bool? shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Event?'),
+        content: Text(
+          'Are you sure you want to delete "${widget.event.title}"? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true && mounted) {
+      _deleteEvent();
+    }
+  }
+
+  Future<void> _deleteEvent() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final controller = Get.find<CalendarController>();
+      await controller.deleteEvent(widget.event);
+
+      if (!mounted) return;
+
+      Navigator.pop(context);
+
+      Get.snackbar(
+        'Success',
+        'Event deleted successfully',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.grey.withValues(alpha: 0.1),
+        colorText: Colors.grey[900],
+      );
+    } catch (e) {
+      debugPrint('❌ Error in modal delete: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        Get.snackbar(
+          'Error',
+          'Failed to delete event',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withValues(alpha: 0.1),
+          colorText: Colors.red[900],
+        );
+      }
+    }
+  }
+
+  Future<void> _saveEvent() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Create DateTime in local timezone first
+      final localDateTime = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        _selectedTime.hour,
+        _selectedTime.minute,
+      );
+
+      // Convert to UTC before sending to backend
+      final dateTimeUtc = localDateTime.toUtc();
+
+      final updatedEvent = widget.event.copyWith(
+        title: _titleController.text.trim(),
+        dateTime: dateTimeUtc,
+        eventType: _selectedType,
+        status: _selectedStatus,
+        location: _locationController.text.trim().isEmpty
+            ? null
+            : _locationController.text.trim(),
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
+      );
+
+      final controller = Get.find<CalendarController>();
+
+      final shouldTriggerHealth =
+          _selectedType == EventType.health &&
+          _selectedStatus == EventStatus.completed &&
+          widget.event.status != EventStatus.completed;
+
+      // 1. Update logic (Don't trigger dialog inside controller automatically)
+      await controller.updateEvent(updatedEvent, triggerHealthDialog: false);
+
+      if (!mounted) return;
+
+      // 2. Close Modal FIRST
+      Navigator.pop(context);
+
+      // 3. Show Success
+      Get.snackbar(
+        'Success',
+        'Event updated successfully!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withValues(alpha: 0.1),
+        colorText: Colors.green[900],
+      );
+
+      // 4. Manually trigger health dialog if needed
+      // After saving event
+      if (shouldTriggerHealth) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        // ✅ Use centralized method instead of manual checks
+        await controller.handleHealthDialogLogic(updatedEvent);
+      }
+    } catch (e) {
+      debugPrint('❌ Error saving event: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to update event: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withValues(alpha: 0.1),
+        colorText: Colors.red[900],
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -68,7 +225,6 @@ class _EditEventModalState extends State<EditEventModal> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header with Delete Button
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -82,8 +238,11 @@ class _EditEventModalState extends State<EditEventModal> {
                     Row(
                       children: [
                         IconButton(
-                          onPressed: _confirmDelete,
-                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: _isLoading ? null : _confirmDelete,
+                          icon: Icon(
+                            Icons.delete,
+                            color: _isLoading ? Colors.grey : Colors.red,
+                          ),
                           tooltip: 'Delete Event',
                         ),
                         IconButton(
@@ -94,7 +253,6 @@ class _EditEventModalState extends State<EditEventModal> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 24),
 
                 // Title Field
@@ -112,7 +270,6 @@ class _EditEventModalState extends State<EditEventModal> {
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 16),
 
                 // Event Type Dropdown
@@ -139,13 +296,8 @@ class _EditEventModalState extends State<EditEventModal> {
                       ),
                     );
                   }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedType = value!;
-                    });
-                  },
+                  onChanged: (value) => setState(() => _selectedType = value!),
                 ),
-
                 const SizedBox(height: 16),
 
                 // Status Dropdown
@@ -172,13 +324,9 @@ class _EditEventModalState extends State<EditEventModal> {
                       ),
                     );
                   }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedStatus = value!;
-                    });
-                  },
+                  onChanged: (value) =>
+                      setState(() => _selectedStatus = value!),
                 ),
-
                 const SizedBox(height: 16),
 
                 // Date Picker
@@ -196,7 +344,6 @@ class _EditEventModalState extends State<EditEventModal> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 16),
 
                 // Time Picker
@@ -214,7 +361,6 @@ class _EditEventModalState extends State<EditEventModal> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 16),
 
                 // Location Field
@@ -226,7 +372,6 @@ class _EditEventModalState extends State<EditEventModal> {
                     prefixIcon: Icon(Icons.location_on),
                   ),
                 ),
-
                 const SizedBox(height: 16),
 
                 // Notes Field
@@ -240,7 +385,6 @@ class _EditEventModalState extends State<EditEventModal> {
                     alignLabelWithHint: true,
                   ),
                 ),
-
                 const SizedBox(height: 24),
 
                 // Save Button
@@ -289,133 +433,25 @@ class _EditEventModalState extends State<EditEventModal> {
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
     );
-
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
+    if (picked != null) setState(() => _selectedDate = picked);
   }
 
   Future<void> _pickTime() async {
     final picked = await showTimePicker(
       context: context,
       initialTime: _selectedTime,
+      builder: (BuildContext context, Widget? child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
+          child: child!,
+        );
+      },
     );
 
     if (picked != null) {
       setState(() {
         _selectedTime = picked;
       });
-    }
-  }
-
-  void _confirmDelete() {
-    Get.defaultDialog(
-      title: 'Delete Event?',
-      middleText:
-          'Are you sure you want to delete "${widget.event.title}"? This action cannot be undone.',
-      textConfirm: 'Delete',
-      textCancel: 'Cancel',
-      confirmTextColor: Colors.white,
-      buttonColor: Colors.red,
-      onConfirm: () {
-        Get.back(); // Close dialog
-        _deleteEvent();
-      },
-    );
-  }
-
-  Future<void> _deleteEvent() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final controller = Get.find<CalendarController>();
-      await controller.deleteEvent(widget.event);
-
-      Navigator.pop(context); // Close modal
-    } catch (e) {
-      debugPrint('❌ Error in modal delete: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _saveEvent() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final dateTime = DateTime(
-        _selectedDate.year,
-        _selectedDate.month,
-        _selectedDate.day,
-        _selectedTime.hour,
-        _selectedTime.minute,
-      );
-
-      final updatedEvent = widget.event.copyWith(
-        title: _titleController.text.trim(),
-        dateTime: dateTime,
-        eventType: _selectedType,
-        status: _selectedStatus,
-        location: _locationController.text.trim().isEmpty
-            ? null
-            : _locationController.text.trim(),
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
-      );
-
-      final controller = Get.find<CalendarController>();
-
-      // 🔍 LOGIC FIX: Check if we need to trigger the Health Dialog
-      // Condition: It is a Health event AND the status is NOW Completed (and wasn't before, or just always check on completion)
-      final shouldTriggerHealth =
-          _selectedType == EventType.health &&
-          _selectedStatus == EventStatus.completed &&
-          widget.event.status != EventStatus.completed;
-
-      await controller.updateEvent(
-        updatedEvent,
-        triggerHealthDialog: shouldTriggerHealth, // Pass the flag!
-      );
-
-      Navigator.pop(context);
-
-      Get.snackbar(
-        'Success',
-        'Event updated successfully!',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.1),
-        colorText: Colors.green[900],
-      );
-    } catch (e) {
-      debugPrint('❌ Error saving event: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to update event: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red[900],
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
     }
   }
 

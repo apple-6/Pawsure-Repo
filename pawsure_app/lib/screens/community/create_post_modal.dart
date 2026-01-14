@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:pawsure_app/services/api_service.dart';
+import 'package:pawsure_app/models/post_model.dart';
 
 class CreatePostModal extends StatefulWidget {
   final VoidCallback onPostCreated;
+  final PostModel? postToEdit;
 
-  const CreatePostModal({super.key, required this.onPostCreated});
+  const CreatePostModal({
+    super.key,
+    required this.onPostCreated,
+    this.postToEdit,
+  });
 
   @override
   State<CreatePostModal> createState() => _CreatePostModalState();
@@ -18,14 +23,28 @@ class _CreatePostModalState extends State<CreatePostModal> {
   final ApiService _apiService = ApiService();
 
   bool _isUrgent = false;
-  final List<XFile> _selectedMedia = [];
+  List<String> _existingMediaUrls = [];
+  final List<XFile> _newSelectedMedia = [];
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
 
-  // --- Media Selection Logic ---
+  bool get _isEditing => widget.postToEdit != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing) {
+      _captionController.text = widget.postToEdit!.content;
+      _isUrgent = widget.postToEdit!.isUrgent;
+      _existingMediaUrls = List.from(widget.postToEdit!.mediaUrls);
+    }
+  }
+
+  int get _totalMediaCount =>
+      _existingMediaUrls.length + _newSelectedMedia.length;
 
   void _uploadFromGallery() async {
-    final int maxSelection = 10 - _selectedMedia.length;
+    final int maxSelection = 10 - _totalMediaCount;
     if (maxSelection <= 0) {
       _showSnackBar('Maximum 10 media files reached!');
       return;
@@ -34,7 +53,7 @@ class _CreatePostModalState extends State<CreatePostModal> {
       final List<XFile> files = await _picker.pickMultipleMedia();
       if (!mounted || files.isEmpty) return;
       setState(() {
-        _selectedMedia.addAll(files.take(maxSelection));
+        _newSelectedMedia.addAll(files.take(maxSelection));
       });
     } catch (e) {
       _showSnackBar('Failed to pick media: $e');
@@ -42,7 +61,7 @@ class _CreatePostModalState extends State<CreatePostModal> {
   }
 
   void _useCamera() async {
-    if (_selectedMedia.length >= 10) {
+    if (_totalMediaCount >= 10) {
       _showSnackBar('Maximum 10 media files reached!');
       return;
     }
@@ -80,7 +99,7 @@ class _CreatePostModalState extends State<CreatePostModal> {
           ? await _picker.pickImage(source: source)
           : await _picker.pickVideo(source: source);
       if (file != null && mounted) {
-        setState(() => _selectedMedia.add(file));
+        setState(() => _newSelectedMedia.add(file));
       }
     } catch (e) {
       _showSnackBar('Failed to capture media: $e');
@@ -88,7 +107,13 @@ class _CreatePostModalState extends State<CreatePostModal> {
   }
 
   void _removeMedia(int index) {
-    setState(() => _selectedMedia.removeAt(index));
+    setState(() {
+      if (index < _existingMediaUrls.length) {
+        _existingMediaUrls.removeAt(index);
+      } else {
+        _newSelectedMedia.removeAt(index - _existingMediaUrls.length);
+      }
+    });
   }
 
   void _showSnackBar(String message, {Color? backgroundColor}) {
@@ -98,12 +123,10 @@ class _CreatePostModalState extends State<CreatePostModal> {
     );
   }
 
-  // --- Create Post Using ApiService ---
-
-  Future<void> _createPost() async {
+  Future<void> _handleSubmit() async {
     if (_isLoading) return;
 
-    if (_captionController.text.trim().isEmpty && _selectedMedia.isEmpty) {
+    if (_captionController.text.trim().isEmpty && _totalMediaCount == 0) {
       _showSnackBar('Please add content or media before posting.');
       return;
     }
@@ -111,26 +134,38 @@ class _CreatePostModalState extends State<CreatePostModal> {
     setState(() => _isLoading = true);
 
     try {
-      // Prepare media paths
-      final List<String> mediaPaths = _selectedMedia
+      final List<String> newMediaPaths = _newSelectedMedia
           .map((xfile) => xfile.path)
           .toList();
 
-      // Call the API service method
-      await _apiService.createPost(
-        content: _captionController.text.trim(),
-        isUrgent: _isUrgent,
-        mediaPaths: mediaPaths.isNotEmpty ? mediaPaths : null,
-      );
+      if (_isEditing) {
+        await _apiService.updatePost(
+          postId: widget.postToEdit!.id,
+          content: _captionController.text.trim(),
+          isUrgent: _isUrgent,
+          existingMediaUrls: _existingMediaUrls,
+          newMediaPaths: newMediaPaths,
+        );
+        _showSnackBar(
+          'Post updated successfully!',
+          backgroundColor: Colors.blue,
+        );
+      } else {
+        await _apiService.createPost(
+          content: _captionController.text.trim(),
+          isUrgent: _isUrgent,
+          mediaPaths: newMediaPaths.isNotEmpty ? newMediaPaths : null,
+        );
+        _showSnackBar(
+          'Post created successfully!',
+          backgroundColor: Colors.green,
+        );
+      }
 
-      _showSnackBar(
-        'Post successfully created!',
-        backgroundColor: Colors.green,
-      );
       widget.onPostCreated();
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      _showSnackBar('Error creating post: $e', backgroundColor: Colors.red);
+      _showSnackBar('Error: $e', backgroundColor: Colors.red);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -162,9 +197,12 @@ class _CreatePostModalState extends State<CreatePostModal> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Create Post',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  Text(
+                    _isEditing ? 'Edit Post' : 'Create Post',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -173,16 +211,13 @@ class _CreatePostModalState extends State<CreatePostModal> {
                 ],
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Photo or Video (Max 10)',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
+
+              // --- Media Buttons ---
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: _selectedMedia.length < 10
+                      onPressed: _totalMediaCount < 10
                           ? _uploadFromGallery
                           : null,
                       icon: const Icon(Icons.upload_file),
@@ -192,7 +227,7 @@ class _CreatePostModalState extends State<CreatePostModal> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: _selectedMedia.length < 10 ? _useCamera : null,
+                      onPressed: _totalMediaCount < 10 ? _useCamera : null,
                       icon: const Icon(Icons.camera_alt),
                       label: const Text('Camera'),
                     ),
@@ -200,17 +235,34 @@ class _CreatePostModalState extends State<CreatePostModal> {
                 ],
               ),
               const SizedBox(height: 16),
-              if (_selectedMedia.isNotEmpty)
+
+              // --- Combined Media List (Existing + New) ---
+              if (_totalMediaCount > 0)
                 SizedBox(
                   height: 100,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: _selectedMedia.length,
+                    itemCount: _totalMediaCount,
                     itemBuilder: (context, index) {
-                      final file = _selectedMedia[index];
-                      final isImage =
-                          !file.path.toLowerCase().endsWith('.mp4') &&
-                          !file.path.toLowerCase().endsWith('.mov');
+                      final bool isExisting = index < _existingMediaUrls.length;
+                      dynamic imageSource;
+                      bool isVideo = false;
+
+                      if (isExisting) {
+                        imageSource = _existingMediaUrls[index];
+                        isVideo = imageSource.toString().toLowerCase().endsWith(
+                          '.mp4',
+                        );
+                      } else {
+                        final file =
+                            _newSelectedMedia[index -
+                                _existingMediaUrls.length];
+                        imageSource = File(file.path);
+                        isVideo =
+                            file.path.toLowerCase().endsWith('.mp4') ||
+                            file.path.toLowerCase().endsWith('.mov');
+                      }
+
                       return Padding(
                         padding: const EdgeInsets.only(right: 8.0),
                         child: Stack(
@@ -222,19 +274,67 @@ class _CreatePostModalState extends State<CreatePostModal> {
                                 color: Colors.grey[200],
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: isImage
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.file(
-                                        File(file.path),
-                                        fit: BoxFit.cover,
-                                      ),
-                                    )
-                                  : const Icon(
-                                      Icons.videocam,
-                                      size: 40,
-                                      color: Colors.red,
-                                    ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: isVideo
+                                    ? const Center(
+                                        child: Icon(
+                                          Icons.videocam,
+                                          color: Colors.red,
+                                          size: 40,
+                                        ),
+                                      )
+                                    : (isExisting
+                                          // 🔧 FIX: Added Error Builder to Image.network
+                                          ? Image.network(
+                                              imageSource,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                    return const Center(
+                                                      child: Column(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .center,
+                                                        children: [
+                                                          Icon(
+                                                            Icons.broken_image,
+                                                            color: Colors.grey,
+                                                          ),
+                                                          SizedBox(height: 4),
+                                                          Text(
+                                                            'Error',
+                                                            style: TextStyle(
+                                                              fontSize: 10,
+                                                              color:
+                                                                  Colors.grey,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                  },
+                                              loadingBuilder:
+                                                  (
+                                                    context,
+                                                    child,
+                                                    loadingProgress,
+                                                  ) {
+                                                    if (loadingProgress == null)
+                                                      return child;
+                                                    return const Center(
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                            strokeWidth: 2,
+                                                          ),
+                                                    );
+                                                  },
+                                            )
+                                          : Image.file(
+                                              imageSource,
+                                              fit: BoxFit.cover,
+                                            )),
+                              ),
                             ),
                             Positioned(
                               top: 2,
@@ -258,7 +358,9 @@ class _CreatePostModalState extends State<CreatePostModal> {
                     },
                   ),
                 ),
+
               const SizedBox(height: 16),
+
               const Text(
                 'Caption',
                 style: TextStyle(fontWeight: FontWeight.bold),
@@ -272,7 +374,10 @@ class _CreatePostModalState extends State<CreatePostModal> {
                   border: OutlineInputBorder(),
                 ),
               ),
+
               const SizedBox(height: 24),
+
+              // --- Urgent Switch ---
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -311,13 +416,16 @@ class _CreatePostModalState extends State<CreatePostModal> {
                   ],
                 ),
               ),
+
               const SizedBox(height: 24),
+
+              // --- Action Button ---
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _createPost,
+                  onPressed: _isLoading ? null : _handleSubmit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: _isEditing ? Colors.blue : Colors.green,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -330,7 +438,10 @@ class _CreatePostModalState extends State<CreatePostModal> {
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text('Post', style: TextStyle(fontSize: 18)),
+                      : Text(
+                          _isEditing ? 'Update Post' : 'Post',
+                          style: const TextStyle(fontSize: 18),
+                        ),
                 ),
               ),
             ],

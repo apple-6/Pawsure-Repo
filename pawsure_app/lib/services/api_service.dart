@@ -1,16 +1,19 @@
 // Pawsure-Repo\pawsure_app\lib\services\api_service.dart
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart'; // Added for MediaType
 import 'package:flutter/foundation.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/models/health_record_model.dart';
 import 'package:pawsure_app/models/event_model.dart';
-import 'package:pawsure_app/models/sitter_model.dart'; // Ensure you have this model or UserProfile
+import 'package:pawsure_app/models/sitter_model.dart';
 import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/constants/api_config.dart';
 import 'package:pawsure_app/models/comment_model.dart';
+import 'dart:io';
+import 'package:mime/mime.dart';
 
 String get apiBaseUrl => ApiConfig.baseUrl;
 
@@ -29,6 +32,7 @@ class ApiService {
     final headers = {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
+      'ngrok-skip-browser-warning': 'true',
     };
 
     try {
@@ -36,7 +40,7 @@ class ApiService {
 
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
-        debugPrint('🔑 Using auth token: ${token.substring(0, 20)}...');
+        // debugPrint('🔑 Using auth token: ${token.substring(0, 20)}...');
       } else {
         debugPrint('⚠️ No auth token found - API calls may fail');
       }
@@ -63,7 +67,6 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList =
@@ -110,8 +113,10 @@ class ApiService {
       // Remove Content-Type for multipart - it will be set automatically
       headers.remove('Content-Type');
 
-      final request =
-          http.MultipartRequest('POST', Uri.parse('$apiBaseUrl/pets'));
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$apiBaseUrl/pets'),
+      );
 
       // Add headers (including auth token)
       request.headers.addAll(headers);
@@ -165,7 +170,6 @@ class ApiService {
       final response = await http.Response.fromStream(streamedResponse);
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final Map<String, dynamic> json =
@@ -264,6 +268,17 @@ class ApiService {
         request.fields['last_vet_visit'] = lastVetVisit;
       }
 
+      if (sterilizationStatus != null && sterilizationStatus.isNotEmpty) {
+        request.fields['sterilization_status'] = sterilizationStatus;
+        debugPrint(
+          '✅ Added sterilization_status to request: $sterilizationStatus',
+        );
+      } else {
+        debugPrint(
+          '⚠️ sterilizationStatus is null or empty: $sterilizationStatus',
+        );
+      }
+
       // Add new photo if provided
       if (photoPath != null && photoPath.isNotEmpty) {
         try {
@@ -287,7 +302,6 @@ class ApiService {
       final response = await http.Response.fromStream(streamedResponse);
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json =
@@ -356,7 +370,6 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList =
@@ -398,7 +411,6 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final Map<String, dynamic> json =
@@ -438,7 +450,6 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json =
@@ -492,6 +503,58 @@ class ApiService {
   // EVENTS API
   // ========================================================================
 
+  // ✅ NEW: Fetch ALL owner events (multi-pet)
+  Future<List<EventModel>> getAllOwnerEvents() async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/events/owner/all');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/events/owner/all'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        return jsonList.map((e) => EventModel.fromJson(e)).toList();
+      } else {
+        throw Exception('Failed to load owner events: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error in getAllOwnerEvents: $e');
+      return [];
+    }
+  }
+
+  // ✅ NEW: Fetch upcoming events for dashboard (owner view)
+  Future<List<EventModel>> getAllOwnerUpcomingEvents({int limit = 3}) async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/events/owner/upcoming?limit=$limit');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/events/owner/upcoming?limit=$limit'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        return jsonList.map((e) => EventModel.fromJson(e)).toList();
+      } else {
+        throw Exception('Failed to load upcoming events: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error in getAllOwnerUpcomingEvents: $e');
+      return [];
+    }
+  }
+
   /// GET /events?petId=X - Fetch all events for a specific pet
   Future<List<EventModel>> getEvents(int petId) async {
     try {
@@ -504,7 +567,6 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList =
@@ -543,7 +605,6 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList =
@@ -569,6 +630,7 @@ class ApiService {
   }
 
   /// POST /events - Create a new event
+  // ✅ UPDATED: Handles both single object and List response (multi-pet)
   Future<EventModel> createEvent(Map<String, dynamic> payload) async {
     try {
       debugPrint('➕ API: POST $apiBaseUrl/events');
@@ -582,15 +644,22 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        final Map<String, dynamic> json =
-            jsonDecode(response.body) as Map<String, dynamic>;
-        final event = EventModel.fromJson(json);
+        final dynamic data = jsonDecode(response.body);
 
-        debugPrint('✅ Event created successfully');
-        return event;
+        // ✅ Handle array response if multiple pets were selected
+        if (data is List) {
+          if (data.isNotEmpty) {
+            // Return the first event created (sufficient for UI feedback)
+            return EventModel.fromJson(data.first as Map<String, dynamic>);
+          } else {
+            throw Exception('Created event list was empty');
+          }
+        } else {
+          // Handle single object response
+          return EventModel.fromJson(data as Map<String, dynamic>);
+        }
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please log in again.');
       }
@@ -623,7 +692,6 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json =
@@ -687,7 +755,6 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList =
@@ -723,7 +790,6 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList =
@@ -764,7 +830,6 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json =
@@ -796,7 +861,6 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json =
@@ -829,7 +893,6 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> json =
@@ -900,7 +963,6 @@ class ApiService {
       );
 
       debugPrint('📦 API Response: ${response.statusCode}');
-      debugPrint('📦 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> posts = jsonDecode(response.body) as List<dynamic>;
@@ -1021,6 +1083,71 @@ class ApiService {
     }
   }
 
+  Future<void> updatePost({
+    required String postId,
+    required String content,
+    required bool isUrgent,
+    required List<String> existingMediaUrls,
+    required List<String> newMediaPaths,
+  }) async {
+    // 1. Get Token safely
+    final authService = Get.find<AuthService>();
+    String? token = await authService.getToken();
+
+    // Debugging: Print exactly what we have
+    print("DEBUG: Raw Token: '$token'");
+
+    if (token == null || token.isEmpty || token == "null") {
+      throw Exception("User is not logged in (Token is null)");
+    }
+
+    // 2. Clean the token (Remove extra quotes if they exist)
+    token = token.replaceAll('"', '').trim();
+
+    // 3. Handle Base URL for Android vs iOS/Web
+    String baseUrl = kIsWeb ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+
+    final uri = Uri.parse('$baseUrl/posts/$postId');
+
+    var request = http.MultipartRequest('PUT', uri);
+
+    // 4. Set Headers CAREFULLY
+    request.headers.addAll({
+      'Authorization': 'Bearer $token', // Ensure only ONE "Bearer "
+      'Content-Type': 'multipart/form-data',
+    });
+
+    request.fields['content'] = content;
+    request.fields['isUrgent'] = isUrgent.toString();
+    request.fields['existingMedia'] = jsonEncode(existingMediaUrls);
+
+    // Add files
+    for (var path in newMediaPaths) {
+      if (path.isNotEmpty) {
+        var file = await http.MultipartFile.fromPath('media', path);
+        request.files.add(file);
+      }
+    }
+
+    print("DEBUG: Sending Update Request to $uri");
+
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('✅ Post updated successfully');
+      } else {
+        print('❌ Failed to update. Status: ${response.statusCode}');
+        print('❌ Body: ${response.body}');
+        throw Exception('Failed to update post: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error updating post: $e');
+      rethrow;
+    }
+  }
+
   // ========================================================================
   // CHAT API
   // ========================================================================
@@ -1050,19 +1177,100 @@ class ApiService {
   // SITTER PROFILE API
   // ========================================================================
 
+  /// GET /sitters/:sitterId - Fetch specific sitter details (including stats)
+  Future<Map<String, dynamic>?> getSitterDetails(int sitterId) async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/sitters/$sitterId');
+
+      final headers = await _getHeaders();
+
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/sitters/$sitterId'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        debugPrint('⚠️ Failed to load sitter stats: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching sitter stats: $e');
+      return null;
+    }
+  }
+
   /// PATCH /sitters/user/:userId - Update sitter profile by USER ID
   Future<UserProfile> updateSitterProfile(
-      int userId, Map<String, dynamic> payload) async {
+    int userId,
+    Map<String, dynamic> payload,
+    File? imageFile,
+  ) async {
     try {
       // ✅ Calls the new endpoint: /sitters/user/23
       debugPrint('🔄 API: PATCH $apiBaseUrl/sitters/user/$userId');
 
       final headers = await _getHeaders();
-      final response = await http.patch(
+
+      http.Response response;
+
+      if (imageFile != null) {
+        // --- 📸 SCENARIO A: Uploading Image (Multipart) ---
+        debugPrint('📤 Uploading profile with image...');
+
+        // Remove Content-Type so boundary is set automatically
+        headers.remove('Content-Type');
+
+        final request = http.MultipartRequest(
+          'PATCH',
+          Uri.parse('$apiBaseUrl/sitters/user/$userId'),
+        );
+
+        request.headers.addAll(headers);
+
+        // 1. Add Text Fields
+        // We iterate through the payload. If a value is a List (like services),
+        // we must encode it to a JSON string because Multipart fields can only be strings.
+        payload.forEach((key, value) {
+          if (value is String) {
+            request.fields[key] = value;
+          } else {
+            request.fields[key] = jsonEncode(value);
+          }
+        });
+
+        // 2. Add File
+        final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'profile_picture', // ⚠️ Must match backend @UploadedFile('profile_picture')
+            imageFile.path,
+            filename: fileName,
+            contentType: MediaType('image', 'jpeg'),
+          ),
+        );
+
+        final streamedResponse = await request.send();
+        response = await http.Response.fromStream(streamedResponse);
+      } else {
+        // --- 📝 SCENARIO B: Text Only (JSON) ---
+        debugPrint('📤 Updating text only...');
+
+        response = await http.patch(
+          Uri.parse('$apiBaseUrl/sitters/user/$userId'),
+          headers: headers,
+          body: jsonEncode(payload),
+        );
+      }
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      /*final response = await http.patch(
         Uri.parse('$apiBaseUrl/sitters/user/$userId'),
         headers: headers,
         body: jsonEncode(payload),
-      );
+      );*/
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json = jsonDecode(response.body);
@@ -1095,7 +1303,8 @@ class ApiService {
       debugPrint('📦 API Response: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
         return jsonList.cast<Map<String, dynamic>>();
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed. Please log in again.');
@@ -1220,8 +1429,6 @@ class ApiService {
     }
   }
 
-  // ... inside ApiService class ...
-
   // ========================================================================
   // LIKES API
   // ========================================================================
@@ -1240,7 +1447,9 @@ class ApiService {
       debugPrint('📦 API Response: ${response.statusCode}');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        return jsonDecode(response.body); // Returns { isLiked: bool, likesCount: int }
+        return jsonDecode(
+          response.body,
+        ); // Returns { isLiked: bool, likesCount: int }
       } else if (response.statusCode == 401) {
         throw Exception('Authentication failed');
       }
@@ -1252,9 +1461,12 @@ class ApiService {
     }
   }
 
- Map<String, dynamic> _flattenCommentData(Map<String, dynamic> json, String postId) {
+  Map<String, dynamic> _flattenCommentData(
+    Map<String, dynamic> json,
+    String postId,
+  ) {
     final user = json['user'] ?? {};
-    
+
     // Check if 'post' is an object or just an ID
     String responsePostId = postId;
     if (json['post'] != null && json['post'] is Map) {
@@ -1268,8 +1480,14 @@ class ApiService {
       'userName': user['name'] ?? 'Unknown',
       'content': json['content'] ?? '',
       'likesCount': json['likesCount'] ?? 0,
-      'createdAt': json['created_at'] ?? json['createdAt'] ?? DateTime.now().toIso8601String(), 
-      'updatedAt': json['updated_at'] ?? json['updatedAt'] ?? DateTime.now().toIso8601String(),
+      'createdAt':
+          json['created_at'] ??
+          json['createdAt'] ??
+          DateTime.now().toIso8601String(),
+      'updatedAt':
+          json['updated_at'] ??
+          json['updatedAt'] ??
+          DateTime.now().toIso8601String(),
     };
   }
 
@@ -1277,19 +1495,19 @@ class ApiService {
     try {
       final headers = await _getHeaders();
       // 🆕 UPDATED: Added print to verify the exact URL being called
-      debugPrint('🔍 API: GET $apiBaseUrl/comments/post/$postId'); 
-      
+      debugPrint('🔍 API: GET $apiBaseUrl/comments/post/$postId');
+
       final response = await http.get(
         Uri.parse('$apiBaseUrl/comments/post/$postId'),
         headers: headers,
       );
 
       // 🆕 UPDATED: Print status code and body to debug the error
-      debugPrint('📦 API Response Code: ${response.statusCode}'); 
-      
+      debugPrint('📦 API Response Code: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        
+
         return data.map((json) {
           final flatData = _flattenCommentData(json, postId);
           return CommentModel.fromJson(flatData);
@@ -1309,7 +1527,9 @@ class ApiService {
     try {
       final headers = await _getHeaders();
       // 🆕 UPDATED: Log the payload being sent
-      debugPrint('➕ API: POST $apiBaseUrl/comments/post/$postId with content: $content');
+      debugPrint(
+        '➕ API: POST $apiBaseUrl/comments/post/$postId with content: $content',
+      );
 
       final response = await http.post(
         Uri.parse('$apiBaseUrl/comments/post/$postId'),
@@ -1411,7 +1631,10 @@ class ApiService {
   }
 
   /// GET /pets/:petId/mood/history?days=30 - Get mood history
-  Future<List<Map<String, dynamic>>> getMoodHistory(int petId, {int days = 30}) async {
+  Future<List<Map<String, dynamic>>> getMoodHistory(
+    int petId, {
+    int days = 30,
+  }) async {
     try {
       debugPrint('📊 API: GET $apiBaseUrl/pets/$petId/mood/history?days=$days');
 
@@ -1471,5 +1694,261 @@ class ApiService {
       };
     }
   }
-}
 
+  // ========================================================================
+  // MEAL LOGS API
+  // ========================================================================
+
+  /// POST /pets/:petId/meals - Log a meal for the pet
+  Future<Map<String, dynamic>> logMeal({
+    required int petId,
+    required String mealType,
+  }) async {
+    try {
+      debugPrint('🍲 API: POST $apiBaseUrl/pets/$petId/meals');
+
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/pets/$petId/meals'),
+        headers: headers,
+        body: jsonEncode({'meal_type': mealType}),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please log in again.');
+      }
+
+      throw Exception(
+        'Failed to log meal (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      debugPrint('❌ Error in logMeal: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /pets/:petId/meals/today - Get today's meals
+  Future<List<String>> getTodayMeals(int petId) async {
+    try {
+      debugPrint('📅 API: GET $apiBaseUrl/pets/$petId/meals/today');
+
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/pets/$petId/meals/today'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((e) => e['meal_type'] as String).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('❌ Error in getTodayMeals: $e');
+      return [];
+    }
+  }
+
+  Future<void> createReview({
+    required int bookingId,
+    required double rating,
+    required String comment,
+  }) async {
+    try {
+      debugPrint('⭐ API: POST $apiBaseUrl/reviews');
+
+      final headers = await _getHeaders(); // Uses your existing helper
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/reviews'),
+        headers: headers,
+        body: jsonEncode({
+          'bookingId': bookingId,
+          'rating': rating,
+          'comment': comment,
+        }),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        throw Exception('Failed to submit review: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error submitting review: $e');
+      rethrow;
+    }
+  }
+
+  // ========================================================================
+  // SITTER PROFILE API (Current User)
+  // ========================================================================
+
+  /// GET /sitters/my-profile - Fetch the logged-in user's sitter profile
+  /// This replaces the crashing '/sitters/me' call
+  // inside lib/services/api_service.dart
+
+  Future<UserProfile?> getMySitterProfile() async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/sitters/my-profile');
+      final headers = await _getHeaders();
+
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/sitters/my-profile'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        // ✅ FIX STARTS HERE: Check if body is empty first
+        if (response.body.isEmpty) {
+          debugPrint('⚠️ Sitter profile body is empty, returning null');
+          return null;
+        }
+        // ✅ FIX ENDS
+
+        final data = jsonDecode(response.body);
+        return UserProfile.fromJson(data);
+      } else if (response.statusCode == 404) {
+        return null;
+      } else {
+        throw Exception('Failed to load profile: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error in getMySitterProfile: $e');
+      return null;
+    }
+  }
+
+  // ========================================================================
+  // SITTER CHECK & REGISTRATION API (Added for Switch Mode)
+  // ========================================================================
+
+  /// GET /sitters/user/:userId - Check if sitter profile exists
+  /// Returns UserProfile if found (Scenario A), returns null if 404 (Scenario B).
+  // Inside lib/services/api_service.dart
+
+  /// GET /sitters/user/:userId - Check if sitter profile exists
+  Future<UserProfile?> getSitterByUserId(int userId) async {
+    try {
+      debugPrint('🔍 API: GET $apiBaseUrl/sitters/user/$userId');
+      final headers = await _getHeaders();
+
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/sitters/user/$userId'),
+        headers: headers,
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+      // debugPrint('📄 Body: ${response.body}'); // Uncomment to see exactly what backend sends
+
+      if (response.statusCode == 200) {
+        // 1. Handle Empty Body (Unlikely based on logs, but good safety)
+        if (response.body.isEmpty) return null;
+
+        final dynamic data = jsonDecode(response.body);
+
+        // 2. Handle "Returning empty list" case from your backend logs
+        if (data is List) {
+          if (data.isEmpty) return null; // It was [], so no profile found
+          // If it's a list but not empty, maybe take the first one?
+          return UserProfile.fromJson(data.first);
+        }
+
+        // 3. Handle Standard Object case
+        return UserProfile.fromJson(data);
+      } else if (response.statusCode == 404) {
+        return null;
+      } else {
+        debugPrint(
+          '⚠️ Unexpected status checking sitter: ${response.statusCode}',
+        );
+        return null;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error checking sitter status: $e');
+      return null;
+    }
+  }
+
+  /// POST /sitters - Create a new sitter profile
+  Future<void> createSitterProfile(Map<String, dynamic> payload) async {
+    try {
+      debugPrint('➕ API: POST $apiBaseUrl/sitters');
+      debugPrint('📤 Payload: ${jsonEncode(payload)}');
+
+      final headers = await _getHeaders();
+
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/sitters'),
+        headers: headers,
+        body: jsonEncode(payload),
+      );
+
+      debugPrint('📦 API Response: ${response.statusCode}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        debugPrint('✅ Sitter profile created successfully');
+      } else {
+        throw Exception('Failed to register as sitter: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error in createSitterProfile: $e');
+      rethrow;
+    }
+  }
+
+  Future<dynamic> updateProfileMultipart(
+    Map<String, String> fields,
+    File? imageFile,
+  ) async {
+    final token = _authService.token; // Get token from your AuthService
+    final uri = Uri.parse('$apiBaseUrl/user/update');
+
+    var request = http.MultipartRequest('PUT', uri);
+
+    // 1. Add Headers
+    request.headers.addAll({
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'multipart/form-data',
+    });
+
+    // 2. Add Text Fields
+    fields.forEach((key, value) {
+      request.fields[key] = value;
+    });
+
+    // 3. Add Image File (if provided)
+    if (imageFile != null) {
+      final mimeTypeData = lookupMimeType(imageFile.path)!.split('/');
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'avatar', // This name must match the NestJS FileInterceptor('avatar')
+          imageFile.path,
+          contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
+        ),
+      );
+    }
+
+    // 4. Send Request
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to update profile: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Error updating profile: $e');
+    }
+  }
+}

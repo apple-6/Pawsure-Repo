@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:pawsure_app/screens/auth/login_screen.dart';
+import 'package:pawsure_app/screens/community/community_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pawsure_app/main_navigation.dart';
+import 'package:pawsure_app/services/api_service.dart';
+import 'package:pawsure_app/controllers/sitter_controller.dart';
+import 'package:pawsure_app/screens/profile/help_support_screen.dart';
+import 'package:pawsure_app/screens/profile/about_screen.dart';
+import 'package:pawsure_app/screens/sitter_setup/sitter_wallet_screen.dart';
 import 'package:pawsure_app/constants/api_config.dart';
-import 'package:pawsure_app/services/storage_service.dart';
-import 'package:pawsure_app/controllers/health_controller.dart';
-import 'package:pawsure_app/controllers/home_controller.dart';
-import 'package:pawsure_app/controllers/profile_controller.dart';
 
 // Navigation Imports
 import 'sitter_calendar.dart';
@@ -18,7 +19,7 @@ import 'sitter_preview_page.dart';
 import 'sitter_edit_profile.dart';
 import 'sitter_performance_page.dart';
 import '../../models/sitter_model.dart';
-import '../../services/api_service.dart';
+import 'sitter_registration_screen.dart';
 
 class SitterSettingScreen extends StatefulWidget {
   const SitterSettingScreen({super.key});
@@ -32,6 +33,9 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
   bool isLoading = true;
   String? errorMessage;
 
+  double rating = 0.0;
+  int reviewCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -40,29 +44,25 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
 
   Future<void> _fetchUserData() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final int? userId = prefs.getInt('userId');
+      final apiService = Get.find<ApiService>();
 
-      if (userId == null) {
-        Get.offAll(() => LoginScreen());
-        throw Exception("User not logged in");
-      }
+      // 1. Get the profile
+      final profile = await apiService.getMySitterProfile();
 
-      final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/sitters/user/$userId'),
-        headers: {'Content-Type': 'application/json'},
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+      if (profile != null) {
         if (mounted) {
           setState(() {
-            currentUser = UserProfile.fromJson(data);
+            currentUser = profile;
             isLoading = false;
+            rating = profile.rating;
+            reviewCount = profile.reviewCount;
           });
         }
       } else {
-        throw Exception('Failed to load: ${response.statusCode}');
+        // User not found (404)
+        if (mounted) {
+          Get.off(() => const SitterRegistrationScreen());
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -71,6 +71,27 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
           errorMessage = "Error: $e";
         });
       }
+    }
+  }
+
+  // Helper to fetch stats specifically
+  Future<void> _fetchSitterStats(ApiService apiService, int sitterId) async {
+    try {
+      final data = await apiService.getSitterDetails(sitterId);
+
+      if (data != null && mounted) {
+        setState(() {
+          rating = (data['rating'] ?? data['avgRating'] ?? 0).toDouble();
+
+          reviewCount =
+              data['reviewCount'] ??
+              data['reviews_count'] ??
+              data['review_count'] ??
+              0;
+        });
+      }
+    } catch (e) {
+      print("Error loading stats: $e");
     }
   }
 
@@ -96,47 +117,36 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
 
     if (shouldLogout == true) {
       try {
-        // Show loading indicator
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          builder: (context) =>
+              const Center(child: CircularProgressIndicator()),
         );
 
-        // Clear SharedPreferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.clear();
 
-        // Clear user data state
         if (mounted) {
           setState(() {
             currentUser = null;
           });
         }
 
-        // Close loading dialog
         if (context.mounted) {
           Navigator.of(context).pop();
         }
 
-        // Navigate to login and remove all previous routes
-        // Use Navigator instead of Get to avoid controller issues
         if (context.mounted) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => LoginScreen()),
             (route) => false,
           );
         }
-
       } catch (e) {
-        // Close loading dialog if it's showing
         if (context.mounted) {
           Navigator.of(context).pop();
         }
-
-        // Show error message
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -149,6 +159,27 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
     }
   }
 
+  Future<void> _checkAndSwitchToOwner() async {
+    try {
+      setState(() => isLoading = true);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_role', 'owner');
+
+      Get.offAll(() => const MainNavigation());
+
+      Get.snackbar(
+        "Switched to Owner Mode",
+        "You can now book other sitters!",
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green[800],
+      );
+    } catch (e) {
+      Get.snackbar("Error", "Failed to switch mode: $e");
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -161,16 +192,24 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
       );
     }
 
-    if (errorMessage != null && currentUser == null) {
+    if (currentUser == null) {
       return Scaffold(
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(errorMessage!, textAlign: TextAlign.center),
+              Text(
+                errorMessage ?? "Failed to load profile data.",
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey),
+              ),
               const SizedBox(height: 10),
               ElevatedButton(
                 onPressed: _fetchUserData,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: brandColor,
+                  foregroundColor: Colors.white,
+                ),
                 child: const Text("Retry"),
               ),
             ],
@@ -178,6 +217,29 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
         ),
       );
     }
+
+    // --- 🔧 FIX: URL SANITIZER FOR REAL DEVICES ---
+    String? avatarPath = currentUser?.profilePicture;
+    String? fullAvatarUrl;
+
+    if (avatarPath != null && avatarPath.isNotEmpty) {
+      if (avatarPath.startsWith('http')) {
+        // If the DB has 'localhost', we MUST replace it with the real IP/Ngrok URL
+        if (avatarPath.contains('localhost')) {
+          fullAvatarUrl = avatarPath.replaceAll(
+            'http://localhost:3000',
+            ApiConfig.baseUrl,
+          );
+        } else {
+          fullAvatarUrl = avatarPath;
+        }
+      } else {
+        // Handle relative paths
+        fullAvatarUrl = '${ApiConfig.baseUrl}/$avatarPath';
+      }
+    }
+    final bool hasAvatar = fullAvatarUrl != null;
+    // --- END FIX ---
 
     return Scaffold(
       backgroundColor: scaffoldBg,
@@ -188,6 +250,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
         currentIndex: 4,
         onTap: (index) {
           if (index == 0) Get.to(() => const SitterDashboard());
+          if (index == 1) Get.to(() => const CommunityScreen());
           if (index == 2) Get.to(() => const SitterCalendar());
           if (index == 3) Get.to(() => const SitterInbox());
         },
@@ -196,10 +259,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
             icon: Icon(Icons.home_filled),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            label: 'Discover',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Community'),
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today_outlined),
             label: 'Calendar',
@@ -215,21 +275,15 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
         ],
       ),
 
-      // ✅ FIXED LAYOUT: Everything is inside SingleChildScrollView
       body: SingleChildScrollView(
         child: Stack(
           children: [
-            // --- 1. THE GREEN BACKGROUND (Scrolls with page) ---
-            Container(
-              height: 260, // Height of the green banner
-              width: double.infinity,
-              color: brandColor,
-            ),
+            // Green Background
+            Container(height: 260, width: double.infinity, color: brandColor),
 
-            // --- 2. THE CONTENT (Scrolls with page) ---
+            // Content
             Column(
               children: [
-                // Header Title (Inside Column, so it scrolls)
                 Padding(
                   padding: const EdgeInsets.only(top: 60, left: 20, right: 20),
                   child: Row(
@@ -256,7 +310,6 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
 
                 const SizedBox(height: 20),
 
-                // Main Content (Card + Menus)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
@@ -292,11 +345,17 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                                   child: CircleAvatar(
                                     radius: 30,
                                     backgroundColor: const Color(0xFFE8F5E9),
-                                    child: const Icon(
-                                      Icons.person,
-                                      color: brandColor,
-                                      size: 35,
-                                    ),
+                                    // 3. UPDATED: Use the sanitized URL
+                                    backgroundImage: hasAvatar
+                                        ? NetworkImage(fullAvatarUrl!)
+                                        : null,
+                                    child: !hasAvatar
+                                        ? const Icon(
+                                            Icons.person,
+                                            color: brandColor,
+                                            size: 35,
+                                          )
+                                        : null,
                                   ),
                                 ),
                                 const SizedBox(width: 15),
@@ -306,7 +365,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        currentUser!.name,
+                                        currentUser?.name ?? "Sitter",
                                         style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
@@ -360,30 +419,43 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                               child: Divider(height: 1),
                             ),
                             // Stats Row
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _buildStatColumn(
-                                  icon: Icons.account_balance_wallet,
-                                  value: "RM 120",
-                                  label: "Wallet",
-                                  color: Colors.green,
-                                ),
-                                _buildVerticalDivider(),
-                                _buildStatColumn(
-                                  icon: Icons.star_rounded,
-                                  value: "4.9",
-                                  label: "Rating",
-                                  color: Colors.amber,
-                                ),
-                                _buildVerticalDivider(),
-                                _buildStatColumn(
-                                  icon: Icons.people_alt,
-                                  value: "32",
-                                  label: "Reviews",
-                                  color: Colors.blueAccent,
-                                ),
-                              ],
+                            GetBuilder<SitterController>(
+                              init: Get.isRegistered<SitterController>()
+                                  ? Get.find<SitterController>()
+                                  : SitterController(),
+                              builder: (controller) {
+                                return Obx(
+                                  () => Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceAround,
+                                    children: [
+                                      _buildStatColumn(
+                                        icon: Icons.account_balance_wallet,
+                                        value:
+                                            "RM ${controller.earnings.value.toStringAsFixed(0)}",
+                                        label: "Wallet",
+                                        color: Colors.green,
+                                      ),
+                                      _buildVerticalDivider(),
+                                      _buildStatColumn(
+                                        icon: Icons.star_rounded,
+                                        value: controller.avgRating.value
+                                            .toStringAsFixed(1),
+                                        label: "Rating",
+                                        color: Colors.amber,
+                                      ),
+                                      _buildVerticalDivider(),
+                                      _buildStatColumn(
+                                        icon: Icons.people_alt,
+                                        value:
+                                            "${controller.sitterProfile['reviewCount'] ?? 0}",
+                                        label: "Reviews",
+                                        color: Colors.blueAccent,
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -409,7 +481,8 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                           iconColor: Colors.blue,
                           title: "My Performance",
                           subtitle: "View booking history & stats",
-                          onTap: () => Get.to(() => const SitterPerformancePage()),
+                          onTap: () =>
+                              Get.to(() => const SitterPerformancePage()),
                         ),
                         _buildDivider(),
                         _buildMenuItem(
@@ -417,7 +490,9 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                           iconColor: Colors.green,
                           title: "Earnings & Wallet",
                           subtitle: "View transaction history",
-                          onTap: () {},
+                          onTap: () {
+                            Get.to(() => SitterWalletScreen());
+                          },
                         ),
                       ]),
 
@@ -430,7 +505,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                           iconColor: Colors.orange,
                           title: "Switch to Owner Mode",
                           subtitle: "Book sitters for your own pets",
-                          onTap: () {},
+                          onTap: _checkAndSwitchToOwner,
                         ),
                         _buildDivider(),
                         _buildMenuItem(
@@ -451,7 +526,9 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                           iconColor: Colors.indigo,
                           title: "Help & Support",
                           subtitle: "FAQ and Customer Service",
-                          onTap: () {},
+                          onTap: () {
+                            Get.to(() => HelpSupportScreen());
+                          },
                         ),
                         _buildDivider(),
                         _buildMenuItem(
@@ -459,13 +536,14 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                           iconColor: Colors.grey,
                           title: "About Pawsure",
                           subtitle: "Version 1.0.0",
-                          onTap: () {},
+                          onTap: () {
+                            Get.to(() => AboutScreen());
+                          },
                         ),
                       ]),
 
                       const SizedBox(height: 30),
 
-                      // --- LOGOUT BUTTON ---
                       SizedBox(
                         width: double.infinity,
                         height: 55,
@@ -505,7 +583,6 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
     );
   }
 
-  // --- WIDGET BUILDERS (Same as before) ---
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12, left: 4),

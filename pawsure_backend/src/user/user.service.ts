@@ -67,4 +67,20 @@ export class UserService {
     user.role = newRole;
     return this.usersRepository.save(user);
   }
+
+  /**
+   * Updates a user's profile information.
+   * Handles partial updates (e.g. just updating bio, or just avatar).
+   */
+  async update(id: number, attrs: Partial<User>) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    
+    // Merge the new attributes into the existing user entity
+    Object.assign(user, attrs);
+    
+    return this.usersRepository.save(user);
+  }
 }

@@ -68,7 +68,10 @@ class AuthService {
       resp = await http
           .post(
             uri,
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true', // ✅ ADDED HERE
+            },
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 10));
@@ -97,7 +100,7 @@ class AuthService {
         final userId = data['user']['id'];
         if (userId is int) {
           await prefs.setInt('userId', userId);
-          print("✅ Saved User ID from Login: $userId");
+          debugPrint("✅ Saved User ID from Login: $userId");
         }
       }
 
@@ -107,7 +110,7 @@ class AuthService {
         if (profile != null) {
           if (profile.containsKey('id') && profile['id'] is int) {
             await prefs.setInt('userId', profile['id']);
-            print("✅ Saved User ID from Profile: ${profile['id']}");
+            debugPrint("✅ Saved User ID from Profile: ${profile['id']}");
           }
 
           if (profile.containsKey('role')) {
@@ -120,7 +123,6 @@ class AuthService {
       }
 
       // 🟢 THE FIX: Force Global Refresh of All Controllers
-      // This ensures "John's" stale data is replaced by "Test's" new data immediately.
       await _refreshAllControllers();
 
       return token;
@@ -134,7 +136,7 @@ class AuthService {
     }
   }
 
-  /// 🟢 NEW HELPER: Refreshes data for the new user
+  /// 🟢 UPDATED: Refreshes data for the new user
   Future<void> _refreshAllControllers() async {
     debugPrint(
       '🔄 REFRESH PROTOCOL: Reloading all controllers for new user...',
@@ -155,16 +157,13 @@ class AuthService {
       Get.find<BookingController>().fetchMyBookings();
     }
 
-    // 4. Reset/Reload Calendar
+    // 4. ✅ FIXED: Reset/Reload Calendar with new method
     if (Get.isRegistered<CalendarController>()) {
-      Get.find<CalendarController>().resetState();
-      // If a pet is selected after loadPets above, we might want to trigger loadEvents
-      final petController = Get.find<PetController>();
-      if (petController.selectedPet.value != null) {
-        Get.find<CalendarController>().loadEvents(
-          petController.selectedPet.value!.id,
-        );
-      }
+      final calendarController = Get.find<CalendarController>();
+      calendarController.resetState();
+      // ✅ Use new loadAllOwnerEvents() instead of loadEvents(petId)
+      calendarController.loadAllOwnerEvents();
+      calendarController.loadAllUpcomingEvents();
     }
 
     // 5. Refresh Home Data
@@ -187,7 +186,6 @@ class AuthService {
     debugPrint('✅ Logout complete - cleared userId');
 
     // 🟢 THE FIX: Reset All Controllers
-    // This wipes "John's" data from memory so it doesn't persist.
     _resetAllControllers();
   }
 
@@ -202,8 +200,6 @@ class AuthService {
       Get.find<PetController>().resetState();
     }
     if (Get.isRegistered<BookingController>()) {
-      // BookingController didn't have a resetState method in your snippet,
-      // so we manually clear the list.
       Get.find<BookingController>().userBookings.clear();
     }
     if (Get.isRegistered<HomeController>()) {
@@ -253,7 +249,13 @@ class AuthService {
 
     try {
       final resp = await http
-          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .get(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'ngrok-skip-browser-warning': 'true', // ✅ ADDED HERE
+            },
+          )
           .timeout(const Duration(seconds: 10));
 
       debugPrint('📦 Profile Response: ${resp.statusCode}');
@@ -322,7 +324,10 @@ class AuthService {
       resp = await http
           .post(
             uri,
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true', // ✅ ADDED HERE
+            },
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 10));
@@ -339,11 +344,13 @@ class AuthService {
         final Map<String, dynamic> data = jsonDecode(resp.body);
         final token = data['access_token'] as String?;
         if (token != null) {
+          // Update in-memory token immediately (was missing)
+          _token = token;
           await _storage.write(key: 'jwt', value: token);
           await _storage.write(key: 'user_role', value: role);
           debugPrint('✅ Registration successful, token stored');
 
-          // 🟢 Refresh controllers after registration (auto-login scenario)
+          // 🟢 Refresh controllers after registration
           await _refreshAllControllers();
 
           return token;
@@ -362,7 +369,6 @@ class AuthService {
 
   /// Submits the 4-step sitter setup form
   Future<void> submitSitterSetup(Map<String, dynamic> setupData) async {
-    // 1. Get the stored token
     final token = await getToken();
     if (token == null) {
       throw Exception('Not authenticated. Please log in.');
@@ -374,6 +380,7 @@ class AuthService {
     var request = http.MultipartRequest('POST', uri);
     request.headers['Authorization'] = 'Bearer $token';
     request.headers['Content-Type'] = 'multipart/form-data';
+    request.headers['ngrok-skip-browser-warning'] = 'true';
 
     setupData.forEach((key, value) {
       if (key != 'idDocumentUrl' &&
@@ -439,7 +446,7 @@ class AuthService {
     return profile != null;
   }
 
-  // Add this method to get the ID from storage
+  /// Get user ID from storage
   Future<int?> getUserId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt('userId');

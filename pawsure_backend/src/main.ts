@@ -1,3 +1,5 @@
+process.env.TZ = 'UTC';
+
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
@@ -12,14 +14,23 @@ async function bootstrap() {
       origin: '*', // Allows all origins (good for development)
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
       allowedHeaders: '*',
+      credentials: true,
   });
 
   // 🔧 Serve static files from the 'uploads' directory
-  // This makes files in ./uploads accessible at http://localhost:3000/uploads/...
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+  // UPDATED: Using process.cwd() ensures we look in the project root, not 'dist'
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
   });
   
+  // 👇 ADDED DEBUG LOGGING 👇
+  console.log('------------------------------------------------');
+  console.log('📂 STATIC FILE DEBUGGER');
+  console.log('👉 Current Working Directory (CWD):', process.cwd());
+  console.log('👉 Static Assets Path:', join(process.cwd(), 'uploads'));
+  console.log('------------------------------------------------');
+  // 👆 END DEBUG LOGGING 👆
+
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 
   console.log(`Application is running on: ${await app.getUrl()}`);
