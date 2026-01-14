@@ -1,12 +1,13 @@
 // lib/screens/sitter_setup/steps/step2_environment.dart
 
 import 'package:flutter/material.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 
 class Step2Environment extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final Map<String, dynamic> formData;
 
-  const Step2Environment({
+  Step2Environment({
     super.key,
     required this.formKey,
     required this.formData,
@@ -17,12 +18,21 @@ class Step2Environment extends StatefulWidget {
 }
 
 class _Step2EnvironmentState extends State<Step2Environment> {
-  late String _houseTypeText;
+  final List<String> _houseTypeOptions = [
+      'Apartment',
+      'House',
+      'Condo',
+      'Villa',
+      'Townhouse'
+    ];
+    String? _selectedHouseType;
 
   @override
   void initState() {
+
     super.initState();
-    _houseTypeText = widget.formData['houseType'] ?? 'Apartment';
+      _selectedHouseType = widget.formData['houseType']; // Default to null (shows 'Select house type')
+    
   }
 
   @override
@@ -42,28 +52,53 @@ class _Step2EnvironmentState extends State<Step2Environment> {
             const Text('House Type',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            TextFormField(
-              decoration: InputDecoration(
-                hintText: 'e.g., Apartment, House, Condo',
-                filled: true,
-                fillColor: Colors.grey[100],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                  borderSide: BorderSide.none,
+            // --- REPLACED TextFormField WITH DropdownButtonFormField ---
+       
+              DropdownButtonFormField2<String>(
+                value: _selectedHouseType,
+                hint: const Text('Select house type'),
+                isExpanded: true,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16.0),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                iconStyleData: const IconStyleData(
+                  icon: Icon(Icons.arrow_drop_down),
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                dropdownStyleData: DropdownStyleData(
+                  maxHeight: 300,
+                  width: MediaQuery.of(context).size.width * 0.7,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white,
+                  ),
+                  offset: const Offset(0, -5),
+                ),
+                menuItemStyleData: const MenuItemStyleData(
+                  padding: EdgeInsets.symmetric(horizontal: 24),
+                ),
+                items: _houseTypeOptions.map((String type) {
+                  return DropdownMenuItem<String>(
+                    value: type,
+                    child: Text(type),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedHouseType = newValue;
+                    widget.formData['houseType'] = newValue;
+                  });
+                },
+                validator: (value) =>
+                    value == null ? 'Please select a house type' : null,
+                onSaved: (value) => widget.formData['houseType'] = value,
               ),
-              initialValue: _houseTypeText,
-              onChanged: (v) => _houseTypeText = v,
-              validator: (v) =>
-                  (v == null || v.isEmpty) ? 'Please enter a house type' : null,
-              onSaved: (v) => widget.formData['houseType'] = v,
-            ),
             const SizedBox(height: 16),
             const Text('Do you have a garden?',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
