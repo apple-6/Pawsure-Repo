@@ -6,7 +6,7 @@ import 'package:get/get.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
 import 'package:pawsure_app/constants/api_config.dart';
 import 'package:intl/intl.dart';
-import 'package:lottie/lottie.dart'; // <--- Add this line
+import 'package:lottie/lottie.dart';
 
 class AIScanTab extends StatefulWidget {
   const AIScanTab({super.key});
@@ -307,82 +307,241 @@ class _AIScanTabState extends State<AIScanTab> {
         return const Center(child: Text("Please select a pet first"));
       }
 
-      return ListView(
-        padding: const EdgeInsets.all(24),
+      // ✅ Changed to Stack to allow Center Loading Overlay
+      return Stack(
         children: [
-          // --- START UPDATED UI (Compact Version) ---
-          Center(
-            child: Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(vertical: 4),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _isScanning
-                      ? null
-                      : () => _showImageSourceSelection(context),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 20,
-                      horizontal: 16,
+          // 1. The Main Content (Behind)
+          ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              Center(
+                child: Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      // Disable clicking if already scanning
+                      onTap: _isScanning
+                          ? null
+                          : () => _showImageSourceSelection(context),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 20,
+                          horizontal: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.grey.withOpacity(0.1),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _brandColor.withOpacity(0.1),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: _brandColor.withOpacity(0.05),
+                                shape: BoxShape.circle,
+                              ),
+                              // ✅ STATIC ICON (Doesn't change to loading)
+                              child: Icon(
+                                Icons.center_focus_strong_rounded,
+                                size: 40,
+                                color: _brandColor,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              "Start Health Analysis",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              "Analyze stool sample for anomalies",
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+              const Text(
+                'Past Scans',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              ),
+              const SizedBox(height: 16),
+
+              // History List
+              FutureBuilder<List<dynamic>>(
+                key: ValueKey(currentPetId),
+                future: _fetchScanHistory(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  } else if (snapshot.hasError ||
+                      !snapshot.hasData ||
+                      snapshot.data!.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.history,
+                              size: 48,
+                              color: Colors.grey[300],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              "No history yet.",
+                              style: TextStyle(color: Colors.grey[500]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: snapshot.data!.length,
+                    itemBuilder: (context, index) {
+                      final scan = snapshot.data![index];
+                      final isNormal = scan['result'] == 'Normal';
+                      final dateStr = scan['scannedAt'].toString().split(
+                        'T',
+                      )[0];
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          leading: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: (isNormal ? _brandColor : _orangeColor)
+                                  .withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.analytics_outlined,
+                              color: isNormal ? _brandColor : _orangeColor,
+                              size: 24,
+                            ),
+                          ),
+                          title: Text(
+                            scan['result'],
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              "$dateStr • ${scan['confidence']}% Match",
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: Icon(
+                              Icons.delete_outline,
+                              color: Colors.grey[400],
+                            ),
+                            onPressed: () => _confirmDelete(scan['id']),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+
+          // 2. ✅ The Loading Overlay (Center of Whole Screen)
+          if (_isScanning)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(
+                  0.4,
+                ), // Dim background to focus on loading
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                      borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: _brandColor.withOpacity(0.1),
-                          blurRadius: 15,
-                          offset: const Offset(0, 8),
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
                         ),
                       ],
                     ),
+                    width: 200,
+                    height: 200,
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            // I made the background slightly lighter so the animation pops
-                            color: _brandColor.withOpacity(0.05),
-                            shape: BoxShape.circle,
+                        Expanded(
+                          child: Lottie.asset(
+                            'assets/animations/loadcat.json',
+                            fit: BoxFit.contain,
                           ),
-                          child: _isScanning
-                              ? SizedBox(
-                                  // Adjusted size: 80 is usually perfect for icon-style loaders
-                                  height: 80,
-                                  width: 80,
-                                  child: Lottie.asset(
-                                    'assets/animations/loadcat.json',
-                                    fit: BoxFit.contain,
-                                    // Optional: If the animation is too fast/slow, you can change speed here
-                                    // controller: _controller,
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.center_focus_strong_rounded,
-                                  size: 40,
-                                  color: _brandColor,
-                                ),
                         ),
                         const SizedBox(height: 16),
                         const Text(
-                          "Start Health Analysis",
+                          "Analyzing...",
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _isScanning
-                              ? "Analyzing..."
-                              : "Analyze stool sample for anomalies",
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 13,
                           ),
                         ),
                       ],
@@ -391,118 +550,6 @@ class _AIScanTabState extends State<AIScanTab> {
                 ),
               ),
             ),
-          ),
-
-          // --- END UPDATED UI ---
-          const SizedBox(height: 32),
-          const Text(
-            'Past Scans',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
-          ),
-          const SizedBox(height: 16),
-
-          // History List
-          FutureBuilder<List<dynamic>>(
-            key: ValueKey(currentPetId),
-            future: _fetchScanHistory(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              } else if (snapshot.hasError ||
-                  !snapshot.hasData ||
-                  snapshot.data!.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        Icon(Icons.history, size: 48, color: Colors.grey[300]),
-                        const SizedBox(height: 12),
-                        Text(
-                          "No history yet.",
-                          style: TextStyle(color: Colors.grey[500]),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-
-              return ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: snapshot.data!.length,
-                itemBuilder: (context, index) {
-                  final scan = snapshot.data![index];
-                  final isNormal = scan['result'] == 'Normal';
-                  final dateStr = scan['scannedAt'].toString().split('T')[0];
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      leading: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: (isNormal ? _brandColor : _orangeColor)
-                              .withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.analytics_outlined,
-                          color: isNormal ? _brandColor : _orangeColor,
-                          size: 24,
-                        ),
-                      ),
-                      title: Text(
-                        scan['result'],
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          "$dateStr • ${scan['confidence']}% Match",
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                      trailing: IconButton(
-                        icon: Icon(
-                          Icons.delete_outline,
-                          color: Colors.grey[400],
-                        ),
-                        onPressed: () => _confirmDelete(scan['id']),
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
         ],
       );
     });
