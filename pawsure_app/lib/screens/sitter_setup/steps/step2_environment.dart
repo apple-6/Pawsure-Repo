@@ -6,7 +6,7 @@ class Step2Environment extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final Map<String, dynamic> formData;
 
-  const Step2Environment({
+  Step2Environment({
     super.key,
     required this.formKey,
     required this.formData,
@@ -17,12 +17,25 @@ class Step2Environment extends StatefulWidget {
 }
 
 class _Step2EnvironmentState extends State<Step2Environment> {
-  late String _houseTypeText;
+  final List<String> _houseTypeOptions = [
+      'Apartment',
+      'House',
+      'Condo',
+      'Villa',
+      'Townhouse'
+    ];
+    String? _selectedHouseType;
 
   @override
   void initState() {
+
     super.initState();
-    _houseTypeText = widget.formData['houseType'] ?? 'Apartment';
+    String? savedValue = widget.formData['houseType'];
+    if (savedValue != null && _houseTypeOptions.contains(savedValue)) {
+      _selectedHouseType = savedValue;
+    } else {
+      _selectedHouseType = null; // Default to null (shows 'Select house type')
+    }
   }
 
   @override
@@ -42,28 +55,44 @@ class _Step2EnvironmentState extends State<Step2Environment> {
             const Text('House Type',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            TextFormField(
-              decoration: InputDecoration(
-                hintText: 'e.g., Apartment, House, Condo',
-                filled: true,
-                fillColor: Colors.grey[100],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                  borderSide: BorderSide.none,
+            // --- REPLACED TextFormField WITH DropdownButtonFormField ---
+       
+              DropdownButtonFormField<String>(
+                value: _selectedHouseType,
+                hint: const Text('Select house type'),
+                icon: const Icon(Icons.arrow_drop_down),
+                isExpanded: true,
+
+                borderRadius: BorderRadius.circular(16.0),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16.0),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                items: _houseTypeOptions.map((String type) {
+                  return DropdownMenuItem<String>(
+                    value: type,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: Text(type),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedHouseType = newValue;
+                    widget.formData['houseType'] = newValue;
+                  });
+                },
+                validator: (value) =>
+                    value == null ? 'Please select a house type' : null,
+                onSaved: (value) => widget.formData['houseType'] = value,
               ),
-              initialValue: _houseTypeText,
-              onChanged: (v) => _houseTypeText = v,
-              validator: (v) =>
-                  (v == null || v.isEmpty) ? 'Please enter a house type' : null,
-              onSaved: (v) => widget.formData['houseType'] = v,
-            ),
             const SizedBox(height: 16),
             const Text('Do you have a garden?',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
