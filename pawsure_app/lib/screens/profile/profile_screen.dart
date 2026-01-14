@@ -6,7 +6,7 @@ import 'package:pawsure_app/controllers/profile_controller.dart';
 import 'package:pawsure_app/controllers/health_controller.dart';
 import 'package:pawsure_app/controllers/home_controller.dart';
 import 'package:pawsure_app/controllers/pet_controller.dart';
-import 'package:pawsure_app/controllers/sitter_controller.dart';
+// import 'package:pawsure_app/controllers/sitter_controller.dart';
 import 'package:pawsure_app/services/storage_service.dart';
 import 'package:pawsure_app/screens/profile/help_support_screen.dart';
 import 'package:pawsure_app/screens/profile/about_screen.dart';
@@ -137,10 +137,7 @@ class ProfileScreen extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF22C55E),
-                      Color(0xFF16A34A),
-                    ],
+                    colors: [Color(0xFF22C55E), Color(0xFF16A34A)],
                   ),
                 ),
                 child: SafeArea(
@@ -199,23 +196,32 @@ class ProfileScreen extends StatelessWidget {
                                       gradient: hasAvatar
                                           ? null
                                           : const LinearGradient(
-                                              colors: [Color(0xFF22C55E), Color(0xFF86EFAC)],
+                                              colors: [
+                                                Color(0xFF22C55E),
+                                                Color(0xFF86EFAC),
+                                              ],
                                               begin: Alignment.topLeft,
                                               end: Alignment.bottomRight,
                                             ),
                                       // If avatar exists, show the Image
                                       image: hasAvatar
                                           ? DecorationImage(
-                                              image: NetworkImage(fullAvatarUrl!), // Use computed URL
+                                              image: NetworkImage(
+                                                fullAvatarUrl!,
+                                              ), // Use computed URL
                                               fit: BoxFit.cover,
                                               onError: (exception, stackTrace) {
-                                                debugPrint("Error loading avatar: $exception");
+                                                debugPrint(
+                                                  "Error loading avatar: $exception",
+                                                );
                                               },
                                             )
                                           : null,
                                       boxShadow: [
                                         BoxShadow(
-                                          color: const Color(0xFF22C55E).withOpacity(0.2),
+                                          color: const Color(
+                                            0xFF22C55E,
+                                          ).withOpacity(0.2),
                                           blurRadius: 12,
                                           offset: const Offset(0, 8),
                                         ),
@@ -239,10 +245,13 @@ class ProfileScreen extends StatelessWidget {
                                   // User Info
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          userName.isNotEmpty ? userName : 'User',
+                                          userName.isNotEmpty
+                                              ? userName
+                                              : 'User',
                                           style: const TextStyle(
                                             fontSize: 20,
                                             fontWeight: FontWeight.bold,
@@ -268,7 +277,9 @@ class ProfileScreen extends StatelessWidget {
                                             color: userRole == 'sitter'
                                                 ? const Color(0xFFDCFCE7)
                                                 : const Color(0xFFEDE9FE),
-                                            borderRadius: BorderRadius.circular(20),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
                                           ),
                                           child: Text(
                                             userRole == 'sitter'
@@ -289,10 +300,10 @@ class ProfileScreen extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(height: 20),
-                              
+
                               // ✅ Sitter Stats Section (Visible only to Sitters)
-                              if (userRole == 'sitter' && Get.isRegistered<SitterController>())
-                                _buildSitterStats(Get.find<SitterController>()),
+                              // if (userRole == 'sitter' && Get.isRegistered<SitterController>())
+                              //   _buildSitterStats(Get.find<SitterController>()),
                             ],
                           ),
                         ),
@@ -343,13 +354,14 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFF8B5CF6),
                           title: 'Booking History',
                           subtitle: 'Past bookings',
-                         onTap: () {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const BookingHistoryScreen(),
-      ),
-    );
-  },
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const BookingHistoryScreen(),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -369,7 +381,8 @@ class ProfileScreen extends StatelessWidget {
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (context) => const PaymentMethodsScreen(),
+                                builder: (context) =>
+                                    const PaymentMethodsScreen(),
                               ),
                             );
                           },
@@ -386,7 +399,7 @@ class ProfileScreen extends StatelessWidget {
                         _buildMenuDivider(),
                         _buildMenuItem(
                           icon: Icons.notifications,
-                          iconBg:  const Color.fromARGB(160, 178, 230, 224),
+                          iconBg: const Color.fromARGB(160, 178, 230, 224),
                           iconColor: Colors.teal,
                           title: 'Notifications',
                           subtitle: 'Manage alerts',
@@ -416,7 +429,9 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFF3B82F6),
                           title: 'Help & Support',
                           subtitle: 'Get assistance',
-                          onTap: () {Get.to(() => HelpSupportScreen());},
+                          onTap: () {
+                            Get.to(() => HelpSupportScreen());
+                          },
                         ),
                         _buildMenuDivider(),
                         _buildMenuItem(
@@ -425,7 +440,9 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: const Color(0xFF6366F1),
                           title: 'About Pawsure',
                           subtitle: 'Version 1.0.0',
-                          onTap: () {Get.to(() => AboutScreen());},
+                          onTap: () {
+                            Get.to(() => AboutScreen());
+                          },
                         ),
                       ],
                     ),
@@ -465,37 +482,37 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSitterStats(SitterController controller) {
-    return Column(
-      children: [
-        const Divider(height: 24),
-        Row(
-          children: [
-            _buildStatItem(
-              icon: Icons.attach_money,
-              value: 'RM${controller.earnings.value.toStringAsFixed(0)}',
-              label: 'Earnings',
-              color: Colors.green,
-            ),
-            _buildStatDivider(),
-            _buildStatItem(
-              icon: Icons.calendar_month,
-              value: controller.activeStaysCount.value.toString(),
-              label: 'Active',
-              color: Colors.blue,
-            ),
-            _buildStatDivider(),
-            _buildStatItem(
-              icon: Icons.star,
-              value: controller.avgRating.value.toStringAsFixed(1),
-              label: 'Rating',
-              color: Colors.orange,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  // Widget _buildSitterStats(SitterController controller) {
+  //   return Column(
+  //     children: [
+  //       const Divider(height: 24),
+  //       Row(
+  //         children: [
+  //           _buildStatItem(
+  //             icon: Icons.attach_money,
+  //             value: 'RM${controller.earnings.value.toStringAsFixed(0)}',
+  //             label: 'Earnings',
+  //             color: Colors.green,
+  //           ),
+  //           _buildStatDivider(),
+  //           _buildStatItem(
+  //             icon: Icons.calendar_month,
+  //             value: controller.activeStaysCount.value.toString(),
+  //             label: 'Active',
+  //             color: Colors.blue,
+  //           ),
+  //           _buildStatDivider(),
+  //           _buildStatItem(
+  //             icon: Icons.star,
+  //             value: controller.avgRating.value.toStringAsFixed(1),
+  //             label: 'Rating',
+  //             color: Colors.orange,
+  //           ),
+  //         ],
+  //       ),
+  //     ],
+  //   );
+  // }
 
   Widget _buildStatItem({
     required IconData icon,
@@ -517,24 +534,14 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
+          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
         ],
       ),
     );
   }
 
   Widget _buildStatDivider() {
-    return Container(
-      height: 40,
-      width: 1,
-      color: Colors.grey[200],
-    );
+    return Container(height: 40, width: 1, color: Colors.grey[200]);
   }
 
   Widget _buildSectionTitle(String title) {
@@ -608,19 +615,12 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[500],
-                      ),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[500]),
                     ),
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                color: Colors.grey[400],
-                size: 22,
-              ),
+              Icon(Icons.chevron_right, color: Colors.grey[400], size: 22),
             ],
           ),
         ),

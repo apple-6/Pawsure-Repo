@@ -1,6 +1,7 @@
 import 'dart:io'; // ✅ Added for File handling
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // ✅ IMPORT ADDED
 import 'package:pawsure_app/models/post_model.dart';
 import 'package:pawsure_app/screens/community/comment_model.dart';
 
@@ -54,7 +55,8 @@ class _PostCardState extends State<PostCard> {
   // ✅ HELPER: Smart Image Provider (Handles Web URL vs Local File)
   ImageProvider _getProfileImage(String path) {
     if (path.startsWith('http') || path.startsWith('https')) {
-      return NetworkImage(path);
+      // ✅ UPDATED: Use Cached Provider for Avatar
+      return CachedNetworkImageProvider(path);
     } else {
       // If it's a local file path (file:/// or C:/)
       try {
@@ -72,11 +74,14 @@ class _PostCardState extends State<PostCard> {
   // ✅ HELPER: Smart Image Widget for Carousel
   Widget _buildCarouselImage(String path, BuildContext context) {
     if (path.startsWith('http') || path.startsWith('https')) {
-      return Image.network(
-        path,
+      // ✅ UPDATED: Use CachedNetworkImage to prevent flickering/reloading
+      return CachedNetworkImage(
+        imageUrl: path,
         fit: BoxFit.cover,
         width: MediaQuery.of(context).size.width,
-        errorBuilder: (context, error, stackTrace) => const Center(
+        // Shows a grey box while loading so UI doesn't jump
+        placeholder: (context, url) => Container(color: Colors.grey[200]),
+        errorWidget: (context, url, error) => const Center(
           child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
         ),
       );

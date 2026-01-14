@@ -20,7 +20,7 @@ import 'package:pawsure_app/screens/sitter_setup/sitter_inbox.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_setting_screen.dart';
 import 'package:pawsure_app/constants/api_config.dart';
 
-// --- POST MODEL ---
+// --- POST MODEL (Left as provided) ---
 class Post {
   final String id;
   final String userId;
@@ -52,7 +52,6 @@ class Post {
     final userData = map['user'] ?? map['owner'];
     final List<dynamic> mediaList = map['post_media'] ?? [];
 
-    // --- PROFILE PICTURE FIX ---
     String rawAvatar = userData?['profile_picture'] ?? '';
     String finalAvatarUrl;
 
@@ -60,7 +59,6 @@ class Post {
       if (rawAvatar.startsWith('http')) {
         finalAvatarUrl = rawAvatar;
       } else {
-        // Appends Base URL if it's a relative path
         finalAvatarUrl = '${ApiConfig.baseUrl}/$rawAvatar';
       }
     } else {
@@ -108,9 +106,6 @@ class CommunityScreenState extends State<CommunityScreen> {
   @override
   void initState() {
     super.initState();
-    debugPrint(
-      "✅ CommunityScreen initialized - Parent is: ${widget.runtimeType}",
-    );
     _getUserRole();
   }
 
@@ -118,12 +113,10 @@ class CommunityScreenState extends State<CommunityScreen> {
     try {
       final authService = Get.find<AuthService>();
       final role = await authService.getUserRole();
-      debugPrint("🔍 User Role Fetched from Storage: $role");
       if (mounted) {
         setState(() {
           _userRole = role;
         });
-        debugPrint("✅ User Role Set in State: $_userRole");
       }
     } catch (e) {
       debugPrint("❌ Error fetching user role: $e");
@@ -141,7 +134,7 @@ class CommunityScreenState extends State<CommunityScreen> {
   }
 
   void _handlePostCreated() {
-    setState(() {});
+    setState(() {}); // This triggers a rebuild to refresh the list
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Post created successfully!')));
@@ -163,10 +156,6 @@ class CommunityScreenState extends State<CommunityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint("🔨 CommunityScreen BUILD - _userRole = $_userRole");
-
-    // Owners: 2 tabs (Feed, Find a Sitter)
-    // Sitters: 1 tab (Feed only)
     final int tabCount = _userRole == 'sitter' ? 1 : 2;
 
     return DefaultTabController(
@@ -191,7 +180,6 @@ class CommunityScreenState extends State<CommunityScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          // Show chat icon only for owners
                           _userRole == 'owner'
                               ? IconButton(
                                   icon: const Icon(Icons.chat_bubble_outline),
@@ -226,24 +214,18 @@ class CommunityScreenState extends State<CommunityScreen> {
             body: TabBarView(
               children: _userRole == 'sitter'
                   ? [
-                      // Sitter view: Only Feed tab
                       FeedTabView(
                         parentState: this,
                         onSubTabChanged: (index) {
-                          setState(() {
-                            _currentSubTabIndex = index;
-                          });
+                          setState(() => _currentSubTabIndex = index);
                         },
                       ),
                     ]
                   : [
-                      // Owner view: Feed + Find a Sitter tabs
                       FeedTabView(
                         parentState: this,
                         onSubTabChanged: (index) {
-                          setState(() {
-                            _currentSubTabIndex = index;
-                          });
+                          setState(() => _currentSubTabIndex = index);
                         },
                       ),
                       FindSitterTab(
@@ -266,15 +248,15 @@ class CommunityScreenState extends State<CommunityScreen> {
         ),
         floatingActionButton: Builder(
           builder: (context) {
-            final TabController tabController = DefaultTabController.of(
+            final TabController? tabController = DefaultTabController.of(
               context,
             );
+            if (tabController == null) return const SizedBox.shrink();
 
             return AnimatedBuilder(
               animation: tabController,
               builder: (context, child) {
                 final bool isFeedTab = tabController.index == 0;
-
                 return isFeedTab
                     ? FloatingActionButton(
                         onPressed: _showCreatePostModal,
@@ -294,21 +276,11 @@ class CommunityScreenState extends State<CommunityScreen> {
                 selectedItemColor: const Color(0xFF2ECA6A),
                 unselectedItemColor: Colors.grey.shade600,
                 onTap: (index) {
-                  if (index == 0) {
-                    Get.offAll(() => const SitterDashboard());
-                  }
-                  if (index == 1) {
-                    Get.offAll(() => const CommunityScreen());
-                  }
-                  if (index == 2) {
-                    Get.to(() => const SitterCalendar());
-                  }
-                  if (index == 3) {
-                    Get.to(() => const SitterInbox());
-                  }
-                  if (index == 4) {
-                    Get.to(() => const SitterSettingScreen());
-                  }
+                  if (index == 0) Get.offAll(() => const SitterDashboard());
+                  if (index == 1) Get.offAll(() => const CommunityScreen());
+                  if (index == 2) Get.to(() => const SitterCalendar());
+                  if (index == 3) Get.to(() => const SitterInbox());
+                  if (index == 4) Get.to(() => const SitterSettingScreen());
                 },
                 items: const [
                   BottomNavigationBarItem(
@@ -354,11 +326,13 @@ class FeedTabView extends StatefulWidget {
   State<FeedTabView> createState() => _FeedTabViewState();
 }
 
+// ✅ FIXED: Added AutomaticKeepAliveClientMixin to prevent Tabs from reloading
 class _FeedTabViewState extends State<FeedTabView>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _subTabController;
 
-  Null get currentUserId => null;
+  @override
+  bool get wantKeepAlive => true; // ✅ Keeps this widget alive in memory
 
   @override
   void initState() {
@@ -379,9 +353,10 @@ class _FeedTabViewState extends State<FeedTabView>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // ✅ Required for KeepAlive
+
     return Column(
       children: [
-        // ✅ MODIFIED: Centered and responsive TabBar
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Container(
@@ -393,7 +368,6 @@ class _FeedTabViewState extends State<FeedTabView>
               labelColor: Theme.of(context).primaryColor,
               unselectedLabelColor: Colors.grey,
               indicatorSize: TabBarIndicatorSize.label,
-              // ✅ Optional: Add padding for better spacing
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               tabs: const [
                 Tab(text: 'For You'),
@@ -422,9 +396,7 @@ class _FeedTabViewState extends State<FeedTabView>
         await Get.dialog(
           AlertDialog(
             title: const Text("Delete Post?"),
-            content: const Text(
-              "Are you sure you want to remove this vacancy? This action cannot be undone.",
-            ),
+            content: const Text("Are you sure you want to remove this?"),
             actions: [
               TextButton(
                 onPressed: () => Get.back(result: false),
@@ -445,8 +417,6 @@ class _FeedTabViewState extends State<FeedTabView>
     try {
       final authService = Get.find<AuthService>();
       final token = await authService.getToken();
-
-      // Uses dynamic Base URL
       final String baseUrl = ApiConfig.baseUrl;
 
       final response = await http.delete(
@@ -460,26 +430,16 @@ class _FeedTabViewState extends State<FeedTabView>
       if (response.statusCode == 200 || response.statusCode == 204) {
         Get.snackbar(
           "Success",
-          "Post deleted successfully",
-          snackPosition: SnackPosition.BOTTOM,
+          "Post deleted",
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
-
         widget.parentState.setState(() {});
       } else {
-        Get.snackbar(
-          "Error",
-          "Failed to delete post",
-          snackPosition: SnackPosition.BOTTOM,
-        );
+        Get.snackbar("Error", "Failed to delete post");
       }
     } catch (e) {
-      Get.snackbar(
-        "Error",
-        "Connection failed",
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      Get.snackbar("Error", "Connection failed");
     }
   }
 
@@ -545,21 +505,22 @@ class _FeedTabViewState extends State<FeedTabView>
 
             final String? currentUserRole = authSnapshot.data!['role'];
             final String? currentUserId = authSnapshot.data!['id']?.toString();
-
             final bool isSitter = currentUserRole == 'sitter';
 
             return RefreshIndicator(
               onRefresh: () async => widget.parentState.setState(() {}),
               child: ListView.builder(
+                // ✅ FIXED: Increase cache extent to load images before they scroll into view
+                cacheExtent: 2000.0,
+                // ✅ FIXED: Add RepaintBoundary for performance
+                addRepaintBoundaries: true,
                 padding: const EdgeInsets.all(16.0),
                 itemCount: posts.length,
                 itemBuilder: (context, index) {
                   final post = posts[index];
-
                   final bool isMyPost =
                       currentUserId != null &&
                       currentUserId == post.userId.toString();
-
                   final bool canManagePost = !isSitter && isMyPost;
 
                   if (tab == 'vacancy') {
@@ -613,7 +574,6 @@ class _FeedTabViewState extends State<FeedTabView>
       await apiService.toggleLike(postId);
     } catch (e) {
       debugPrint("Error liking post: $e");
-      rethrow;
     }
   }
 }
