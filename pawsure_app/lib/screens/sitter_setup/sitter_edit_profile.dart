@@ -155,23 +155,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       final apiService = Get.find<ApiService>();
 
-      // Call API
       final updatedProfileData = await apiService.updateSitterProfile(
         widget.user.id,
         payload,
         _selectedImage,
       );
 
-      // --- FIX: Access fields directly using Dot Notation ---
       String? newProfilePic = widget.user.profilePicture;
 
-      // Since updatedProfileData is a UserProfile object, we access .profilePicture directly
       if (updatedProfileData != null &&
           updatedProfileData.profilePicture != null) {
         newProfilePic = updatedProfileData.profilePicture;
       }
 
-      // Create optimistic profile for UI
       final newProfile = UserProfile(
         id: widget.user.id,
         name: _nameController.text,
@@ -182,15 +178,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
         staysCompleted: widget.user.staysCompleted,
         email: widget.user.email,
         phone: widget.user.phone,
-        // Assign the extracted image URL
         profilePicture: newProfilePic,
         rating: widget.user.rating,
         reviewCount: widget.user.reviewCount,
       );
 
       if (mounted) {
-        Navigator.of(context).pop(); // Close loader
-        Navigator.pop(context, newProfile); // Return data
+        Navigator.of(context).pop();
+        Navigator.pop(context, newProfile);
       }
 
       Get.snackbar(
@@ -270,7 +265,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Profile Picture UI
               Center(
                 child: Stack(
                   children: [
@@ -336,7 +330,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
               const SizedBox(height: 20),
 
-              // --- SECTION 1: BASIC INFO ---
               const Text(
                 "Basic Information",
                 style: TextStyle(
@@ -367,14 +360,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       _nameController,
                       Icons.person_outline,
                       true,
-                    ), // Required
+                    ),
                     const SizedBox(height: 20),
                     _buildTextField(
                       "Location",
                       _locationController,
                       Icons.location_on_outlined,
                       true,
-                    ), // Required
+                    ),
                     const SizedBox(height: 20),
                     _buildTextField(
                       "About Me",
@@ -382,14 +375,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       Icons.info_outline,
                       true,
                       maxLines: 4,
-                    ), // Required
+                    ),
                   ],
                 ),
               ),
 
               const SizedBox(height: 30),
 
-              // --- SECTION 2: SERVICES & RATES ---
               const Text(
                 "Services & Rates",
                 style: TextStyle(
@@ -412,7 +404,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  // URL Sanitization Helper
+  // 🔧 URL SANITIZER HELPER (Fixes real device image loading)
   Widget _buildProfileImage(String? netUrl, Color brandColor) {
     if (_selectedImage != null) {
       return Image.file(
@@ -426,7 +418,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
     if (netUrl != null && netUrl.isNotEmpty) {
       String fullUrl;
       if (netUrl.startsWith('http')) {
-        fullUrl = netUrl;
+        // If DB gives localhost, replace with Ngrok/Env URL
+        if (netUrl.contains('localhost')) {
+          fullUrl = netUrl.replaceAll(
+            'http://localhost:3000',
+            ApiConfig.baseUrl,
+          );
+        } else {
+          fullUrl = netUrl;
+        }
       } else {
         fullUrl = '${ApiConfig.baseUrl}/$netUrl';
       }
@@ -571,7 +571,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 scale: 0.8,
                 child: Switch(
                   value: isActive,
-                  activeColor: activeColor, // Kept for compatibility
+                  activeColor: activeColor,
                   activeTrackColor: activeColor.withOpacity(0.5),
                   inactiveThumbColor: Colors.white,
                   inactiveTrackColor: Colors.grey.shade200,

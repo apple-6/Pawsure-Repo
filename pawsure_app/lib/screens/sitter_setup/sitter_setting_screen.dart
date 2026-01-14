@@ -9,7 +9,7 @@ import 'package:pawsure_app/controllers/sitter_controller.dart';
 import 'package:pawsure_app/screens/profile/help_support_screen.dart';
 import 'package:pawsure_app/screens/profile/about_screen.dart';
 import 'package:pawsure_app/screens/sitter_setup/sitter_wallet_screen.dart';
-import 'package:pawsure_app/constants/api_config.dart'; // 1. IMPORT ADDED
+import 'package:pawsure_app/constants/api_config.dart';
 
 // Navigation Imports
 import 'sitter_calendar.dart';
@@ -46,7 +46,7 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
     try {
       final apiService = Get.find<ApiService>();
 
-      // 1. Get the profile (Now includes rating/reviews inside the object)
+      // 1. Get the profile
       final profile = await apiService.getMySitterProfile();
 
       if (profile != null) {
@@ -54,8 +54,6 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
           setState(() {
             currentUser = profile;
             isLoading = false;
-
-            // ✅ FIXED: No more 'toJson' error. Just use the fields directly.
             rating = profile.rating;
             reviewCount = profile.reviewCount;
           });
@@ -76,15 +74,13 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
     }
   }
 
-  // ✅ New Helper to fetch stats specifically
+  // Helper to fetch stats specifically
   Future<void> _fetchSitterStats(ApiService apiService, int sitterId) async {
     try {
-      // Calls the new API method we added in Step 2
       final data = await apiService.getSitterDetails(sitterId);
 
       if (data != null && mounted) {
         setState(() {
-          // Parse data safely
           rating = (data['rating'] ?? data['avgRating'] ?? 0).toDouble();
 
           reviewCount =
@@ -121,7 +117,6 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
 
     if (shouldLogout == true) {
       try {
-        // Show loading indicator
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -129,24 +124,19 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
               const Center(child: CircularProgressIndicator()),
         );
 
-        // Clear SharedPreferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.clear();
 
-        // Clear user data state
         if (mounted) {
           setState(() {
             currentUser = null;
           });
         }
 
-        // Close loading dialog
         if (context.mounted) {
           Navigator.of(context).pop();
         }
 
-        // Navigate to login and remove all previous routes
-        // Use Navigator instead of Get to avoid controller issues
         if (context.mounted) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => LoginScreen()),
@@ -154,12 +144,9 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
           );
         }
       } catch (e) {
-        // Close loading dialog if it's showing
         if (context.mounted) {
           Navigator.of(context).pop();
         }
-
-        // Show error message
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -174,16 +161,11 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
 
   Future<void> _checkAndSwitchToOwner() async {
     try {
-      // 1. Show loading indicator briefly (optional, for UX)
       setState(() => isLoading = true);
 
-      // 2. Update Local Storage
-      // This tells the app: "Next time I open, show me the Owner Dashboard"
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_role', 'owner');
 
-      // 3. Navigate directly to Owner Dashboard
-      // Make sure to import your OwnerDashboard file at the top!
       Get.offAll(() => const MainNavigation());
 
       Get.snackbar(
@@ -216,7 +198,6 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Display specific error if available, or generic message
               Text(
                 errorMessage ?? "Failed to load profile data.",
                 textAlign: TextAlign.center,
@@ -237,20 +218,28 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
       );
     }
 
-    // --- 2. URL CLEANING LOGIC START ---
+    // --- 🔧 FIX: URL SANITIZER FOR REAL DEVICES ---
     String? avatarPath = currentUser?.profilePicture;
     String? fullAvatarUrl;
 
     if (avatarPath != null && avatarPath.isNotEmpty) {
       if (avatarPath.startsWith('http')) {
-        fullAvatarUrl = avatarPath;
+        // If the DB has 'localhost', we MUST replace it with the real IP/Ngrok URL
+        if (avatarPath.contains('localhost')) {
+          fullAvatarUrl = avatarPath.replaceAll(
+            'http://localhost:3000',
+            ApiConfig.baseUrl,
+          );
+        } else {
+          fullAvatarUrl = avatarPath;
+        }
       } else {
-        // Fix for Ngrok/Real Device: Prepend Base URL to relative paths
+        // Handle relative paths
         fullAvatarUrl = '${ApiConfig.baseUrl}/$avatarPath';
       }
     }
     final bool hasAvatar = fullAvatarUrl != null;
-    // --- URL CLEANING LOGIC END ---
+    // --- END FIX ---
 
     return Scaffold(
       backgroundColor: scaffoldBg,
@@ -286,21 +275,15 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
         ],
       ),
 
-      // ✅ FIXED LAYOUT: Everything is inside SingleChildScrollView
       body: SingleChildScrollView(
         child: Stack(
           children: [
-            // --- 1. THE GREEN BACKGROUND (Scrolls with page) ---
-            Container(
-              height: 260, // Height of the green banner
-              width: double.infinity,
-              color: brandColor,
-            ),
+            // Green Background
+            Container(height: 260, width: double.infinity, color: brandColor),
 
-            // --- 2. THE CONTENT (Scrolls with page) ---
+            // Content
             Column(
               children: [
-                // Header Title (Inside Column, so it scrolls)
                 Padding(
                   padding: const EdgeInsets.only(top: 60, left: 20, right: 20),
                   child: Row(
@@ -327,7 +310,6 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
 
                 const SizedBox(height: 20),
 
-                // Main Content (Card + Menus)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
@@ -363,11 +345,10 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
                                   child: CircleAvatar(
                                     radius: 30,
                                     backgroundColor: const Color(0xFFE8F5E9),
-                                    // 3. UPDATED: Use clean URL
+                                    // 3. UPDATED: Use the sanitized URL
                                     backgroundImage: hasAvatar
                                         ? NetworkImage(fullAvatarUrl!)
                                         : null,
-                                    // 4. UPDATED: Show icon only if NO avatar
                                     child: !hasAvatar
                                         ? const Icon(
                                             Icons.person,
@@ -563,7 +544,6 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
 
                       const SizedBox(height: 30),
 
-                      // --- LOGOUT BUTTON ---
                       SizedBox(
                         width: double.infinity,
                         height: 55,
@@ -603,7 +583,6 @@ class _SitterSettingScreenState extends State<SitterSettingScreen> {
     );
   }
 
-  // --- WIDGET BUILDERS ---
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12, left: 4),
