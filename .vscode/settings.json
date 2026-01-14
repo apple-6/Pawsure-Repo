@@ -1,5 +1,5 @@
 {
-    "cmake.sourceDirectory": "C:/Users/mavis/Pawsure-Repo/pawsure_app/linux",
+    "cmake.sourceDirectory": "C:/project/Pawsure-Repo/pawsure_app/linux",
     "java.configuration.updateBuildConfiguration": "interactive",
     "postman.settings.dotenv-detection-notification-visibility": false
 }
