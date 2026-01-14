@@ -57,16 +57,27 @@ class PostModel {
     // 3. Extract Pets
     final List<dynamic> rawPets = json['pets'] ?? [];
 
+    // --- 🔧 HELPER: URL CLEANER (Fixes Android Emulator Localhost) ---
+    String cleanUrl(String url) {
+      if (url.isEmpty) return url;
+      // If the database gives us 'localhost', we swap it with the correct
+      // Base URL for the current device (10.0.2.2 for Android, etc.)
+      if (url.contains('localhost:3000')) {
+        return url.replaceAll('http://localhost:3000', ApiConfig.baseUrl);
+      }
+      return url;
+    }
+
     // --- 4. IMAGE FIX LOGIC START ---
     String rawAvatar = userData['profile_picture'] ?? '';
     String finalAvatarUrl;
 
     if (rawAvatar.isNotEmpty) {
       if (rawAvatar.startsWith('http')) {
-        // It is already a full URL (e.g., Google login photo)
-        finalAvatarUrl = rawAvatar;
+        // It is a full URL, but might be 'localhost'. Clean it.
+        finalAvatarUrl = cleanUrl(rawAvatar);
       } else {
-        // It is a local path (e.g., uploads/avatar.jpg) -> Add Base URL
+        // It is a relative path (e.g., uploads/avatar.jpg) -> Add Base URL
         finalAvatarUrl = '${ApiConfig.baseUrl}/$rawAvatar';
       }
     } else {
@@ -79,17 +90,22 @@ class PostModel {
       id: json['id'].toString(),
       userId: (json['userId'] ?? userData['id'] ?? '').toString(),
       userName: userData['name'] ?? 'Unknown User',
-      
+
       // ✅ ASSIGN THE FIXED URL
       profilePicture: finalAvatarUrl,
-      
+
       content: json['content'] ?? '',
 
-      // Media mapping logic
+      // ✅ APPLY CLEANER TO MEDIA URLS
       mediaUrls: rawMedia
           .map((m) {
-            if (m is String) return m;
-            return (m['url'] ?? m['media_url'] ?? '').toString();
+            String url;
+            if (m is String) {
+              url = m;
+            } else {
+              url = (m['url'] ?? m['media_url'] ?? '').toString();
+            }
+            return cleanUrl(url); // Fix localhost links here
           })
           .where((url) => url.isNotEmpty)
           .toList()
@@ -113,12 +129,12 @@ class PostModel {
       // Multi-Pet Mapping
       petIds: rawPets.map((p) => p['id'].toString()).toList(),
       petNames: rawPets.map((p) => p['name'].toString()).toList(),
-      // Inside PostModel.fromJson
-      pets: rawPets.map((p) => Pet.fromJson(p)).toList(),
+      pets: rawPets
+          .map((p) => Pet.fromJson(p))
+          .toList(), // Pet.fromJson already cleans its own URLs
       ratePerNight: json['rate_per_night'] != null
           ? double.tryParse(json['rate_per_night'].toString()) ?? 0.0
           : 0.0,
-      //petId: json['petId']?.toString(),
       commentsCount: json['commentsCount'] ?? json['comments_count'] ?? 0,
     );
   }
