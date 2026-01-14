@@ -417,28 +417,31 @@ try {
       throw new BadRequestException("Search failed.");
     }
   }
-
   async updateAvailability(
     userId: number,
     dto: UpdateAvailabilityDto,
   ): Promise<Sitter> {
-    // 1. Find the sitter profile associated with this user
     const sitter = await this.findByUserId(userId);
 
     if (!sitter) {
-      throw new NotFoundException('Sitter profile not found for this user.');
+      throw new NotFoundException('Sitter profile not found');
     }
 
-    // 2. Update only the relevant fields
-    if (dto.unavailable_dates !== undefined) {
-      sitter.unavailable_dates = dto.unavailable_dates;
+    // Ensure we are saving clean strings. 
+    // If the frontend sends full ISO strings, we strip the time.
+    if (dto.unavailable_dates) {
+      sitter.unavailable_dates = dto.unavailable_dates.map(date => {
+        // If it comes in as "2026-03-05T00:00...", slice it to "2026-03-05"
+        // If it's already "2026-03-05", this leaves it alone.
+        return date.toString().split('T')[0];
+      });
     }
 
-    if (dto.unavailable_days !== undefined) {
+    if (dto.unavailable_days) {
       sitter.unavailable_days = dto.unavailable_days;
     }
 
-    // 3. Save and return the updated profile
     return await this.sitterRepository.save(sitter);
   }
+  
 }

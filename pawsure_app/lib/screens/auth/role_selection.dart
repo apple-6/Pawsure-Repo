@@ -104,7 +104,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         height: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/images/backgroundroleimage.jpg'),
+            image: AssetImage('assets/images/mimi.png'),
             fit: BoxFit.cover,
           ),
         ),
@@ -169,7 +169,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20), // Gap between header and scroll area
+                  const SizedBox(
+                    height: 20,
+                  ), // Gap between header and scroll area
                 ],
 
                 // ==================================================
@@ -183,8 +185,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     child: Column(
                       children: [
                         // If not registration flow, add top spacing since there is no header
-                        if (!widget.isRegistrationFlow) 
-                           const SizedBox(height: 60),
+                        if (!widget.isRegistrationFlow)
+                          const SizedBox(height: 60),
 
                         _buildRoleCard(
                           title: "I'm a Pet Owner",
@@ -196,7 +198,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                         const SizedBox(height: 24),
                         _buildRoleCard(
                           title: "I'm a Pet Sitter",
-                          subtitle: "Offer safe, loving care for\nothers' pets.",
+                          subtitle:
+                              "Offer safe, loving care for\nothers' pets.",
                           role: 'sitter',
                           userRole: UserRole.sitter,
                           icon: Icons.home_work_outlined,

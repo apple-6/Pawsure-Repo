@@ -90,15 +90,14 @@ class _SitterCalendarState extends State<SitterCalendar> {
 
   Future<void> _fetchAvailability() async {
     if (!mounted) return;
-
     setState(() => _isLoading = true);
 
     try {
-      // 1. Get the real token (make sure this is implemented)
       final token = await _getAuthToken();
-      final url = Uri.parse('${ApiConfig.baseUrl}/sitters/me');
+      final url = Uri.parse('${ApiConfig.baseUrl}/sitters/my-profile');
 
-      debugPrint("Fetching from: $url");
+      // DEBUG: Print where we are fetching from
+      debugPrint("🔍 Fetching availability from: $url");
 
       final response = await http
           .get(
@@ -108,24 +107,58 @@ class _SitterCalendarState extends State<SitterCalendar> {
               "Content-Type": "application/json",
             },
           )
-          .timeout(
-            const Duration(seconds: 10),
-          ); // Add a timeout so it doesn't spin forever
+          .timeout(const Duration(seconds: 10));
+
+      debugPrint("📩 Response Status: ${response.statusCode}");
+      debugPrint("📩 Response Body: ${response.body}"); // <--- THIS IS CRITICAL
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<dynamic> dbDates = data['unavailable_dates'] ?? [];
-        final List<dynamic> dbDays = data['unavailable_days'] ?? [];
+
+        // ✅ FIX 1: Handle "Wrapped" responses (optional, but safe)
+        // If the data is inside a 'data' wrapper, unwrap it.
+        final actualData = (data is Map && data.containsKey('data'))
+            ? data['data']
+            : data;
+
+        // ✅ FIX 2: Check for BOTH snake_case and camelCase keys
+        final List<dynamic> dbDates =
+            actualData['unavailable_dates'] ??
+            actualData['unavailableDates'] ??
+            [];
+        final List<dynamic> dbDays =
+            actualData['unavailable_days'] ??
+            actualData['unavailableDays'] ??
+            [];
+
+        debugPrint("✅ Found Dates: ${dbDates.length}");
+        debugPrint("✅ Found Days: ${dbDays.length}");
 
         setState(() {
           _dateStatuses.clear();
+
           for (var dateStr in dbDates) {
-            DateTime parsed = DateTime.parse(dateStr);
-            _dateStatuses[dateStr] = DateInfo(
-              date: parsed,
-              status: DateStatus.unavailable,
-            );
+            try {
+              // ✅ FIX 3: Robust Parsing
+              // Convert to string first to handle any weird JSON types
+              String rawString = dateStr.toString();
+
+              // Parse the date (Works for "2026-03-05" OR "2026-03-05T00:00:00Z")
+              DateTime parsed = DateTime.parse(rawString);
+
+              // Standardize the key for the Map lookup
+              String formattedKey = DateFormat('yyyy-MM-dd').format(parsed);
+
+              _dateStatuses[formattedKey] = DateInfo(
+                date: parsed,
+                status: DateStatus.unavailable,
+              );
+              debugPrint("   mapped $rawString -> $formattedKey"); // debug log
+            } catch (e) {
+              debugPrint("❌ Error parsing date: $dateStr - $e");
+            }
           }
+
           _recurringUnavailableDays = dbDays
               .map((dayName) => _daysOfWeek.indexOf(dayName))
               .where((index) => index != -1)
@@ -133,12 +166,11 @@ class _SitterCalendarState extends State<SitterCalendar> {
               .toList();
         });
       } else {
-        debugPrint("Server Error: ${response.statusCode} - ${response.body}");
+        debugPrint("❌ Server Error: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      debugPrint("Connection Error: $e");
+      debugPrint("❌ Connection Error: $e");
     } finally {
-      // This runs no matter what, stopping the loading spinner
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -149,15 +181,19 @@ class _SitterCalendarState extends State<SitterCalendar> {
     try {
       final token = await _getAuthToken();
       final url = Uri.parse('${ApiConfig.baseUrl}/sitters/availability');
+
       List<String> unavailableDates = _dateStatuses.entries
           .where((e) => e.value.status == DateStatus.unavailable)
           .map((e) => e.key)
           .toList();
+
       List<String> unavailableDays = _recurringUnavailableDays
           .map((index) => _daysOfWeek[index])
           .toList();
 
-      await http.put(
+      debugPrint("Syncing: $unavailableDates, $unavailableDays"); // DEBUG LOG
+
+      final response = await http.put(
         url,
         headers: {
           "Content-Type": "application/json",
@@ -168,6 +204,14 @@ class _SitterCalendarState extends State<SitterCalendar> {
           "unavailable_days": unavailableDays,
         }),
       );
+
+      // Check if the server actually accepted the request
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        debugPrint("FAILED TO SYNC: ${response.body}");
+        // Optional: Show a snackbar to the user telling them save failed
+      } else {
+        debugPrint("Sync Successful");
+      }
     } catch (e) {
       debugPrint("Sync Error: $e");
     }
