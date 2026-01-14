@@ -1,6 +1,7 @@
 // lib/screens/sitter_setup/steps/step2_environment.dart
 
 import 'package:flutter/material.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 
 class Step2Environment extends StatefulWidget {
   final GlobalKey<FormState> formKey;
@@ -30,12 +31,8 @@ class _Step2EnvironmentState extends State<Step2Environment> {
   void initState() {
 
     super.initState();
-    String? savedValue = widget.formData['houseType'];
-    if (savedValue != null && _houseTypeOptions.contains(savedValue)) {
-      _selectedHouseType = savedValue;
-    } else {
-      _selectedHouseType = null; // Default to null (shows 'Select house type')
-    }
+      _selectedHouseType = widget.formData['houseType']; // Default to null (shows 'Select house type')
+    
   }
 
   @override
@@ -57,13 +54,10 @@ class _Step2EnvironmentState extends State<Step2Environment> {
             const SizedBox(height: 8),
             // --- REPLACED TextFormField WITH DropdownButtonFormField ---
        
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField2<String>(
                 value: _selectedHouseType,
                 hint: const Text('Select house type'),
-                icon: const Icon(Icons.arrow_drop_down),
                 isExpanded: true,
-
-                borderRadius: BorderRadius.circular(16.0),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.grey[100],
@@ -74,13 +68,25 @@ class _Step2EnvironmentState extends State<Step2Environment> {
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 ),
+                iconStyleData: const IconStyleData(
+                  icon: Icon(Icons.arrow_drop_down),
+                ),
+                dropdownStyleData: DropdownStyleData(
+                  maxHeight: 300,
+                  width: MediaQuery.of(context).size.width * 0.7,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white,
+                  ),
+                  offset: const Offset(0, -5),
+                ),
+                menuItemStyleData: const MenuItemStyleData(
+                  padding: EdgeInsets.symmetric(horizontal: 24),
+                ),
                 items: _houseTypeOptions.map((String type) {
                   return DropdownMenuItem<String>(
                     value: type,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: Text(type),
-                    ),
+                    child: Text(type),
                   );
                 }).toList(),
                 onChanged: (String? newValue) {

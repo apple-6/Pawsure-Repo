@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  dropdown_button2: ^2.3.9
     
   # Networking
   http: ^1.1.0
