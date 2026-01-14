@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:pawsure_app/constants/api_config.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:pawsure_app/services/api_service.dart';
+import 'package:intl/intl.dart';
 
 class ChatScreen extends StatefulWidget {
   final String ownerName;
@@ -32,7 +34,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   List<Map<String, dynamic>> _messages = [];
-  
+
   // The main green color from your image
   final Color _brandGreen = const Color(0xFF1CCA5B);
 
@@ -47,7 +49,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _fetchMessages() async {
     try {
-      final List<dynamic> history = await ApiService().getChatHistory(widget.room);
+      final List<dynamic> history = await ApiService().getChatHistory(
+        widget.room,
+      );
       if (mounted) {
         setState(() {
           _messages = history.map((msg) {
@@ -58,11 +62,13 @@ class _ChatScreenState extends State<ChatScreen> {
             } else if (msg['sender'] is int) {
               senderId = msg['sender'];
             }
-            
+
             return {
               "text": msg['text'],
               "isMe": senderId == widget.currentUserId,
-              "time": msg['created_at'] ?? DateTime.now().toString(),
+              "time": msg['created_at'] != null
+                  ? DateTime.parse(msg['created_at']).toLocal().toString()
+                  : DateTime.now().toString(),
             };
           }).toList();
         });
@@ -74,74 +80,74 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _connectSocket() {
-  String socketUrl = Platform.isAndroid ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
-  
-  print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  print('🔌 Initializing socket connection');
-  print('   URL: $socketUrl');
-  print('   Room: ${widget.room}');
-  print('   User ID: ${widget.currentUserId}');
-  
-  socket = IO.io(socketUrl, <String, dynamic>{
-    'transports': ['websocket'],
-    'autoConnect': false,
-    'reconnection': true,
-    'reconnectionAttempts': 5,
-    'reconnectionDelay': 1000,
-  });
+    String socketUrl = ApiConfig.baseUrl;
 
-  socket.connect();
-  
-  socket.onConnect((_) {
-    print('✅ SOCKET CONNECTED!');
-    print('   Socket ID: ${socket.id}');
-    print('   Joining room: ${widget.room}');
-    socket.emit('joinRoom', widget.room);
-    print('   Join room emitted');
-  });
-
-  socket.on('receiveMessage', (data) {
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('📨 MESSAGE RECEIVED VIA SOCKET');
-    print('   Text: ${data['text']}');
-    print('   Sender ID: ${data['senderId']}');
-    print('   My User ID: ${widget.currentUserId}');
-    print('   Is Me: ${data['senderId'] == widget.currentUserId}');
-    print('   Timestamp: ${data['timestamp']}');
-    
-    if (mounted) {
-      setState(() {
-        _messages.add({
-          "text": data['text'],
-          "isMe": data['senderId'] == widget.currentUserId,
-          "time": data['timestamp'] ?? DateTime.now().toString(),
+    print('🔌 Initializing socket connection');
+    print('   URL: $socketUrl');
+    print('   Room: ${widget.room}');
+    print('   User ID: ${widget.currentUserId}');
+
+    socket = IO.io(socketUrl, <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': false,
+      'reconnection': true,
+      'reconnectionAttempts': 5,
+      'reconnectionDelay': 1000,
+    });
+
+    socket.connect();
+
+    socket.onConnect((_) {
+      print('✅ SOCKET CONNECTED!');
+      print('   Socket ID: ${socket.id}');
+      print('   Joining room: ${widget.room}');
+      socket.emit('joinRoom', widget.room);
+      print('   Join room emitted');
+    });
+
+    socket.on('receiveMessage', (data) {
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      print('📨 MESSAGE RECEIVED VIA SOCKET');
+      print('   Text: ${data['text']}');
+      print('   Sender ID: ${data['senderId']}');
+      print('   My User ID: ${widget.currentUserId}');
+      print('   Is Me: ${data['senderId'] == widget.currentUserId}');
+      print('   Timestamp: ${data['timestamp']}');
+
+      if (mounted) {
+        setState(() {
+          _messages.add({
+            "text": data['text'],
+            "isMe": data['senderId'] == widget.currentUserId,
+            "time": data['timestamp'] != null
+                ? DateTime.parse(data['timestamp']).toLocal().toString()
+                : DateTime.now().toString(),
+          });
         });
-      });
-      print('✅ Message added to list. Total messages: ${_messages.length}');
-      _scrollToBottom();
-    } else {
-      print('⚠️ Widget not mounted, message ignored');
-    }
+        print('✅ Message added to list. Total messages: ${_messages.length}');
+        _scrollToBottom();
+      } else {
+        print('⚠️ Widget not mounted, message ignored');
+      }
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    });
+
+    socket.onDisconnect((_) {
+      print('❌ SOCKET DISCONNECTED');
+    });
+
+    socket.onError((error) {
+      print('🔴 SOCKET ERROR: $error');
+    });
+
+    socket.onReconnect((_) {
+      print('🔄 SOCKET RECONNECTED');
+      socket.emit('joinRoom', widget.room);
+    });
+
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  });
-
-  socket.onDisconnect((_) {
-    print('❌ SOCKET DISCONNECTED');
-  });
-
-  socket.onError((error) {
-    print('🔴 SOCKET ERROR: $error');
-  });
-
-  socket.onReconnect((_) {
-    print('🔄 SOCKET RECONNECTED');
-    socket.emit('joinRoom', widget.room);
-  });
-  
-  print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-}
-
-
+  }
 
   void _sendMessage() {
     final text = _controller.text.trim();
@@ -154,7 +160,6 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     _controller.clear();
-    
   }
 
   void _scrollToBottom() {
@@ -192,8 +197,13 @@ class _ChatScreenState extends State<ChatScreen> {
             CircleAvatar(
               backgroundColor: const Color(0xFFE8F5E9),
               child: Text(
-                widget.ownerName.isNotEmpty ? widget.ownerName[0].toUpperCase() : "?",
-                style: TextStyle(color: _brandGreen, fontWeight: FontWeight.bold),
+                widget.ownerName.isNotEmpty
+                    ? widget.ownerName[0].toUpperCase()
+                    : "?",
+                style: TextStyle(
+                  color: _brandGreen,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -203,7 +213,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   Text(
                     "${widget.ownerName} (Owner of ${widget.petName})",
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
@@ -260,7 +274,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SizedBox(width: 4),
                 Text(
                   "View Pet Profile",
-                  style: TextStyle(color: _brandGreen, fontWeight: FontWeight.w600, fontSize: 13),
+                  style: TextStyle(
+                    color: _brandGreen,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
@@ -271,28 +289,38 @@ class _ChatScreenState extends State<ChatScreen> {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => _updateStatus('accepted'), 
+                  onPressed: () => _updateStatus('accepted'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _brandGreen,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  child: const Text("ACCEPT BOOKING", style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    "ACCEPT BOOKING",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => _updateStatus('declined'), 
+                  onPressed: () => _updateStatus('declined'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.grey[800],
                     side: BorderSide(color: Colors.grey.shade300),
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  child: const Text("DECLINE", style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    "DECLINE",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ],
@@ -307,15 +335,20 @@ class _ChatScreenState extends State<ChatScreen> {
   // CHAT BUBBLE
   Widget _buildMessageBubble(Map<String, dynamic> msg) {
     final bool isMe = msg['isMe'];
-    final String time = msg['time'].toString().length > 16 
-        ? msg['time'].toString().substring(11, 16) 
-        : "";
+    String time = "";
+    if (msg['time'] != null && msg['time'].toString().isNotEmpty) {
+      final DateTime date = DateTime.parse(msg['time']);
+      time = DateFormat('HH:mm').format(date); // Formats to 14:30
+      // OR use DateFormat('h:mm a').format(date) for 2:30 PM
+    }
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isMe ? _brandGreen : Colors.white,
@@ -327,7 +360,11 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           boxShadow: [
             if (!isMe)
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
           ],
         ),
         child: Column(
@@ -384,7 +421,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   hintStyle: TextStyle(color: Colors.grey[400]),
                   filled: true,
                   fillColor: const Color(0xFFF5F6F8),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,
@@ -399,7 +439,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 borderRadius: BorderRadius.circular(12), // Squarish button
               ),
               child: IconButton(
-                icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                icon: const Icon(
+                  Icons.send_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 onPressed: _sendMessage,
               ),
             ),
@@ -408,29 +452,35 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
+
   //handle clicks
   Future<void> _updateStatus(String status) async {
     try {
       // 1. Call the API
       await ApiService().updateBookingStatus(widget.bookingId, status);
-      
+
       // 2. Show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Booking marked as $status"),
-            backgroundColor: status == 'accepted' ? Colors.green : Colors.orange,
+            backgroundColor: status == 'accepted'
+                ? Colors.green
+                : Colors.orange,
           ),
         );
-        
+
         // 3. Go back to Inbox (since the status changed, this screen is old)
-        Navigator.pop(context); 
+        Navigator.pop(context);
       }
     } catch (e) {
       print("Error updating status: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to update: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("Failed to update: $e"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
