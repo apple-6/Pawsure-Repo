@@ -147,7 +147,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
 
       final Map<String, dynamic> payload = {
-        "name": _nameController.text,
         "bio": _bioController.text,
         "address": _locationController.text,
         "services": servicesJson,
@@ -155,17 +154,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       final apiService = Get.find<ApiService>();
 
-      final updatedProfileData = await apiService.updateSitterProfile(
-        widget.user.id,
-        payload,
+      // 1. Update Sitter specific info
+      await apiService.updateSitterProfile(payload);
+
+      // 2. Update general user info (name + image)
+      final userResponse = await apiService.updateProfileMultipart(
+        {"name": _nameController.text},
         _selectedImage,
       );
 
       String? newProfilePic = widget.user.profilePicture;
-
-      if (updatedProfileData != null &&
-          updatedProfileData.profilePicture != null) {
-        newProfilePic = updatedProfileData.profilePicture;
+      if (userResponse != null && userResponse['user'] != null) {
+        newProfilePic = userResponse['user']['profile_picture'];
       }
 
       final newProfile = UserProfile(

@@ -223,10 +223,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     DateTime endOfWeek = startOfWeek.add(const Duration(days: 6));
     selectedWeekRange = DateTimeRange(start: startOfWeek, end: endOfWeek);
   }
-Future<void> _fetchBookingHistory() async {
+  Future<void> _fetchBookingHistory() async {
     try {
       final apiService = Get.find<ApiService>();
-      final List<Map<String, dynamic>> rawData = await apiService.getOwnerBookings();
+      final result = await apiService.getOwnerBookings();
+      final List<Map<String, dynamic>> rawData = List<Map<String, dynamic>>.from(result);
 
       // 🔍 DEBUG: Check the first item in your console to verify structure
       if (rawData.isNotEmpty) {

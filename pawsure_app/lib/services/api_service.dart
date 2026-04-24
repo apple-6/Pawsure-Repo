@@ -322,6 +322,30 @@ class ApiService {
     if (response.statusCode != 201) throw Exception('Failed to create post');
   }
 
+  Future<void> updatePost({
+    required String postId,
+    required String content,
+    required bool isUrgent,
+    required List<String> existingMediaUrls,
+    required List<String> newMediaPaths,
+  }) async {
+    final headers = await _getHeaders();
+    headers.remove('Content-Type');
+    final request = http.MultipartRequest('PUT', Uri.parse('$apiBaseUrl/posts/$postId'));
+    request.headers.addAll(headers);
+    request.fields['content'] = content;
+    request.fields['is_urgent'] = isUrgent.toString();
+    request.fields['existingMedia'] = jsonEncode(existingMediaUrls);
+
+    if (newMediaPaths.isNotEmpty) {
+      for (var path in newMediaPaths) {
+        request.files.add(await http.MultipartFile.fromPath('media', path));
+      }
+    }
+    final response = await http.Response.fromStream(await request.send());
+    if (response.statusCode != 200 && response.statusCode != 201) throw Exception('Failed to update post');
+  }
+
   // ========================================================================
   // USER PROFILE & SITTER API
   // ========================================================================
@@ -329,6 +353,13 @@ class ApiService {
   Future<dynamic> getSitterByUserId(int userId) async {
     final headers = await _getHeaders();
     final response = await http.get(Uri.parse('$apiBaseUrl/sitters/user/$userId'), headers: headers);
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    return null;
+  }
+
+  Future<dynamic> getMySitterProfile() async {
+    final headers = await _getHeaders();
+    final response = await http.get(Uri.parse('$apiBaseUrl/sitters/my-profile'), headers: headers);
     if (response.statusCode == 200) return jsonDecode(response.body);
     return null;
   }
@@ -359,6 +390,10 @@ class ApiService {
     return [];
   }
 
+  Future<List<dynamic>> getMyBookings() async {
+    return getOwnerBookings();
+  }
+
   Future<void> updateBookingStatus(int bookingId, String status) async {
     final headers = await _getHeaders();
     final response = await http.patch(Uri.parse('$apiBaseUrl/bookings/$bookingId/status'), headers: headers, body: jsonEncode({'status': status}));
@@ -378,10 +413,38 @@ class ApiService {
     throw Exception('Failed to load sitter details');
   }
 
+  Future<void> createSitterProfile(Map<String, dynamic> payload) async {
+    final headers = await _getHeaders();
+    final response = await http.post(Uri.parse('$apiBaseUrl/sitters'), headers: headers, body: jsonEncode(payload));
+    if (response.statusCode != 201) throw Exception('Failed to create sitter profile');
+  }
+
   Future<void> updateSitterProfile(Map<String, dynamic> payload) async {
     final headers = await _getHeaders();
     final response = await http.patch(Uri.parse('$apiBaseUrl/sitters/profile'), headers: headers, body: jsonEncode(payload));
     if (response.statusCode != 200) throw Exception('Failed to update sitter profile');
+  }
+
+  // ========================================================================
+  // REVIEWS & PAYMENTS
+  // ========================================================================
+
+  Future<void> createReview({required int bookingId, required int rating, String? comment}) async {
+    final headers = await _getHeaders();
+    final response = await http.post(Uri.parse('$apiBaseUrl/reviews'), headers: headers, body: jsonEncode({
+      'bookingId': bookingId,
+      'rating': rating,
+      'comment': comment,
+    }));
+    if (response.statusCode != 201) throw Exception('Failed to create review');
+  }
+
+  Future<void> processPayment(dynamic payloadOrId) async {
+    final headers = await _getHeaders();
+    final dynamic body = (payloadOrId is Map) ? payloadOrId : {'bookingId': payloadOrId};
+    
+    final response = await http.post(Uri.parse('$apiBaseUrl/payments/process'), headers: headers, body: jsonEncode(body));
+    if (response.statusCode != 201 && response.statusCode != 200) throw Exception('Failed to process payment');
   }
 
   // ========================================================================

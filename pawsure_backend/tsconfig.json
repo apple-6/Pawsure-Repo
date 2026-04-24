@@ -23,13 +23,13 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
-    },
-    "include": [
-    "src/**/*.ts",
-    "test/**/*.ts"
-    ],
-    "exclude": [
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
     "node_modules",
-    "dist"
-    ]
-    }
+    "dist",
+    "test"
+  ]
+}
