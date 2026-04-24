@@ -55,13 +55,18 @@ class CalendarController extends GetxController {
       isLoadingUpcoming.value = true;
       debugPrint('🏠 Loading upcoming events for all pets...');
 
-      final fetchedEvents = await _apiService.getAllOwnerUpcomingEvents(
-        limit: 3,
-      );
+      final fetchedEvents = await _apiService.getAllOwnerEvents();
 
-      upcomingEvents.value =
-          fetchedEvents.where((e) => e.status != EventStatus.missed).toList()
-            ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+      upcomingEvents.value = fetchedEvents
+          .where((e) =>
+              e.dateTime.isAfter(DateTime.now()) &&
+              e.status != EventStatus.missed)
+          .toList()
+        ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+
+      if (upcomingEvents.length > 3) {
+        upcomingEvents.value = upcomingEvents.sublist(0, 3);
+      }
 
       debugPrint('✅ Loaded ${upcomingEvents.length} upcoming events');
     } catch (e) {

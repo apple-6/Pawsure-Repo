@@ -2,7 +2,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/models/health_record_model.dart';
@@ -12,16 +11,8 @@ import 'package:pawsure_app/services/auth_service.dart';
 import 'package:get/get.dart';
 import 'package:pawsure_app/constants/api_config.dart';
 import 'package:pawsure_app/models/comment_model.dart';
-import 'package:mime/mime.dart';
 
 String get apiBaseUrl => ApiConfig.baseUrl;
-
-// Helper function to get file extension
-String extname(String filename) {
-  final lastDot = filename.lastIndexOf('.');
-  if (lastDot == -1) return '';
-  return filename.substring(lastDot);
-}
 
 class ApiService {
   AuthService get _authService => Get.find<AuthService>();
@@ -94,8 +85,7 @@ class ApiService {
       if (lastVetVisit != null) request.fields['last_vet_visit'] = lastVetVisit;
 
       if (photoPath != null && photoPath.isNotEmpty) {
-        final fileName = 'pet_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        request.files.add(await http.MultipartFile.fromPath('photo', photoPath, filename: fileName));
+        request.files.add(await http.MultipartFile.fromPath('photo', photoPath));
       }
 
       final response = await http.Response.fromStream(await request.send());
@@ -150,8 +140,7 @@ class ApiService {
       if (lastVetVisit != null) request.fields['last_vet_visit'] = lastVetVisit;
 
       if (photoPath != null && photoPath.isNotEmpty) {
-        final fileName = 'pet_upd_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        request.files.add(await http.MultipartFile.fromPath('photo', photoPath, filename: fileName));
+        request.files.add(await http.MultipartFile.fromPath('photo', photoPath));
       }
 
       final response = await http.Response.fromStream(await request.send());
@@ -166,16 +155,9 @@ class ApiService {
   }
 
   Future<void> deletePet(int petId) async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.delete(Uri.parse('$apiBaseUrl/pets/$petId'), headers: headers);
-      if (response.statusCode != 200 && response.statusCode != 204) {
-        throw Exception('Failed to delete pet: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('❌ Error in deletePet: $e');
-      rethrow;
-    }
+    final headers = await _getHeaders();
+    final response = await http.delete(Uri.parse('$apiBaseUrl/pets/$petId'), headers: headers);
+    if (response.statusCode != 200 && response.statusCode != 204) throw Exception('Failed to delete pet');
   }
 
   // ========================================================================
@@ -183,36 +165,35 @@ class ApiService {
   // ========================================================================
 
   Future<List<HealthRecord>> getHealthRecords(int petId) async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.get(Uri.parse('$apiBaseUrl/pets/$petId/health-records'), headers: headers);
-      if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body);
-        return jsonList.map((e) => HealthRecord.fromJson(e)).toList();
-      }
-      throw Exception('Failed to load health records: ${response.statusCode}');
-    } catch (e) {
-      debugPrint('❌ Error in getHealthRecords: $e');
-      rethrow;
+    final headers = await _getHeaders();
+    final response = await http.get(Uri.parse('$apiBaseUrl/pets/$petId/health-records'), headers: headers);
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonList = jsonDecode(response.body);
+      return jsonList.map((e) => HealthRecord.fromJson(e)).toList();
     }
+    return [];
   }
 
   Future<HealthRecord> addHealthRecord(int petId, Map<String, dynamic> payload) async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.post(
-        Uri.parse('$apiBaseUrl/pets/$petId/health-records'),
-        headers: headers,
-        body: jsonEncode(payload),
-      );
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        return HealthRecord.fromJson(jsonDecode(response.body));
-      }
-      throw Exception('Failed to add health record: ${response.statusCode}');
-    } catch (e) {
-      debugPrint('❌ Error in addHealthRecord: $e');
-      rethrow;
+    final headers = await _getHeaders();
+    final response = await http.post(Uri.parse('$apiBaseUrl/pets/$petId/health-records'), headers: headers, body: jsonEncode(payload));
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return HealthRecord.fromJson(jsonDecode(response.body));
     }
+    throw Exception('Failed to add health record');
+  }
+
+  Future<HealthRecord> updateHealthRecord(int recordId, Map<String, dynamic> payload) async {
+    final headers = await _getHeaders();
+    final response = await http.patch(Uri.parse('$apiBaseUrl/health-records/$recordId'), headers: headers, body: jsonEncode(payload));
+    if (response.statusCode == 200) return HealthRecord.fromJson(jsonDecode(response.body));
+    throw Exception('Failed to update health record');
+  }
+
+  Future<void> deleteHealthRecord(int recordId) async {
+    final headers = await _getHeaders();
+    final response = await http.delete(Uri.parse('$apiBaseUrl/health-records/$recordId'), headers: headers);
+    if (response.statusCode != 200 && response.statusCode != 204) throw Exception('Failed to delete health record');
   }
 
   // ========================================================================
@@ -220,144 +201,78 @@ class ApiService {
   // ========================================================================
 
   Future<List<EventModel>> getAllOwnerEvents() async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.get(Uri.parse('$apiBaseUrl/events/owner/all'), headers: headers);
-      if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body);
-        return jsonList.map((e) => EventModel.fromJson(e)).toList();
-      }
-      return [];
-    } catch (e) {
-      debugPrint('❌ Error in getAllOwnerEvents: $e');
-      return [];
+    final headers = await _getHeaders();
+    final response = await http.get(Uri.parse('$apiBaseUrl/events/owner/all'), headers: headers);
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonList = jsonDecode(response.body);
+      return jsonList.map((e) => EventModel.fromJson(e)).toList();
     }
+    return [];
   }
 
-  // ========================================================================
-  // POSTS/COMMUNITY API
-  // ========================================================================
-
-  Future<List<dynamic>> getPosts({String tab = 'all'}) async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.get(Uri.parse('$apiBaseUrl/posts?tab=$tab'), headers: headers);
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      }
-      throw Exception('Failed to load posts: ${response.statusCode}');
-    } catch (e) {
-      debugPrint('❌ Error in getPosts: $e');
-      rethrow;
+  Future<List<EventModel>> getAllOwnerUpcomingEvents({int limit = 3}) async {
+    final headers = await _getHeaders();
+    final response = await http.get(Uri.parse('$apiBaseUrl/events/owner/upcoming?limit=$limit'), headers: headers);
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonList = jsonDecode(response.body);
+      return jsonList.map((e) => EventModel.fromJson(e)).toList();
     }
+    return [];
   }
 
-  Future<void> createPost({
-    required String content,
-    bool isUrgent = false,
-    List<String>? mediaPaths,
-  }) async {
-    try {
-      final headers = await _getHeaders();
-      headers.remove('Content-Type');
-
-      final request = http.MultipartRequest('POST', Uri.parse('$apiBaseUrl/posts'));
-      request.headers.addAll(headers);
-      request.fields['content'] = content.trim();
-      request.fields['is_urgent'] = isUrgent.toString();
-
-      if (mediaPaths != null) {
-        for (int i = 0; i < mediaPaths.length; i++) {
-          final path = mediaPaths[i];
-          final fileName = 'post_${DateTime.now().millisecondsSinceEpoch}_$i${extname(path)}';
-          final file = await http.MultipartFile.fromPath('media', path, filename: fileName);
-          request.files.add(file);
-        }
-      }
-
-      final response = await http.Response.fromStream(await request.send());
-      if (response.statusCode != 201 && response.statusCode != 200) {
-        throw Exception('Failed to create post: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('❌ Error in createPost: $e');
-      rethrow;
-    }
+  Future<EventModel> updateEventStatus(int eventId, EventStatus status) async {
+    final headers = await _getHeaders();
+    final response = await http.patch(
+      Uri.parse('$apiBaseUrl/events/$eventId/status'),
+      headers: headers,
+      body: jsonEncode({'status': status.toJson()}),
+    );
+    if (response.statusCode == 200) return EventModel.fromJson(jsonDecode(response.body));
+    throw Exception('Failed to update event status');
   }
 
-  Future<void> updatePost({
-    required String postId,
-    required String content,
-    required bool isUrgent,
-    required List<String> existingMediaUrls,
-    required List<String> newMediaPaths,
-  }) async {
-    try {
-      final headers = await _getHeaders();
-      headers.remove('Content-Type');
+  Future<void> deleteEvent(int eventId) async {
+    final headers = await _getHeaders();
+    final response = await http.delete(Uri.parse('$apiBaseUrl/events/$eventId'), headers: headers);
+    if (response.statusCode != 200 && response.statusCode != 204) throw Exception('Failed to delete event');
+  }
 
-      final request = http.MultipartRequest('PUT', Uri.parse('$apiBaseUrl/posts/$postId'));
-      request.headers.addAll(headers);
-      request.fields['content'] = content;
-      request.fields['isUrgent'] = isUrgent.toString();
-      request.fields['existingMedia'] = jsonEncode(existingMediaUrls);
-
-      for (var path in newMediaPaths) {
-        if (path.isNotEmpty) {
-          request.files.add(await http.MultipartFile.fromPath('media', path));
-        }
-      }
-
-      final response = await http.Response.fromStream(await request.send());
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception('Failed to update post: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('❌ Error in updatePost: $e');
-      rethrow;
-    }
+  Future<void> createEvent(Map<String, dynamic> payload) async {
+    final headers = await _getHeaders();
+    final response = await http.post(Uri.parse('$apiBaseUrl/events'), headers: headers, body: jsonEncode(payload));
+    if (response.statusCode != 201) throw Exception('Failed to create event');
   }
 
   // ========================================================================
   // MOOD & STREAK API
   // ========================================================================
 
-  Future<Map<String, dynamic>> logMood({
-    required int petId,
-    required int moodScore,
-    String? moodLabel,
-  }) async {
+  Future<Map<String, dynamic>> logMood({required int petId, required int moodScore, String? moodLabel}) async {
+    final headers = await _getHeaders();
+    final response = await http.post(
+      Uri.parse('$apiBaseUrl/pets/$petId/mood'),
+      headers: headers,
+      body: jsonEncode({'mood_score': moodScore, if (moodLabel != null) 'mood_label': moodLabel}),
+    );
+    return jsonDecode(response.body);
+  }
+
+  Future<dynamic> getTodayMood(int petId) async {
     try {
       final headers = await _getHeaders();
-      final response = await http.post(
-        Uri.parse('$apiBaseUrl/pets/$petId/mood'),
-        headers: headers,
-        body: jsonEncode({
-          'mood_score': moodScore,
-          if (moodLabel != null) 'mood_label': moodLabel,
-        }),
-      );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
-      }
-      throw Exception('Failed to log mood: ${response.statusCode}');
+      final response = await http.get(Uri.parse('$apiBaseUrl/pets/$petId/mood/today'), headers: headers);
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      return null;
     } catch (e) {
-      debugPrint('❌ Error in logMood: $e');
-      rethrow;
+      return null;
     }
   }
 
   Future<Map<String, dynamic>> getStreakInfo(int petId) async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.get(Uri.parse('$apiBaseUrl/pets/$petId/mood/streak'), headers: headers);
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      }
-      return {'currentStreak': 0};
-    } catch (e) {
-      return {'currentStreak': 0};
-    }
+    final headers = await _getHeaders();
+    final response = await http.get(Uri.parse('$apiBaseUrl/pets/$petId/mood/streak'), headers: headers);
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    return {'currentStreak': 0};
   }
 
   // ========================================================================
@@ -365,65 +280,143 @@ class ApiService {
   // ========================================================================
 
   Future<Map<String, dynamic>> logMeal({required int petId, required String mealType}) async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.post(
-        Uri.parse('$apiBaseUrl/pets/$petId/meals'),
-        headers: headers,
-        body: jsonEncode({'meal_type': mealType}),
-      );
-      return jsonDecode(response.body);
-    } catch (e) {
-      rethrow;
-    }
+    final headers = await _getHeaders();
+    final response = await http.post(Uri.parse('$apiBaseUrl/pets/$petId/meals'), headers: headers, body: jsonEncode({'meal_type': mealType}));
+    return jsonDecode(response.body);
   }
 
   Future<List<String>> getTodayMeals(int petId) async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.get(Uri.parse('$apiBaseUrl/pets/$petId/meals/today'), headers: headers);
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        return data.map((e) => e['meal_type'] as String).toList();
-      }
-      return [];
-    } catch (e) {
-      return [];
+    final headers = await _getHeaders();
+    final response = await http.get(Uri.parse('$apiBaseUrl/pets/$petId/meals/today'), headers: headers);
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((e) => e['meal_type'] as String).toList();
     }
+    return [];
   }
 
   // ========================================================================
-  // CHAT & SITTER API (Simplified)
+  // POSTS/COMMUNITY API
   // ========================================================================
 
-  Future<List<dynamic>> getChatHistory(String room) async {
+  Future<List<dynamic>> getPosts({String tab = 'all'}) async {
     final headers = await _getHeaders();
-    final response = await http.get(Uri.parse('$apiBaseUrl/chat/$room'), headers: headers);
+    final response = await http.get(Uri.parse('$apiBaseUrl/posts?tab=$tab'), headers: headers);
     if (response.statusCode == 200) return jsonDecode(response.body);
-    throw Exception('Failed history');
+    throw Exception('Failed to load posts');
   }
 
-  Future<UserProfile?> getMySitterProfile() async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.get(Uri.parse('$apiBaseUrl/sitters/my-profile'), headers: headers);
-      if (response.statusCode == 200 && response.body.isNotEmpty) {
-        return UserProfile.fromJson(jsonDecode(response.body));
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<void> createSitterProfile(Map<String, dynamic> payload) async {
+  Future<void> createPost({required String content, bool isUrgent = false, List<String>? mediaPaths}) async {
     final headers = await _getHeaders();
-    final response = await http.post(Uri.parse('$apiBaseUrl/sitters'), headers: headers, body: jsonEncode(payload));
-    if (response.statusCode != 201) throw Exception('Failed registration');
+    headers.remove('Content-Type');
+    final request = http.MultipartRequest('POST', Uri.parse('$apiBaseUrl/posts'));
+    request.headers.addAll(headers);
+    request.fields['content'] = content;
+    request.fields['is_urgent'] = isUrgent.toString();
+    if (mediaPaths != null) {
+      for (var path in mediaPaths) {
+        request.files.add(await http.MultipartFile.fromPath('media', path));
+      }
+    }
+    final response = await http.Response.fromStream(await request.send());
+    if (response.statusCode != 201) throw Exception('Failed to create post');
   }
 
   // ========================================================================
-  // LIKES & COMMENTS
+  // USER PROFILE & SITTER API
+  // ========================================================================
+
+  Future<dynamic> getSitterByUserId(int userId) async {
+    final headers = await _getHeaders();
+    final response = await http.get(Uri.parse('$apiBaseUrl/sitters/user/$userId'), headers: headers);
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    return null;
+  }
+
+  Future<Map<String, dynamic>> updateProfileMultipart(Map<String, dynamic> data, File? image) async {
+    final headers = await _getHeaders();
+    headers.remove('Content-Type');
+    final request = http.MultipartRequest('PATCH', Uri.parse('$apiBaseUrl/users/profile'));
+    request.headers.addAll(headers);
+    data.forEach((key, value) => request.fields[key] = value.toString());
+    if (image != null) request.files.add(await http.MultipartFile.fromPath('profile_picture', image.path));
+    final response = await http.Response.fromStream(await request.send());
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to update profile');
+  }
+
+  Future<List<dynamic>> getSitterBookings() async {
+    final headers = await _getHeaders();
+    final response = await http.get(Uri.parse('$apiBaseUrl/bookings/sitter'), headers: headers);
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    return [];
+  }
+
+  Future<List<dynamic>> getOwnerBookings() async {
+    final headers = await _getHeaders();
+    final response = await http.get(Uri.parse('$apiBaseUrl/bookings/owner'), headers: headers);
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    return [];
+  }
+
+  Future<void> updateBookingStatus(int bookingId, String status) async {
+    final headers = await _getHeaders();
+    final response = await http.patch(Uri.parse('$apiBaseUrl/bookings/$bookingId/status'), headers: headers, body: jsonEncode({'status': status}));
+    if (response.statusCode != 200) throw Exception('Failed to update booking');
+  }
+
+  Future<void> completeService(int bookingId) async {
+    final headers = await _getHeaders();
+    final response = await http.post(Uri.parse('$apiBaseUrl/bookings/$bookingId/complete'), headers: headers);
+    if (response.statusCode != 200) throw Exception('Failed to complete service');
+  }
+
+  Future<dynamic> getSitterDetails(int sitterId) async {
+    final headers = await _getHeaders();
+    final response = await http.get(Uri.parse('$apiBaseUrl/sitters/$sitterId'), headers: headers);
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load sitter details');
+  }
+
+  Future<void> updateSitterProfile(Map<String, dynamic> payload) async {
+    final headers = await _getHeaders();
+    final response = await http.patch(Uri.parse('$apiBaseUrl/sitters/profile'), headers: headers, body: jsonEncode(payload));
+    if (response.statusCode != 200) throw Exception('Failed to update sitter profile');
+  }
+
+  // ========================================================================
+  // PAYMENT METHODS API
+  // ========================================================================
+
+  Future<List<dynamic>> getPaymentMethods() async {
+    final headers = await _getHeaders();
+    final response = await http.get(Uri.parse('$apiBaseUrl/payment-methods'), headers: headers);
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    return [];
+  }
+
+  Future<void> addPaymentMethod({required String cardType, required String lastFourDigits, required String cardholderName, required String expiryMonth, required String expiryYear, bool isDefault = false}) async {
+    final headers = await _getHeaders();
+    final response = await http.post(Uri.parse('$apiBaseUrl/payment-methods'), headers: headers, body: jsonEncode({
+      'cardType': cardType, 'lastFourDigits': lastFourDigits, 'cardholderName': cardholderName, 'expiryMonth': expiryMonth, 'expiryYear': expiryYear, 'isDefault': isDefault
+    }));
+    if (response.statusCode != 201) throw Exception('Failed to add payment method');
+  }
+
+  Future<void> setDefaultPaymentMethod(int methodId) async {
+    final headers = await _getHeaders();
+    final response = await http.patch(Uri.parse('$apiBaseUrl/payment-methods/$methodId/default'), headers: headers);
+    if (response.statusCode != 200) throw Exception('Failed to set default payment method');
+  }
+
+  Future<void> deletePaymentMethod(int methodId) async {
+    final headers = await _getHeaders();
+    final response = await http.delete(Uri.parse('$apiBaseUrl/payment-methods/$methodId'), headers: headers);
+    if (response.statusCode != 200) throw Exception('Failed to delete payment method');
+  }
+
+  // ========================================================================
+  // LIKES, COMMENTS & CHAT
   // ========================================================================
 
   Future<Map<String, dynamic>> toggleLike(String postId) async {
@@ -458,5 +451,12 @@ class ApiService {
       'content': json['content'] ?? '',
       'createdAt': json['created_at'] ?? DateTime.now().toIso8601String(),
     };
+  }
+
+  Future<List<dynamic>> getChatHistory(String room) async {
+    final headers = await _getHeaders();
+    final response = await http.get(Uri.parse('$apiBaseUrl/chat/$room'), headers: headers);
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed history');
   }
 }

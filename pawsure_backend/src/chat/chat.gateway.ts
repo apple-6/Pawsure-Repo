@@ -42,7 +42,7 @@ export class ChatGateway {
     console.log(`❌ Client disconnected: ${client.id}`);
     // Clean up rooms the client was part of
     const rooms = Array.from(client.rooms);
-    rooms.forEach(room => {
+    rooms.forEach((room) => {
       client.leave(room);
     });
   }

@@ -1,4 +1,8 @@
-import { Injectable, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import * as ort from 'onnxruntime-node';
 import sharp = require('sharp');
 import { join } from 'path';
@@ -50,7 +54,9 @@ export class AiService implements OnModuleInit {
 
   async classify(imageBuffer: Buffer) {
     if (!this.session) {
-      throw new ServiceUnavailableException('AI Model is currently offline. Please try again later.');
+      throw new ServiceUnavailableException(
+        'AI Model is currently offline. Please try again later.',
+      );
     }
 
     try {
