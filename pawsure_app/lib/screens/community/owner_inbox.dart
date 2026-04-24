@@ -157,7 +157,7 @@ class _OwnerInboxState extends State<OwnerInbox>
             
             await _apiService.createReview(
               bookingId: bookingId,
-              rating: rating,
+              rating: rating.toInt(),
               comment: comment,
             );
             
@@ -207,6 +207,8 @@ class _OwnerInboxState extends State<OwnerInbox>
         return;
       }
     }
+
+    if (!mounted) return;
 
     Navigator.push(
       context,
@@ -455,7 +457,7 @@ class OwnerPendingCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
+                    color: Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
@@ -598,7 +600,7 @@ class OwnerConfirmedCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(

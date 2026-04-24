@@ -351,7 +351,7 @@ class _OwnerChatScreenState extends State<OwnerChatScreen> {
             Text(
               time,
               style: TextStyle(
-                color: isMe ? Colors.white.withOpacity(0.7) : Colors.grey[400],
+                color: isMe ? Colors.white.withValues(alpha: 0.7) : Colors.grey[400],
                 fontSize: 10,
               ),
             ),
