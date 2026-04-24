@@ -28,9 +28,9 @@ export class FileService {
           resource_type: 'auto',
         },
         (error, result) => {
-          if (error) {
-            this.logger.error('Cloudinary upload failed:', error);
-            return reject(error);
+          if (error || !result) {
+            this.logger.error('Cloudinary upload failed:', error || 'No result');
+            return reject(error || new Error('Upload failed'));
           }
           this.logger.log(`File uploaded to Cloudinary: ${result.secure_url}`);
           resolve(result.secure_url);
