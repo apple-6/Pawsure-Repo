@@ -18,6 +18,8 @@ import { User } from '../user/user.entity';
     credentials: true,
   },
   transports: ['websocket', 'polling'],
+  pingInterval: 10000,
+  pingTimeout: 5000,
 })
 export class ChatGateway {
   @WebSocketServer()
@@ -38,6 +40,11 @@ export class ChatGateway {
   // ✅ Track disconnections
   handleDisconnect(client: Socket) {
     console.log(`❌ Client disconnected: ${client.id}`);
+    // Clean up rooms the client was part of
+    const rooms = Array.from(client.rooms);
+    rooms.forEach(room => {
+      client.leave(room);
+    });
   }
 
   @SubscribeMessage('joinRoom')

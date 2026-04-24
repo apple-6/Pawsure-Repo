@@ -133,17 +133,29 @@ class PetController extends GetxController {
   }
 
   // 2. ADD: Booking Actions (Calling your NestJS backend)
-  Future<void> acceptBooking(String bookingId) async {
+  Future<void> acceptBooking(int bookingId) async {
     try {
-      // await _apiService.updateBookingStatus(bookingId, 'accepted');
+      await _apiService.updateBookingStatus(bookingId, 'accepted');
       Get.snackbar(
         "Success",
         "Booking accepted!",
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green[800],
+        snackPosition: SnackPosition.BOTTOM,
       );
+      // Optional: Refresh bookings if you have a booking controller
+      // if (Get.isRegistered<BookingController>()) {
+      //   Get.find<BookingController>().loadBookings();
+      // }
     } catch (e) {
-      Get.snackbar("Error", "Failed to accept booking");
+      debugPrint('❌ Error accepting booking: $e');
+      Get.snackbar(
+        "Error",
+        "Failed to accept booking. Please try again.",
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red[800],
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 

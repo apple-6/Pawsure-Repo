@@ -100,6 +100,9 @@ class _AIScanTabState extends State<AIScanTab> {
       if (response.statusCode == 201 || response.statusCode == 200) {
         final result = jsonDecode(response.body);
         _showResultDialog(result['prediction'], result['confidence']);
+      } else if (response.statusCode == 503) {
+        debugPrint("❌ AI Model Offline: 503");
+        _showError("AI Model is currently offline. Please try again later.");
       } else {
         debugPrint("❌ Server Error: ${response.statusCode}");
         _showError("Server Error: ${response.statusCode}");
