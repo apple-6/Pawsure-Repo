@@ -46,4 +46,3 @@ export class PaymentMethodController {
     return { message: 'Payment method deleted successfully' };
   }
 }
-

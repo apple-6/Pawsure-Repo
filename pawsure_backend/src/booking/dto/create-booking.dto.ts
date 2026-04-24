@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsNumber, IsDateString, IsOptional, IsString,IsArray } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsDateString,
+  IsOptional,
+  IsString,
+  IsArray,
+} from 'class-validator';
 
 export class CreateBookingDto {
   @IsNotEmpty()
@@ -22,14 +29,14 @@ export class CreateBookingDto {
   // petId: number;
 
   @IsArray()
-  @IsNumber({}, { each: true }) 
+  @IsNumber({}, { each: true })
   petIds: number[];
 
-  @IsNotEmpty() 
+  @IsNotEmpty()
   @IsString()
   drop_off_time: string;
 
-  @IsNotEmpty() 
+  @IsNotEmpty()
   @IsString()
   pick_up_time: string;
 
@@ -40,5 +47,4 @@ export class CreateBookingDto {
   @IsOptional()
   @IsNumber()
   payment_method_id?: number;
-
 }

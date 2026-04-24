@@ -32,7 +32,7 @@ export class EventsService {
 
     // ✅ CRITICAL FIX: Parse as UTC explicitly
     const dateTimeUtc = new Date(createEventDto.dateTime);
-    
+
     console.log('📥 Received dateTime:', createEventDto.dateTime);
     console.log('📅 Parsed as Date:', dateTimeUtc.toISOString());
 
@@ -46,7 +46,7 @@ export class EventsService {
       notes: createEventDto.notes,
       pet_ids: petsToInclude, // ✅ Store all pet IDs in array
       petId: petsToInclude[0], // ✅ For backward compatibility, use first pet
-      pet: { id: petsToInclude[0] } as any,
+      pet: { id: petsToInclude[0] },
     });
 
     const saved = await this.eventsRepository.save(event);
@@ -76,7 +76,7 @@ export class EventsService {
       where: { owner: { id: userId } },
       select: ['id'],
     });
-    const petIds = ownerPets.map(p => p.id);
+    const petIds = ownerPets.map((p) => p.id);
 
     if (petIds.length === 0) return [];
 
@@ -115,7 +115,7 @@ export class EventsService {
       where: { owner: { id: userId } },
       select: ['id'],
     });
-    const petIds = ownerPets.map(p => p.id);
+    const petIds = ownerPets.map((p) => p.id);
 
     if (petIds.length === 0) return [];
 
@@ -130,7 +130,9 @@ export class EventsService {
       .limit(limit)
       .getMany();
 
-    console.log(`✅ Found ${events.length} upcoming events for owner ${userId}`);
+    console.log(
+      `✅ Found ${events.length} upcoming events for owner ${userId}`,
+    );
 
     return events;
   }
@@ -140,7 +142,7 @@ export class EventsService {
    */
   async findAllByPet(petId: number): Promise<Event[]> {
     if (!petId || isNaN(petId)) return [];
-    
+
     return this.eventsRepository
       .createQueryBuilder('event')
       .where(':petId = ANY(event.pet_ids)', { petId })
@@ -159,20 +161,21 @@ export class EventsService {
 
     // Update basic fields
     if (updateEventDto.title) event.title = updateEventDto.title;
-    
+
     if (updateEventDto.dateTime) {
       // ✅ CRITICAL FIX: Parse as UTC
       const dateTimeUtc = new Date(updateEventDto.dateTime);
-      
+
       console.log('📥 Update received dateTime:', updateEventDto.dateTime);
       console.log('📅 Parsed as Date:', dateTimeUtc.toISOString());
-      
+
       event.dateTime = dateTimeUtc;
     }
 
     if (updateEventDto.eventType) event.eventType = updateEventDto.eventType;
     if (updateEventDto.status) event.status = updateEventDto.status;
-    if (updateEventDto.location !== undefined) event.location = updateEventDto.location;
+    if (updateEventDto.location !== undefined)
+      event.location = updateEventDto.location;
     if (updateEventDto.notes !== undefined) event.notes = updateEventDto.notes;
 
     // ✅ Update pet_ids if provided

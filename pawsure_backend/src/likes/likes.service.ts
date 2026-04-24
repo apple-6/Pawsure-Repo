@@ -10,7 +10,10 @@ export class LikesService {
     private likesRepository: Repository<Like>,
   ) {}
 
-  async toggleLike(userId: number, postId: number): Promise<{ isLiked: boolean; likesCount: number }> {
+  async toggleLike(
+    userId: number,
+    postId: number,
+  ): Promise<{ isLiked: boolean; likesCount: number }> {
     // Check if like exists
     const existingLike = await this.likesRepository.findOne({
       where: {

@@ -14,7 +14,7 @@ export class AiService implements OnModuleInit {
     @InjectRepository(AiScan)
     private readonly aiScanRepository: Repository<AiScan>, // 'private' makes it available as 'this.aiScanRepository'
   ) {}
-  
+
   // These must match your YOLO model's training order exactly
   private readonly labels = {
     0: 'Diarrhea',
@@ -41,9 +41,9 @@ export class AiService implements OnModuleInit {
       result: result,
       // Clean the confidence string (e.g., "99.60%" -> 99.60)
       confidence: parseFloat(confidence.replace('%', '')),
-      pet: { id: petId } as any, // Link to the pet via ID
+      pet: { id: petId }, // Link to the pet via ID
     });
-    
+
     return await this.aiScanRepository.save(scan);
   }
 
@@ -60,7 +60,7 @@ export class AiService implements OnModuleInit {
       const rows = 224;
       const cols = 224;
       const area = rows * cols;
-      
+
       // 2. Prepare CHW (Planar) float32 array
       // Current 'data' is [R,G,B, R,G,B...] (Interleaved)
       // YOLO wants [R,R,R... G,G,G... B,B,B...] (Planar)
@@ -71,9 +71,9 @@ export class AiService implements OnModuleInit {
         const g = data[i * 3 + 1] / 255.0;
         const b = data[i * 3 + 2] / 255.0;
 
-        float32Data[i] = r;              // Red channel
-        float32Data[i + area] = g;       // Green channel
-        float32Data[i + 2 * area] = b;   // Blue channel
+        float32Data[i] = r; // Red channel
+        float32Data[i + area] = g; // Green channel
+        float32Data[i + 2 * area] = b; // Blue channel
       }
 
       // 3. Create Tensor
@@ -81,7 +81,7 @@ export class AiService implements OnModuleInit {
 
       // 4. Run Model
       const output = await this.session.run({ images: tensor });
-      
+
       // Handle potential variation in output key name (usually output0)
       const outputKey = Object.keys(output)[0];
       const probabilities = Array.from(output[outputKey].data as Float32Array);
@@ -94,7 +94,7 @@ export class AiService implements OnModuleInit {
       return {
         prediction: this.labels[maxIdx],
         confidence: (probabilities[maxIdx] * 100).toFixed(2) + '%',
-        allScores: probabilities 
+        allScores: probabilities,
       };
     } catch (error) {
       console.error('Classification error:', error);

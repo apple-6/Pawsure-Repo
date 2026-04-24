@@ -13,9 +13,9 @@ import {
   UploadedFile,
   Post,
   Query,
-  Request, 
-  Param, 
-  Patch, 
+  Request,
+  Param,
+  Patch,
   UseGuards,
   ParseIntPipe,
   Put,
@@ -30,17 +30,18 @@ import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 @Controller('sitters')
 export class SitterController {
   constructor(private readonly sitterService: SitterService) {}
-  
+
   @Post()
   @UseGuards(JwtAuthGuard)
-  async register(
-    @Body() createSitterDto: CreateSitterDto,
-    @Request() req,
-  ) {
+  async register(@Body() createSitterDto: CreateSitterDto, @Request() req) {
     // We reuse your existing service create method.
     // We pass 'null' for the file because this registration step is JSON-only.
     // Ensure your SitterService.create handles 'file' being optional/null.
-    return await this.sitterService.create(createSitterDto, req.user.id, undefined);
+    return await this.sitterService.create(
+      createSitterDto,
+      req.user.id,
+      undefined,
+    );
   }
 
   @Post('setup')
@@ -59,7 +60,11 @@ export class SitterController {
   async findAll(@Query('minRating') minRating?: string) {
     let parsed: number | undefined;
 
-    if (minRating !== undefined && minRating !== null && minRating.trim() !== '') {
+    if (
+      minRating !== undefined &&
+      minRating !== null &&
+      minRating.trim() !== ''
+    ) {
       parsed = Number(minRating);
 
       if (Number.isNaN(parsed)) {
@@ -78,7 +83,9 @@ export class SitterController {
   ) {
     // 1. Basic validation to ensure both dates are present
     if (!startDate || !endDate) {
-      throw new BadRequestException('Both startDate and endDate are required for availability search.');
+      throw new BadRequestException(
+        'Both startDate and endDate are required for availability search.',
+      );
     }
 
     // 2. Call the updated service method with both dates
@@ -94,10 +101,12 @@ export class SitterController {
   @Get('user/:userId')
   async findSitterByUserId(@Param('userId', ParseIntPipe) userId: number) {
     const sitter = await this.sitterService.findByUserId(userId);
-    
+
     // Safety Check: If no sitter profile exists for this user, return 404
     if (!sitter) {
-      throw new NotFoundException(`No Sitter Profile found for User ID ${userId}`);
+      throw new NotFoundException(
+        `No Sitter Profile found for User ID ${userId}`,
+      );
     }
 
     return sitter;
@@ -115,9 +124,11 @@ export class SitterController {
   ) {
     // 1. Find the sitter profile belonging to this User ID
     const sitter = await this.sitterService.findByUserId(userId);
-    
+
     if (!sitter) {
-      throw new NotFoundException(`No sitter profile found for User ID ${userId}`);
+      throw new NotFoundException(
+        `No sitter profile found for User ID ${userId}`,
+      );
     }
 
     // 2. Security Check: Ensure the logged-in user matches the target User ID
@@ -127,7 +138,12 @@ export class SitterController {
     }
 
     // 3. Call the existing service method using the SITTER'S ID we just found
-    return await this.sitterService.update(sitter.id, updateSitterDto, req.user.id,file);
+    return await this.sitterService.update(
+      sitter.id,
+      updateSitterDto,
+      req.user.id,
+      file,
+    );
   }
 
   @Get(':id')
@@ -154,10 +170,7 @@ export class SitterController {
 
   @Put('availability')
   @UseGuards(JwtAuthGuard) // Assuming you use a guard to get req.user
-  async updateAvailability(
-    @Request() req,
-    @Body() dto: UpdateAvailabilityDto,
-  ) {
+  async updateAvailability(@Request() req, @Body() dto: UpdateAvailabilityDto) {
     // Pass the userId from the auth token and the data from the body
     return this.sitterService.updateAvailability(req.user.id, dto);
   }

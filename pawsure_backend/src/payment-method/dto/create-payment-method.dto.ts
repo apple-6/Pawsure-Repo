@@ -1,5 +1,11 @@
 // pawsure_backend/src/payment-method/dto/create-payment-method.dto.ts
-import { IsString, IsNotEmpty, Length, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  Length,
+  IsOptional,
+  IsBoolean,
+} from 'class-validator';
 
 export class CreatePaymentMethodDto {
   @IsString()
@@ -30,4 +36,3 @@ export class CreatePaymentMethodDto {
   @IsOptional()
   nickname?: string;
 }
-

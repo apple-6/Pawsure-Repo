@@ -1,8 +1,8 @@
 // src/auth/guards/jwt-auth.guard.ts
-import { 
-  Injectable, 
-  ExecutionContext, 
-  UnauthorizedException 
+import {
+  Injectable,
+  ExecutionContext,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -19,9 +19,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       console.error('Error:', err);
       console.error('Info:', info);
       console.error('User:', user);
-      
-      throw err || new UnauthorizedException(
-        info?.message || 'Invalid or missing authentication token'
+
+      throw (
+        err ||
+        new UnauthorizedException(
+          info?.message || 'Invalid or missing authentication token',
+        )
       );
     }
     return user;

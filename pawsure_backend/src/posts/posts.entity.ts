@@ -15,7 +15,6 @@ import { Comment } from '../comments/comments.entity';
 import { Like } from '../likes/likes.entity';
 import { Pet } from '../pet/pet.entity'; // Make sure this path is correct
 
-
 @Entity('posts')
 export class Post {
   @PrimaryGeneratedColumn()
@@ -46,13 +45,22 @@ export class Post {
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @OneToMany(() => PostMedia, (media) => media.post, {cascade: true, onDelete: 'CASCADE'})
+  @OneToMany(() => PostMedia, (media) => media.post, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   post_media: PostMedia[];
 
-  @OneToMany(() => Comment, (comment) => comment.post, {cascade: true, onDelete: 'CASCADE'})
+  @OneToMany(() => Comment, (comment) => comment.post, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   comments: Comment[];
 
-  @OneToMany(() => Like, (like) => like.post, {cascade: true, onDelete: 'CASCADE'})
+  @OneToMany(() => Like, (like) => like.post, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   likes: Like[];
 
   // UPDATED: Many-to-Many relationship for multiple pets
@@ -60,7 +68,7 @@ export class Post {
   @JoinTable({
     name: 'post_pets', // This creates the junction table in Supabase
     joinColumn: { name: 'post_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'pet_id', referencedColumnName: 'id' }
+    inverseJoinColumn: { name: 'pet_id', referencedColumnName: 'id' },
   })
   pets: Pet[];
 

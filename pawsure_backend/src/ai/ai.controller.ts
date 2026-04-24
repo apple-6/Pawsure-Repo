@@ -1,4 +1,14 @@
-import { Controller, Post, Body, Param, UploadedFile, UseInterceptors, Get, Delete, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Param,
+  UploadedFile,
+  UseInterceptors,
+  Get,
+  Delete,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AiService } from './ai.service';
 
@@ -15,7 +25,7 @@ export class AiController {
   @Post('save/:petId')
   async saveResult(
     @Param('petId', ParseIntPipe) petId: number,
-    @Body() data: { result: string; confidence: string }
+    @Body() data: { result: string; confidence: string },
   ) {
     return await this.aiService.saveScan(petId, data.result, data.confidence);
   }
@@ -26,7 +36,7 @@ export class AiController {
   }
 
   // Correct way
-  @Delete('scan/:id') 
+  @Delete('scan/:id')
   async removeScan(@Param('id', ParseIntPipe) id: number) {
     await this.aiService.deleteScan(id);
     return { message: 'Deleted successfully' };

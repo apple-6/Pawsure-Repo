@@ -47,7 +47,8 @@ export class PostsController {
       storage: diskStorage({
         destination: './uploads/post-media',
         filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
           cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
         },
       }),
@@ -64,7 +65,10 @@ export class PostsController {
         if (allowedMimes.includes(file.mimetype)) {
           cb(null, true);
         } else {
-          cb(new BadRequestException(`File type not allowed: ${file.mimetype}`), false);
+          cb(
+            new BadRequestException(`File type not allowed: ${file.mimetype}`),
+            false,
+          );
         }
       },
     }),
@@ -104,7 +108,11 @@ export class PostsController {
         petIds: petIds,
       };
 
-      const post = await this.postsService.create(postData, uploadedFiles, user.id);
+      const post = await this.postsService.create(
+        postData,
+        uploadedFiles,
+        user.id,
+      );
       return {
         success: true,
         message: 'Post created successfully',
@@ -122,7 +130,8 @@ export class PostsController {
       storage: diskStorage({
         destination: './uploads/post-media',
         filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
           cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
         },
       }),
@@ -139,7 +148,10 @@ export class PostsController {
         if (allowedMimes.includes(file.mimetype)) {
           cb(null, true);
         } else {
-          cb(new BadRequestException(`File type not allowed: ${file.mimetype}`), false);
+          cb(
+            new BadRequestException(`File type not allowed: ${file.mimetype}`),
+            false,
+          );
         }
       },
     }),
@@ -152,7 +164,12 @@ export class PostsController {
   ) {
     try {
       const uploadedFiles = files && files.length > 0 ? files : [];
-      const updatedPost = await this.postsService.update(+id, updatePostDto, user.id, uploadedFiles);
+      const updatedPost = await this.postsService.update(
+        +id,
+        updatePostDto,
+        user.id,
+        uploadedFiles,
+      );
       return {
         success: true,
         message: 'Post updated successfully',

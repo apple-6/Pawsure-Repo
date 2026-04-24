@@ -12,47 +12,50 @@ import { CreateSitterDto } from './dto/create-sitter.dto';
 import { UpdateSitterDto } from './dto/update-sitter.dto';
 import { User } from '../user/user.entity';
 import { UserService } from '../user/user.service';
-import { FileService } from '../file/file.service';    
+import { FileService } from '../file/file.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 import { validate } from 'class-validator';
 import { Express } from 'express';
 
 // --- HELPER FUNCTION (From Version M) ---
 // Generates arrays of specific dates and day names for the search query
-function generateSearchRangeArrays(startDateStr: string, endDateStr: string): { searchDates: string[], searchDays: string[] } {
-    const start = new Date(startDateStr);
-    const end = new Date(endDateStr);
+function generateSearchRangeArrays(
+  startDateStr: string,
+  endDateStr: string,
+): { searchDates: string[]; searchDays: string[] } {
+  const start = new Date(startDateStr);
+  const end = new Date(endDateStr);
 
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
-        throw new BadRequestException('Invalid date range provided.');
-    }
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+    throw new BadRequestException('Invalid date range provided.');
+  }
 
-    const searchDates: string[] = [];
-    const searchDaysSet: Set<string> = new Set();
-    
-    // Day names for PostgreSQL array (e.g., 'Sun', 'Mon', 'Tue', ...)
-    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const searchDates: string[] = [];
+  const searchDaysSet: Set<string> = new Set();
 
-    let currentDate = new Date(start);
-    
-    while (currentDate <= end) {
-        // Format date as 'YYYY-MM-DD'
-        const dateString = currentDate.toISOString().split('T')[0];
-        searchDates.push(dateString);
+  // Day names for PostgreSQL array (e.g., 'Sun', 'Mon', 'Tue', ...)
+  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-        // Get the day of the week string
-        const dayIndex = currentDate.getDay();
-        const dayString = daysOfWeek[dayIndex];
-        searchDaysSet.add(dayString);
+  const currentDate = new Date(start);
 
-        // Move to the next day
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    return { 
-        searchDates: searchDates, 
-        searchDays: Array.from(searchDaysSet) 
-    };
+  while (currentDate <= end) {
+    // Format date as 'YYYY-MM-DD'
+    const dateString = currentDate.toISOString().split('T')[0];
+    searchDates.push(dateString);
+
+    // Get the day of the week string
+    const dayIndex = currentDate.getDay();
+    const dayString = daysOfWeek[dayIndex];
+    searchDaysSet.add(dayString);
+
+    // Move to the next day
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return {
+    searchDates: searchDates,
+    searchDays: Array.from(searchDaysSet),
+  };
 }
 
 @Injectable()
@@ -69,10 +72,14 @@ export class SitterService {
   // --- CREATE METHOD (From Version S - The "Fixer") ---
   // This version checks if a profile actually exists and "Upserts" it.
   // It effectively heals the "Zombie User" bug.
-  async create(createSitterDto: CreateSitterDto, userId: number, file?: Express.Multer.File): Promise<Sitter> {
+  async create(
+    createSitterDto: CreateSitterDto,
+    userId: number,
+    file?: Express.Multer.File,
+  ): Promise<Sitter> {
     // 1. Fetch the existing User entity.
     const user = await this.userRepository.findOne({ where: { id: userId } });
-    
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -83,61 +90,63 @@ export class SitterService {
     // 2. Handle ID Document File Upload
     let idDocumentUrl: string | undefined;
     if (file) {
-        idDocumentUrl = await this.fileService.uploadPublicFile(
-            file.buffer, 
-            file.originalname, 
-            'sitter-id-documents'
-        );
-        delete createSitterDto.idDocumentUrl; // Clean DTO
+      idDocumentUrl = await this.fileService.uploadPublicFile(
+        file.buffer,
+        file.originalname,
+        'sitter-id-documents',
+      );
+      delete createSitterDto.idDocumentUrl; // Clean DTO
     }
 
     // 3. Handle User Data (Phone Number)
     if (createSitterDto.phoneNumber) {
-        user.phone_number = createSitterDto.phoneNumber;
-        await this.userRepository.save(user);
-        delete createSitterDto.phoneNumber; 
+      user.phone_number = createSitterDto.phoneNumber;
+      await this.userRepository.save(user);
+      delete createSitterDto.phoneNumber;
     }
 
     if (sitter) {
-        // === UPDATE EXISTING PROFILE ===
-        // If the zombie profile exists (or partially exists), we update it.
-        if (idDocumentUrl) {
-            sitter.idDocumentUrl = idDocumentUrl;
-        }
-        Object.assign(sitter, createSitterDto);
-        await this.sitterRepository.save(sitter);
+      // === UPDATE EXISTING PROFILE ===
+      // If the zombie profile exists (or partially exists), we update it.
+      if (idDocumentUrl) {
+        sitter.idDocumentUrl = idDocumentUrl;
+      }
+      Object.assign(sitter, createSitterDto);
+      await this.sitterRepository.save(sitter);
     } else {
-        // === CREATE NEW PROFILE ===
-        // If it was missing (even if role was 'sitter'), we create it now.
-        sitter = this.sitterRepository.create({
-          ...createSitterDto,
-          userId,
-          idDocumentUrl: idDocumentUrl,
-        });
+      // === CREATE NEW PROFILE ===
+      // If it was missing (even if role was 'sitter'), we create it now.
+      sitter = this.sitterRepository.create({
+        ...createSitterDto,
+        userId,
+        idDocumentUrl: idDocumentUrl,
+      });
 
-        await this.sitterRepository.save(sitter);
+      await this.sitterRepository.save(sitter);
     }
 
     // 4. Ensure role is 'sitter' (Fixes the role if it was missing)
     if (user.role !== 'sitter') {
-        user.role = 'sitter';
-        await this.userRepository.save(user);
+      user.role = 'sitter';
+      await this.userRepository.save(user);
     }
 
     // 5. Return the full profile
-    const finalSitter = await this.sitterRepository.findOne({ 
-        where: { userId },
-        relations: ['user'] 
+    const finalSitter = await this.sitterRepository.findOne({
+      where: { userId },
+      relations: ['user'],
     });
 
     if (!finalSitter) {
-        throw new NotFoundException('Failed to retrieve Sitter profile after creation');
+      throw new NotFoundException(
+        'Failed to retrieve Sitter profile after creation',
+      );
     }
 
     return finalSitter;
   }
 
-async findAll(minRating?: number): Promise<any[]> {
+  async findAll(minRating?: number): Promise<any[]> {
     const query = this.sitterRepository
       .createQueryBuilder('sitter')
       .leftJoinAndSelect('sitter.user', 'user')
@@ -152,17 +161,19 @@ async findAll(minRating?: number): Promise<any[]> {
       .orderBy('"avg_rating"', 'DESC');
 
     if (minRating) {
-      query.having('COALESCE(AVG(review.rating), 0) >= :minRating', { minRating });
+      query.having('COALESCE(AVG(review.rating), 0) >= :minRating', {
+        minRating,
+      });
     }
 
     try {
       const { entities, raw } = await query.getRawAndEntities();
 
       return entities.map((sitter) => {
-        const rawData = raw.find(r => r.sitter_id === sitter.id);
+        const rawData = raw.find((r) => r.sitter_id === sitter.id);
         let ratingVal = rawData ? parseFloat(rawData.avg_rating) : 0.0;
         ratingVal = parseFloat(ratingVal.toFixed(1));
-        
+
         // 🔴 FIX: Added 'as any' here to solve Error 2561
         return {
           ...sitter,
@@ -170,26 +181,26 @@ async findAll(minRating?: number): Promise<any[]> {
           reviewCount: rawData ? parseInt(rawData.review_count, 10) : 0,
           // Map raw 'avg_rating' (string) to 'rating' (number)
           rating: rawData ? parseFloat(rawData.avg_rating) : 0.0,
-        } as any; 
+        } as any;
       });
     } catch (error) {
-      console.error("Error in findAll sitters:", error);
-      throw new BadRequestException("Could not fetch sitters");
+      console.error('Error in findAll sitters:', error);
+      throw new BadRequestException('Could not fetch sitters');
     }
   }
-  
- async findOne(id: number): Promise<any> {
+
+  async findOne(id: number): Promise<any> {
     const sitter = await this.sitterRepository.findOne({
       where: { id },
       withDeleted: false,
       // 👇 Updated relations to deeply fetch booking and pets
       relations: [
-        'user', 
-        'reviews', 
-        'reviews.owner', 
+        'user',
+        'reviews',
+        'reviews.owner',
         'bookings',
-        'reviews.booking',      
-        'reviews.booking.pets', 
+        'reviews.booking',
+        'reviews.booking.pets',
       ],
     });
 
@@ -208,26 +219,28 @@ async findAll(minRating?: number): Promise<any[]> {
     avgRating = parseFloat(avgRating.toFixed(1));
     return {
       ...sitter,
-      rating: avgRating,  
-      reviewCount: reviewCount, 
+      rating: avgRating,
+      reviewCount: reviewCount,
       reviews_count: reviewCount,
-      
-      reviews: sitter.reviews 
-        ? sitter.reviews.sort((a, b) => b.created_at.getTime() - a.created_at.getTime()) 
-        : []
+
+      reviews: sitter.reviews
+        ? sitter.reviews.sort(
+            (a, b) => b.created_at.getTime() - a.created_at.getTime(),
+          )
+        : [],
     } as any;
   }
 
-async findByUserId(userId: number): Promise<any> {
+  async findByUserId(userId: number): Promise<any> {
     // 1. Fetch sitter AND reviews (Just like findOne)
     const sitter = await this.sitterRepository.findOne({
       where: { userId, deleted_at: IsNull() },
       relations: [
-        'user', 
-        'reviews', 
-        'reviews.owner',          
-        'reviews.booking',        
-        'reviews.booking.pets',   
+        'user',
+        'reviews',
+        'reviews.owner',
+        'reviews.booking',
+        'reviews.booking.pets',
       ],
     });
 
@@ -253,9 +266,11 @@ async findByUserId(userId: number): Promise<any> {
       reviewCount: reviewCount,
       reviews_count: reviewCount,
       // Sort reviews by newest first
-      reviews: sitter.reviews 
-        ? sitter.reviews.sort((a, b) => b.created_at.getTime() - a.created_at.getTime()) 
-        : []
+      reviews: sitter.reviews
+        ? sitter.reviews.sort(
+            (a, b) => b.created_at.getTime() - a.created_at.getTime(),
+          )
+        : [],
     };
   }
 
@@ -269,11 +284,16 @@ async findByUserId(userId: number): Promise<any> {
     const sitter = await this.findOne(id);
 
     if (sitter.userId !== userId) {
-      throw new ForbiddenException('You can only update your own sitter profile');
+      throw new ForbiddenException(
+        'You can only update your own sitter profile',
+      );
     }
 
     // 🛑 CRITICAL FIX: Parse 'services' if it comes as a string (Multipart)
-    if (updateSitterDto.services && typeof updateSitterDto.services === 'string') {
+    if (
+      updateSitterDto.services &&
+      typeof updateSitterDto.services === 'string'
+    ) {
       try {
         updateSitterDto.services = JSON.parse(updateSitterDto.services);
       } catch (e) {
@@ -283,31 +303,33 @@ async findByUserId(userId: number): Promise<any> {
 
     // 🟢 HANDLE PROFILE PICTURE (User Table)
     if (file) {
-      console.log(`[DEBUG] File received! Name: ${file.originalname}, Size: ${file.size}`);
+      console.log(
+        `[DEBUG] File received! Name: ${file.originalname}, Size: ${file.size}`,
+      );
       // 1. Upload the file
       const photoUrl = await this.fileService.uploadPublicFile(
         file.buffer,
         file.originalname,
-        'profile-pictures' // folder name
+        'profile-pictures', // folder name
       );
 
       console.log(`[DEBUG] File uploaded to storage. URL: ${photoUrl}`);
-      
+
       // 2. Update the User entity
       await this.userRepository.update(userId, { profile_picture: photoUrl });
-      const updateResult = await this.userRepository.update(userId, { profile_picture: photoUrl });
+      const updateResult = await this.userRepository.update(userId, {
+        profile_picture: photoUrl,
+      });
       console.log(`[DEBUG] DB Update Result:`, updateResult); // 🔍 Log 4
-      
     } else {
       console.log(`[DEBUG] No file received in service.`); // 🔍 Log 5
-    
     }
 
     // 1. 🟢 HANDLE NAME UPDATE (User Table)
     // If the payload has a 'name', we update the User table separately
     if (updateSitterDto.name) {
       await this.userRepository.update(userId, { name: updateSitterDto.name });
-      
+
       // Remove 'name' from the DTO so we don't try to save it to the Sitter table
       // (This prevents "Column 'name' not found" errors)
       delete updateSitterDto.name;
@@ -319,12 +341,14 @@ async findByUserId(userId: number): Promise<any> {
 
     // 3. RETURN FRESH DATA
     const freshSitter = await this.sitterRepository.findOne({
-        where: { id },
-        relations: ['user', 'reviews', 'bookings'], 
+      where: { id },
+      relations: ['user', 'reviews', 'bookings'],
     });
 
     if (!freshSitter) {
-        throw new NotFoundException(`Sitter profile with ID ${id} not found after update.`);
+      throw new NotFoundException(
+        `Sitter profile with ID ${id} not found after update.`,
+      );
     }
 
     return freshSitter;
@@ -334,7 +358,9 @@ async findByUserId(userId: number): Promise<any> {
     const sitter = await this.findOne(id);
 
     if (sitter.userId !== userId) {
-      throw new ForbiddenException('You can only delete your own sitter profile');
+      throw new ForbiddenException(
+        'You can only delete your own sitter profile',
+      );
     }
 
     await this.sitterRepository.remove(sitter);
@@ -367,54 +393,60 @@ async findByUserId(userId: number): Promise<any> {
 
   // --- SEARCH METHOD (From Version M - The "Feature") ---
   // This uses the advanced range search and exclusion logic.
-  async searchByAvailability(startDate: string, endDate: string): Promise<any[]> {
+  async searchByAvailability(
+    startDate: string,
+    endDate: string,
+  ): Promise<any[]> {
     // 1. Generate the required arrays for the search range
-    const { searchDates, searchDays } = generateSearchRangeArrays(startDate, endDate);
+    const { searchDates, searchDays } = generateSearchRangeArrays(
+      startDate,
+      endDate,
+    );
 
     // 2. Build the query to find sitters NOT overlapping with any unavailability
-   // return await this.sitterRepository
-   const query = this.sitterRepository
-        .createQueryBuilder('sitter')
-        .leftJoinAndSelect('sitter.user', 'user')
-        .leftJoin('sitter.reviews', 'review')
-        .addSelect('COUNT(review.id)', 'reviewCountRaw')
-        .addSelect('COALESCE(AVG(review.rating), 0)', 'averageRatingRaw')
-        
-        // --- Unavailability Check 1: Specific Dates ---
-        // Filter OUT sitters where their unavailable_dates array OVERLAPS (&&) the requested searchDates array.
-        .andWhere(`NOT ("sitter"."unavailable_dates" && :searchDates)`, {
-            searchDates: searchDates, 
-        })
-        
-        // --- Unavailability Check 2: Recurring Days ---
-        // Filter OUT sitters where their unavailable_days array OVERLAPS (&&) the requested searchDays array.
-        .andWhere(`NOT ("sitter"."unavailable_days" && :searchDays)`, {
-            searchDays: searchDays, 
-        })
-        
-        // --- General Filtering ---
-        .andWhere('sitter.deleted_at IS NULL')
-        .groupBy('sitter.id')
-        .addGroupBy('user.id')
-        .orderBy('"averageRatingRaw"', 'DESC');
-try {
+    // return await this.sitterRepository
+    const query = this.sitterRepository
+      .createQueryBuilder('sitter')
+      .leftJoinAndSelect('sitter.user', 'user')
+      .leftJoin('sitter.reviews', 'review')
+      .addSelect('COUNT(review.id)', 'reviewCountRaw')
+      .addSelect('COALESCE(AVG(review.rating), 0)', 'averageRatingRaw')
+
+      // --- Unavailability Check 1: Specific Dates ---
+      // Filter OUT sitters where their unavailable_dates array OVERLAPS (&&) the requested searchDates array.
+      .andWhere(`NOT ("sitter"."unavailable_dates" && :searchDates)`, {
+        searchDates: searchDates,
+      })
+
+      // --- Unavailability Check 2: Recurring Days ---
+      // Filter OUT sitters where their unavailable_days array OVERLAPS (&&) the requested searchDays array.
+      .andWhere(`NOT ("sitter"."unavailable_days" && :searchDays)`, {
+        searchDays: searchDays,
+      })
+
+      // --- General Filtering ---
+      .andWhere('sitter.deleted_at IS NULL')
+      .groupBy('sitter.id')
+      .addGroupBy('user.id')
+      .orderBy('"averageRatingRaw"', 'DESC');
+    try {
       const { entities, raw } = await query.getRawAndEntities();
 
       return entities.map((sitter) => {
-        const rawData = raw.find(r => r.sitter_id === sitter.id);
-      
+        const rawData = raw.find((r) => r.sitter_id === sitter.id);
+
         let ratingVal = rawData ? parseFloat(rawData.averageRatingRaw) : 0.0;
         ratingVal = parseFloat(ratingVal.toFixed(1));
-        
+
         return {
           ...sitter,
-          reviewCount: rawData ? parseInt(rawData.reviewCountRaw, 10) : 0, 
-  rating: rawData ? parseFloat(rawData.averageRatingRaw) : 0.0,
+          reviewCount: rawData ? parseInt(rawData.reviewCountRaw, 10) : 0,
+          rating: rawData ? parseFloat(rawData.averageRatingRaw) : 0.0,
         } as any;
       });
     } catch (error) {
-      console.error("Error in searchByAvailability:", error);
-      throw new BadRequestException("Search failed.");
+      console.error('Error in searchByAvailability:', error);
+      throw new BadRequestException('Search failed.');
     }
   }
   async updateAvailability(
@@ -427,10 +459,10 @@ try {
       throw new NotFoundException('Sitter profile not found');
     }
 
-    // Ensure we are saving clean strings. 
+    // Ensure we are saving clean strings.
     // If the frontend sends full ISO strings, we strip the time.
     if (dto.unavailable_dates) {
-      sitter.unavailable_dates = dto.unavailable_dates.map(date => {
+      sitter.unavailable_dates = dto.unavailable_dates.map((date) => {
         // If it comes in as "2026-03-05T00:00...", slice it to "2026-03-05"
         // If it's already "2026-03-05", this leaves it alone.
         return date.toString().split('T')[0];
@@ -443,5 +475,4 @@ try {
 
     return await this.sitterRepository.save(sitter);
   }
-  
 }

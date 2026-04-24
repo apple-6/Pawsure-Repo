@@ -13,7 +13,11 @@ export class CommentsService {
   ) {}
 
   // 1. Create a Comment
-  async create(userId: number, postId: number, content: string): Promise<Comment> {
+  async create(
+    userId: number,
+    postId: number,
+    content: string,
+  ): Promise<Comment> {
     const newComment = this.commentRepo.create({
       content,
       user: { id: userId } as User,
@@ -23,7 +27,7 @@ export class CommentsService {
     const saved = await this.commentRepo.save(newComment);
 
     // ✅ FIX: Use findOneOrFail
-    // This guarantees a return type of 'Comment' (removes null) 
+    // This guarantees a return type of 'Comment' (removes null)
     // because it throws an error if the ID isn't found.
     return this.commentRepo.findOneOrFail({
       where: { id: saved.id },

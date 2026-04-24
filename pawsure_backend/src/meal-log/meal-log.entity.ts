@@ -1,4 +1,12 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, Index, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  ManyToOne,
+  Index,
+  JoinColumn,
+} from 'typeorm';
 import { Pet } from '../pet/pet.entity';
 
 @Entity('meal_logs')

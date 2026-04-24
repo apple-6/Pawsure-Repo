@@ -49,4 +49,3 @@ export class PaymentMethod {
   @UpdateDateColumn()
   updated_at: Date;
 }
-

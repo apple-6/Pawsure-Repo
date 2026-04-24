@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, In } from 'typeorm';
 import { ActivityLog } from './activity-log.entity';
@@ -27,8 +33,6 @@ export class ActivityLogService {
     dto: CreateActivityLogDto,
     userId: number,
   ): Promise<ActivityLog[]> {
-    const { activity_type, title, description, duration_minutes, distance_km, calories_burned, route_data } = dto;
-
     // STEP 1: Validate all pets exist
     const pets = await this.petRepository.find({
       where: { id: In(petIds) },
@@ -36,17 +40,15 @@ export class ActivityLogService {
     });
 
     if (pets.length !== petIds.length) {
-      const foundIds = pets.map(p => p.id);
-      const missingIds = petIds.filter(id => !foundIds.includes(id));
-      throw new NotFoundException(
-        `Pets not found: ${missingIds.join(', ')}`,
-      );
+      const foundIds = pets.map((p) => p.id);
+      const missingIds = petIds.filter((id) => !foundIds.includes(id));
+      throw new NotFoundException(`Pets not found: ${missingIds.join(', ')}`);
     }
 
     // STEP 2: Validate user owns ALL selected pets
-    const unauthorizedPets = pets.filter(pet => pet.owner.id !== userId);
+    const unauthorizedPets = pets.filter((pet) => pet.owner.id !== userId);
     if (unauthorizedPets.length > 0) {
-      const unauthorizedNames = unauthorizedPets.map(p => p.name).join(', ');
+      const unauthorizedNames = unauthorizedPets.map((p) => p.name).join(', ');
       throw new ForbiddenException(
         `You don't own these pets: ${unauthorizedNames}`,
       );
@@ -81,7 +83,11 @@ export class ActivityLogService {
    * ✅ KEPT: Original single-pet creation (legacy support)
    * Used by legacy endpoint /activity-logs/pets/:petId
    */
-  async create(petId: number, dto: CreateActivityLogDto, userId: number): Promise<ActivityLog> {
+  async create(
+    petId: number,
+    dto: CreateActivityLogDto,
+    userId: number,
+  ): Promise<ActivityLog> {
     const pet = await this.petRepository.findOne({
       where: { id: petId },
       relations: ['owner'],
@@ -110,7 +116,7 @@ export class ActivityLogService {
     });
 
     const savedActivity = await this.activityLogRepository.save(activity);
-    
+
     // Recalculate streak
     await this.petService.calculateAndUpdateStreak(petId);
 
@@ -174,7 +180,11 @@ export class ActivityLogService {
   /**
    * Get activity statistics for a specific pet
    */
-  async getStats(petId: number, userId: number, period: 'day' | 'week' | 'month') {
+  async getStats(
+    petId: number,
+    userId: number,
+    period: 'day' | 'week' | 'month',
+  ) {
     const pet = await this.petRepository.findOne({
       where: { id: petId },
       relations: ['owner'],
@@ -194,8 +204,24 @@ export class ActivityLogService {
 
     switch (period) {
       case 'day':
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        startDate = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          0,
+          0,
+          0,
+          0,
+        );
+        endDate = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          59,
+          999,
+        );
         break;
       case 'week':
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -214,9 +240,18 @@ export class ActivityLogService {
       },
     });
 
-    const totalDuration = activities.reduce((sum, a) => sum + (a.duration_minutes || 0), 0);
-    const totalDistance = activities.reduce((sum, a) => sum + (Number(a.distance_km) || 0), 0);
-    const totalCalories = activities.reduce((sum, a) => sum + (a.calories_burned || 0), 0);
+    const totalDuration = activities.reduce(
+      (sum, a) => sum + (a.duration_minutes || 0),
+      0,
+    );
+    const totalDistance = activities.reduce(
+      (sum, a) => sum + (Number(a.distance_km) || 0),
+      0,
+    );
+    const totalCalories = activities.reduce(
+      (sum, a) => sum + (a.calories_burned || 0),
+      0,
+    );
 
     const byType = activities.reduce((acc, a) => {
       acc[a.activity_type] = (acc[a.activity_type] || 0) + 1;
@@ -256,16 +291,23 @@ export class ActivityLogService {
   /**
    * Update an activity
    */
-  async update(id: number, dto: UpdateActivityLogDto, userId: number): Promise<ActivityLog> {
+  async update(
+    id: number,
+    dto: UpdateActivityLogDto,
+    userId: number,
+  ): Promise<ActivityLog> {
     const activity = await this.findOne(id, userId);
 
     // Update fields
-    if (dto.activity_type !== undefined) activity.activity_type = dto.activity_type;
+    if (dto.activity_type !== undefined)
+      activity.activity_type = dto.activity_type;
     if (dto.title !== undefined) activity.title = dto.title;
     if (dto.description !== undefined) activity.description = dto.description;
-    if (dto.duration_minutes !== undefined) activity.duration_minutes = dto.duration_minutes;
+    if (dto.duration_minutes !== undefined)
+      activity.duration_minutes = dto.duration_minutes;
     if (dto.distance_km !== undefined) activity.distance_km = dto.distance_km;
-    if (dto.calories_burned !== undefined) activity.calories_burned = dto.calories_burned;
+    if (dto.calories_burned !== undefined)
+      activity.calories_burned = dto.calories_burned;
     if (dto.route_data !== undefined) activity.route_data = dto.route_data;
 
     if (dto.activity_date) {
@@ -274,9 +316,11 @@ export class ActivityLogService {
     }
 
     const saved = await this.activityLogRepository.save(activity);
-    
+
     // Recalculate streak
-    await this.petService.calculateAndUpdateStreak(activity.petId || (activity.pet ? activity.pet.id : 0));
+    await this.petService.calculateAndUpdateStreak(
+      activity.petId || (activity.pet ? activity.pet.id : 0),
+    );
 
     return saved;
   }

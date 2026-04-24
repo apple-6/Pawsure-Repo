@@ -6,7 +6,7 @@ import { Pet } from '../pet/pet.entity';
 import { AiScan } from './ai-scan.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AiScan, Pet])], 
+  imports: [TypeOrmModule.forFeature([AiScan, Pet])],
   controllers: [AiController],
   providers: [AiService],
   exports: [AiService],

@@ -7,10 +7,7 @@ import { Pet } from '../pet/pet.entity';
 import { PetModule } from '../pet/pet.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([ActivityLog, Pet]),
-    PetModule,
-  ],
+  imports: [TypeOrmModule.forFeature([ActivityLog, Pet]), PetModule],
   controllers: [ActivityLogController],
   providers: [ActivityLogService],
   exports: [ActivityLogService],

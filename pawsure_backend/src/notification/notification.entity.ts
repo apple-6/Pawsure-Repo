@@ -1,7 +1,12 @@
 // src/notification/notification.entity.ts
 import { User } from 'src/user/user.entity';
 import {
-  Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
 } from 'typeorm';
 
 @Entity('notifications')

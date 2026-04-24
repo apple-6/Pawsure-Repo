@@ -1,17 +1,17 @@
 //pawsure_backend\src\health-record\health-record.controller.ts
-import { 
-  Controller, 
-  Post, 
-  Put, 
-  Delete, 
-  Body, 
-  Param, 
-  ParseIntPipe, 
-  UsePipes, 
-  ValidationPipe, 
+import {
+  Controller,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  ParseIntPipe,
+  UsePipes,
+  ValidationPipe,
   Get,
   HttpCode,
-  HttpStatus
+  HttpStatus,
 } from '@nestjs/common';
 import { HealthRecordService } from './health-record.service';
 import { CreateHealthRecordDto } from './dto/create-health-record.dto';

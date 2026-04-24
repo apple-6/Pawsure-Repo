@@ -77,4 +77,3 @@ export class MoodLogController {
     return this.moodLogService.getStreakInfo(petId);
   }
 }
-

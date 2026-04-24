@@ -29,10 +29,7 @@ export class ActivityLogController {
    * Body: { pet_ids: [1, 2, 3], activity_type: 'walk', ... }
    */
   @Post()
-  async create(
-    @Body() createDto: CreateActivityLogDto,
-    @Request() req,
-  ) {
+  async create(@Body() createDto: CreateActivityLogDto, @Request() req) {
     return this.activityLogService.createForMultiplePets(
       createDto.pet_ids,
       createDto,
@@ -53,13 +50,13 @@ export class ActivityLogController {
   ) {
     // Override pet_ids with single petId from route
     const dtoWithPetId = { ...createDto, pet_ids: [petId] };
-    
+
     const activities = await this.activityLogService.createForMultiplePets(
       [petId],
       dtoWithPetId,
       req.user.id,
     );
-    
+
     // Return single activity for backward compatibility
     return activities[0];
   }
@@ -76,11 +73,11 @@ export class ActivityLogController {
     @Query('endDate') endDate?: string,
     @Request() req?,
   ) {
-    return this.activityLogService.findAllByPet(
-      petId,
-      req.user.id,
-      { type, startDate, endDate },
-    );
+    return this.activityLogService.findAllByPet(petId, req.user.id, {
+      type,
+      startDate,
+      endDate,
+    });
   }
 
   /**

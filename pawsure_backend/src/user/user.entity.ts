@@ -10,7 +10,13 @@ import { Like } from 'src/likes/likes.entity';
 import { Message } from '../message/message.entity';
 
 import {
-  Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany, OneToOne
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  OneToOne,
 } from 'typeorm';
 
 @Entity('users')

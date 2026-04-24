@@ -17,10 +17,13 @@ import { JwtSignOptions } from '@nestjs/jwt'; // Import the specific type if nee
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'fallback-secret-key-12345',
+        secret:
+          configService.get<string>('JWT_SECRET') ||
+          'fallback-secret-key-12345',
         signOptions: {
           // RESOLUTION: Cast the string to the correct type (string | number)
-          expiresIn: (configService.get<string>('JWT_EXPIRATION') || '1d') as JwtSignOptions['expiresIn'], 
+          expiresIn: (configService.get<string>('JWT_EXPIRATION') ||
+            '1d') as JwtSignOptions['expiresIn'],
         },
       }),
     }),

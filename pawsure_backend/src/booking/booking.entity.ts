@@ -4,7 +4,16 @@ import { Review } from 'src/review/review.entity';
 import { Sitter } from 'src/sitter/sitter.entity';
 import { User } from 'src/user/user.entity';
 import {
-  Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToOne, OneToMany,ManyToMany, JoinTable
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  OneToOne,
+  OneToMany,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 
 @Entity('bookings')
@@ -23,7 +32,7 @@ export class Booking {
 
   @Column({ type: 'float' })
   total_amount: number;
-  
+
   @Column({ type: 'int', nullable: true })
   payment_method_id: number;
 
@@ -42,7 +51,7 @@ export class Booking {
   @Column()
   drop_off_time: string;
 
-  @Column() 
+  @Column()
   pick_up_time: string;
 
   @CreateDateColumn()
@@ -62,7 +71,7 @@ export class Booking {
   // pet: Pet;
 
   @ManyToMany(() => Pet, (pet) => pet.bookings)
-  @JoinTable({ name: 'booking_pets' }) 
+  @JoinTable({ name: 'booking_pets' })
   pets: Pet[];
 
   @OneToOne(() => Payment, (payment) => payment.booking)

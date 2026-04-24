@@ -12,7 +12,8 @@ export class CommunityService {
   ) {}
 
   async findAll(tab?: string) {
-    const query = this.postRepo.createQueryBuilder('post')
+    const query = this.postRepo
+      .createQueryBuilder('post')
       .leftJoinAndSelect('post.user', 'user')
       .leftJoinAndSelect('post.post_media', 'media');
 
@@ -26,9 +27,10 @@ export class CommunityService {
   async create(body: any, files: Express.Multer.File[], userId: number) {
     try {
       // Parse is_urgent from string to boolean
-      const isUrgent = typeof body.is_urgent === 'string' 
-        ? body.is_urgent === 'true' 
-        : Boolean(body.is_urgent);
+      const isUrgent =
+        typeof body.is_urgent === 'string'
+          ? body.is_urgent === 'true'
+          : Boolean(body.is_urgent);
 
       // Create post - DO NOT include location_name
       const savedPost = await this.postRepo.save({
@@ -42,7 +44,9 @@ export class CommunityService {
         const mediaRecords = files.map((file) => {
           const media = new PostMedia();
           media.media_url = `http://localhost:3000/uploads/post-media/${file.filename}`;
-          media.media_type = file.mimetype.startsWith('video') ? 'video' : 'image';
+          media.media_type = file.mimetype.startsWith('video')
+            ? 'video'
+            : 'image';
           media.post = savedPost;
           return media;
         });

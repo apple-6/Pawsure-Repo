@@ -1,27 +1,43 @@
-// src/file/file.service.ts
-
-import { Injectable } from '@nestjs/common';
-import * as path from 'path';
-import * as fs from 'fs/promises';
-
-// src/file/file.service.ts
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { v2 as cloudinary } from 'cloudinary';
+import * as streamifier from 'streamifier';
 
 @Injectable()
 export class FileService {
-    private readonly uploadPath = path.join(process.cwd(), 'uploads');
-    
-    // Add this to get your base URL from environment variables or hardcode for now
-    private readonly baseUrl = process.env.BACKEND_URL || 'http://localhost:3000';
+  private readonly logger = new Logger(FileService.name);
 
-    async uploadPublicFile(dataBuffer: Buffer, fileName: string, folder: string = 'general'): Promise<string> {
-        const uniqueFileName = `${Date.now()}-${fileName}`;
-        const targetDir = path.join(this.uploadPath, folder);
-        
-        await fs.mkdir(targetDir, { recursive: true });
-        const filePath = path.join(targetDir, uniqueFileName);
-        await fs.writeFile(filePath, dataBuffer);
+  constructor(private configService: ConfigService) {
+    cloudinary.config({
+      cloud_name: this.configService.get<string>('CLOUDINARY_CLOUD_NAME'),
+      api_key: this.configService.get<string>('CLOUDINARY_API_KEY'),
+      api_secret: this.configService.get<string>('CLOUDINARY_API_SECRET'),
+    });
+  }
 
-        // ✅ FIX: Return the absolute URL instead of a relative path
-        return `${this.baseUrl}/uploads/${folder}/${uniqueFileName}`; 
-    }
+  async uploadPublicFile(
+    dataBuffer: Buffer,
+    fileName: string,
+    folder: string = 'pawsure',
+  ): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: folder,
+          public_id: fileName.split('.')[0], // Use original filename without extension
+          resource_type: 'auto',
+        },
+        (error, result) => {
+          if (error) {
+            this.logger.error('Cloudinary upload failed:', error);
+            return reject(error);
+          }
+          this.logger.log(`File uploaded to Cloudinary: ${result.secure_url}`);
+          resolve(result.secure_url);
+        },
+      );
+
+      streamifier.createReadStream(dataBuffer).pipe(uploadStream);
+    });
+  }
 }

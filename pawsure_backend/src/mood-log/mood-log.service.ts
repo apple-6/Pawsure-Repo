@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { MoodLog } from './mood-log.entity';
@@ -26,7 +31,10 @@ export class MoodLogService {
   /**
    * Log a mood and update streak
    */
-  async create(petId: number, dto: CreateMoodLogDto): Promise<{ moodLog: MoodLog; streak: number }> {
+  async create(
+    petId: number,
+    dto: CreateMoodLogDto,
+  ): Promise<{ moodLog: MoodLog; streak: number }> {
     // 1. Find the pet
     const pet = await this.petRepository.findOne({ where: { id: petId } });
     if (!pet) {
@@ -119,10 +127,9 @@ export class MoodLogService {
 
     return {
       currentStreak: pet.streak || 0,
-      longestStreak: pet.streak || 0, 
+      longestStreak: pet.streak || 0,
       totalDaysLogged: 0, // Simplified for now
       lastActivityDate: pet.last_activity_date || null,
     };
   }
 }
-

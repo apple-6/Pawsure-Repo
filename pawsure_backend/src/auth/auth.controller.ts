@@ -1,6 +1,14 @@
 // src/auth/auth.controller.ts
 
-import { Controller, Post, Get, Body, ValidationPipe, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  ValidationPipe,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
@@ -27,7 +35,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard) // Requires valid JWT token
   getProfile(@Request() req) {
     console.log('🔍 GET /auth/profile - User from JWT:', req.user);
-    
+
     // req.user comes from JWT strategy validation
     // It contains the full user object from your database
     return {

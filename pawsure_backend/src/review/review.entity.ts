@@ -3,7 +3,12 @@ import { Booking } from 'src/booking/booking.entity';
 import { Sitter } from 'src/sitter/sitter.entity';
 import { User } from 'src/user/user.entity';
 import {
-  Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
 } from 'typeorm';
 
 @Entity('reviews')

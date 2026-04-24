@@ -16,7 +16,10 @@ export class HealthRecordService {
     private readonly petRepository: Repository<Pet>,
   ) {}
 
-  async create(petId: number, dto: CreateHealthRecordDto): Promise<HealthRecord> {
+  async create(
+    petId: number,
+    dto: CreateHealthRecordDto,
+  ): Promise<HealthRecord> {
     const pet = await this.petRepository.findOne({ where: { id: petId } });
     if (!pet) {
       throw new NotFoundException(`Pet with ID ${petId} not found`);
@@ -56,11 +59,11 @@ export class HealthRecordService {
 
   // ✅ NEW: Update health record
   async update(id: number, dto: UpdateHealthRecordDto): Promise<HealthRecord> {
-    const record = await this.healthRecordRepository.findOne({ 
+    const record = await this.healthRecordRepository.findOne({
       where: { id },
-      relations: ['pet']
+      relations: ['pet'],
     });
-    
+
     if (!record) {
       throw new NotFoundException(`Health record with ID ${id} not found`);
     }
@@ -83,25 +86,25 @@ export class HealthRecordService {
     }
 
     const savedRecord = await this.healthRecordRepository.save(record);
-    
+
     // Reload without relations to avoid circular reference in response
     const reloadedRecord = await this.healthRecordRepository.findOne({
       where: { id: savedRecord.id },
     });
-    
+
     if (!reloadedRecord) {
       throw new NotFoundException('Failed to reload updated health record');
     }
-    
+
     return reloadedRecord;
   }
 
   // ✅ NEW: Delete health record
   async remove(id: number): Promise<void> {
-    const record = await this.healthRecordRepository.findOne({ 
-      where: { id } 
+    const record = await this.healthRecordRepository.findOne({
+      where: { id },
     });
-    
+
     if (!record) {
       throw new NotFoundException(`Health record with ID ${id} not found`);
     }

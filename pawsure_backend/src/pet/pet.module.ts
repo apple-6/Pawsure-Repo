@@ -12,7 +12,7 @@ import { MealLog } from '../meal-log/meal-log.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Pet, ActivityLog, MoodLog, MealLog]),
-    FileModule, 
+    FileModule,
   ],
   controllers: [PetController],
   providers: [PetService],

@@ -10,7 +10,7 @@ import { Pet } from 'src/pet/pet.entity'; // This import is already there, good!
 @Module({
   imports: [
     // Add Pet here!
-    TypeOrmModule.forFeature([Post, PostMedia, Pet])
+    TypeOrmModule.forFeature([Post, PostMedia, Pet]),
   ],
   controllers: [PostsController],
   providers: [PostsService],

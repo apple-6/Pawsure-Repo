@@ -35,7 +35,7 @@ export class PetService {
 
     // Get unique dates with activity in the last 365 days
     const activeDates = await this.getActiveDates(petId, 365);
-    
+
     if (activeDates.length === 0) {
       pet.streak = 0;
       pet.last_activity_date = null as any;
@@ -53,8 +53,8 @@ export class PetService {
     yesterday.setDate(yesterday.getDate() - 1);
 
     const mostRecentDate = activeDates[0];
-    const isStreakActive = 
-      mostRecentDate.getTime() === today.getTime() || 
+    const isStreakActive =
+      mostRecentDate.getTime() === today.getTime() ||
       mostRecentDate.getTime() === yesterday.getTime();
 
     if (!isStreakActive) {
@@ -70,9 +70,11 @@ export class PetService {
     for (let i = 0; i < activeDates.length - 1; i++) {
       const current = activeDates[i];
       const next = activeDates[i + 1];
-      
-      const diffDays = Math.round((current.getTime() - next.getTime()) / (1000 * 60 * 60 * 24));
-      
+
+      const diffDays = Math.round(
+        (current.getTime() - next.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
       if (diffDays === 1) {
         streak++;
       } else {
@@ -122,21 +124,21 @@ export class PetService {
 
     // Combine and dedupe dates
     const dateSet = new Set<string>();
-    
-    moodLogs.forEach(row => {
-      if (row.date) dateSet.add(new Date(row.date).toISOString().split('T')[0]);
-    });
-    
-    activityLogs.forEach(row => {
+
+    moodLogs.forEach((row) => {
       if (row.date) dateSet.add(new Date(row.date).toISOString().split('T')[0]);
     });
 
-    mealLogs.forEach(row => {
+    activityLogs.forEach((row) => {
+      if (row.date) dateSet.add(new Date(row.date).toISOString().split('T')[0]);
+    });
+
+    mealLogs.forEach((row) => {
       if (row.date) dateSet.add(new Date(row.date).toISOString().split('T')[0]);
     });
 
     // Convert to Date objects
-    return Array.from(dateSet).map(dateStr => {
+    return Array.from(dateSet).map((dateStr) => {
       const d = new Date(dateStr);
       d.setHours(0, 0, 0, 0);
       return d;

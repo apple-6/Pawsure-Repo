@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MealLog } from './meal-log.entity';
@@ -14,10 +19,13 @@ export class MealLogService {
     @InjectRepository(Pet)
     private petRepository: Repository<Pet>,
     @Inject(forwardRef(() => PetService))
-    private petService: PetService, 
+    private petService: PetService,
   ) {}
 
-  async create(petId: number, dto: CreateMealLogDto): Promise<{ mealLog: MealLog; streak: number }> {
+  async create(
+    petId: number,
+    dto: CreateMealLogDto,
+  ): Promise<{ mealLog: MealLog; streak: number }> {
     const pet = await this.petRepository.findOne({ where: { id: petId } });
     if (!pet) {
       throw new NotFoundException(`Pet with ID ${petId} not found`);

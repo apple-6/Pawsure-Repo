@@ -1,7 +1,12 @@
 // src/health-record/health-record.entity.ts
 import { Pet } from 'src/pet/pet.entity';
 import {
-  Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
 } from 'typeorm';
 
 @Entity('health_records')

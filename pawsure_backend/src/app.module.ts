@@ -4,10 +4,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-// 👇 1. ADD THESE IMPORTS
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
-// 👆 END ADDITION
 
 import { AiModule } from './ai/ai.module';
 import { UserModule } from './user/user.module';
@@ -40,19 +36,11 @@ import { getTypeOrmConfig } from './config/typeorm.config';
       envFilePath: '.env',
     }),
 
-    // 👇 2. STATIC FILE CONFIGURATION (The 404 Fix)
-    ServeStaticModule.forRoot({
-      // "process.cwd()" is safer than "__dirname" here. 
-      // It points to your project root where the 'uploads' folder actually lives.
-      rootPath: join(process.cwd(), 'uploads'), 
-      serveRoot: '/uploads',                    
-    }),
-    // 👆 END ADDITION
-
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => getTypeOrmConfig(configService),
+      useFactory: (configService: ConfigService) =>
+        getTypeOrmConfig(configService),
     }),
     AiModule,
     UserModule,
@@ -74,7 +62,7 @@ import { getTypeOrmConfig } from './config/typeorm.config';
     AuthModule,
     EventsModule,
     ChatModule,
-    MoodLogModule, 
+    MoodLogModule,
     MealLogModule,
   ],
   controllers: [AppController],

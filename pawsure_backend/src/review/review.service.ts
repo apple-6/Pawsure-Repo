@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Review } from './review.entity';
@@ -10,12 +14,15 @@ export class ReviewService {
   constructor(
     @InjectRepository(Review)
     private reviewRepository: Repository<Review>,
-    
+
     @InjectRepository(Booking)
     private bookingRepository: Repository<Booking>,
   ) {}
 
-  async create(createReviewDto: CreateReviewDto, ownerId: number): Promise<Review> {
+  async create(
+    createReviewDto: CreateReviewDto,
+    ownerId: number,
+  ): Promise<Review> {
     const { bookingId, rating, comment } = createReviewDto;
 
     // 1. Verify Booking exists
@@ -33,26 +40,32 @@ export class ReviewService {
     console.log(`Booking ID: ${booking.id}`);
     console.log(`Logged-in User ID (from Token): ${ownerId}`);
     // Safe navigation in case owner is null
-    console.log(`Booking Owner ID (from DB): ${booking.owner ? booking.owner.id : 'NULL'}`);
+    console.log(
+      `Booking Owner ID (from DB): ${booking.owner ? booking.owner.id : 'NULL'}`,
+    );
     // ------------------------------------
 
     // CHECK 1: Does the booking have an owner?
     if (!booking.owner) {
-       throw new BadRequestException('This booking has no owner assigned in the database.');
+      throw new BadRequestException(
+        'This booking has no owner assigned in the database.',
+      );
     }
 
     // CHECK 2: Do the IDs match?
     if (booking.owner.id !== ownerId) {
-      throw new BadRequestException(`You (ID: ${ownerId}) cannot review booking owned by User ID: ${booking.owner.id}`);
+      throw new BadRequestException(
+        `You (ID: ${ownerId}) cannot review booking owned by User ID: ${booking.owner.id}`,
+      );
     }
 
     // 2. Create the Review
     const review = this.reviewRepository.create({
       rating,
       comment,
-      booking, 
-      sitter: booking.sitter, 
-      owner: booking.owner,   
+      booking,
+      sitter: booking.sitter,
+      owner: booking.owner,
     });
 
     return await this.reviewRepository.save(review);

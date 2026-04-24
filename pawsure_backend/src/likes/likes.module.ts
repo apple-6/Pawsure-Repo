@@ -8,16 +8,6 @@ import { LikesController } from './like.controller'; // 👈 Import this
   imports: [TypeOrmModule.forFeature([Like])],
   controllers: [LikesController], // 👈 ADD THIS LINE
   providers: [LikesService],
-  exports: [LikesService]
+  exports: [LikesService],
 })
 export class LikesModule {}
-
-
-
-
-
-
-
-
-
-

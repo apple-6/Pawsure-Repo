@@ -53,10 +53,10 @@ export class AuthService {
     });
 
     const payload = {
-        sub: newUser.id,
-        email: newUser.email,
-        phone_number: newUser.phone_number,
-        role: newUser.role,
+      sub: newUser.id,
+      email: newUser.email,
+      phone_number: newUser.phone_number,
+      role: newUser.role,
     };
 
     // 2. Generate the Access Token

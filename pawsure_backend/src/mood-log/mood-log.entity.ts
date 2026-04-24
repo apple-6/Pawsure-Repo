@@ -36,4 +36,3 @@ export class MoodLog {
   @JoinColumn({ name: 'pet_id' })
   pet: Pet;
 }
-

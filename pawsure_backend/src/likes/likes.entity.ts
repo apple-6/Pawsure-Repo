@@ -2,7 +2,10 @@
 import { User } from 'src/user/user.entity';
 import { Post } from 'src/posts/posts.entity';
 import {
-  Entity, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne
+  Entity,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  ManyToOne,
 } from 'typeorm';
 
 @Entity('likes')

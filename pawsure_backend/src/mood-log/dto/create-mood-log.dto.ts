@@ -14,4 +14,3 @@ export class CreateMoodLogDto {
   @IsOptional()
   notes?: string;
 }
-

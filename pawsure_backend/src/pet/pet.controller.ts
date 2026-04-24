@@ -1,24 +1,24 @@
 // pawsure_backend\src\pet\pet.controller.ts
-import { 
-  Controller, 
+import {
+  Controller,
   Post,
   Put,
-  Body, 
-  UseInterceptors, 
-  UploadedFile, 
+  Body,
+  UseInterceptors,
+  UploadedFile,
   Request,
   UseGuards,
   Get,
   Param,
   // 🔑 ADDED: Import the Delete decorator
-  Delete, 
+  Delete,
   HttpCode, // Added for explicit status code control
   HttpStatus, // Added for status code constants
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PetService } from './pet.service';
 import { CreatePetDto } from './dto/create-pet.dto';
-import { UpdatePetDto } from './dto/update-pet.dto'; 
+import { UpdatePetDto } from './dto/update-pet.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FileService } from '../file/file.service'; // 🆕 Imported from Sitter logic
 import { Express } from 'express';
@@ -33,17 +33,17 @@ export class PetController {
   // ========================================================================
   // READ (GET) ENDPOINTS
   // ========================================================================
-  
+
   @Get()
   @UseGuards(JwtAuthGuard)
   async getMyPets(@Request() req) {
     console.log('🔍 JWT User from token:', req.user);
     const userId = req.user.id;
     console.log('🔍 Fetching pets for user ID:', userId);
-    
+
     const pets = await this.petService.findByOwner(userId);
     console.log('📦 Found', pets.length, 'pets for user', userId);
-    
+
     return pets;
   }
 
@@ -52,15 +52,15 @@ export class PetController {
     console.log('🐛 Debug endpoint called - fetching all pets');
     const allPets = await this.petService.findAll();
     console.log('🐛 Total pets in database:', allPets.length);
-    return { 
-      total: allPets.length, 
-      pets: allPets.map(p => ({ 
-        id: p.id, 
-        name: p.name, 
+    return {
+      total: allPets.length,
+      pets: allPets.map((p) => ({
+        id: p.id,
+        name: p.name,
         ownerId: p.ownerId,
         species: p.species,
-        breed: p.breed
-      }))
+        breed: p.breed,
+      })),
     };
   }
 
@@ -73,7 +73,7 @@ export class PetController {
   // ========================================================================
   // WRITE (POST) ENDPOINTS
   // ========================================================================
-  
+
   @Post()
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('photo'))
@@ -90,9 +90,9 @@ export class PetController {
     if (file) {
       // Logic from SitterService: Upload buffer to storage and get public URL
       const photoUrl = await this.fileService.uploadPublicFile(
-        file.buffer, 
-        file.originalname, 
-        'pet-photos'
+        file.buffer,
+        file.originalname,
+        'pet-photos',
       );
       createPetDto.photoUrl = photoUrl;
       console.log('📸 Photo uploaded and URL assigned:', photoUrl);
@@ -116,21 +116,21 @@ export class PetController {
   ) {
     const petId = Number(id);
     const userId = req.user.id;
-    
+
     console.log(`✏️ Updating Pet ID: ${petId} by User ID: ${userId}`);
-    
+
     // --- UPDATED PHOTO LOGIC ---
     if (file) {
       // Replace manual URL building with the dynamic FileService upload
       const photoUrl = await this.fileService.uploadPublicFile(
-        file.buffer, 
-        file.originalname, 
-        'pet-photos'
+        file.buffer,
+        file.originalname,
+        'pet-photos',
       );
       updatePetDto.photoUrl = photoUrl;
       console.log('📸 New photo uploaded and URL assigned:', photoUrl);
     }
-    
+
     return this.petService.update(petId, updatePetDto, userId);
   }
 
@@ -138,16 +138,16 @@ export class PetController {
   // DELETE ENDPOINT
   // ========================================================================
 
-  @Delete(':id') 
+  @Delete(':id')
   @UseGuards(JwtAuthGuard)
   // Use 204 No Content for successful deletion (standard REST practice)
-  @HttpCode(HttpStatus.NO_CONTENT) 
+  @HttpCode(HttpStatus.NO_CONTENT)
   async removePet(@Param('id') id: string, @Request() req) {
     const petId = Number(id);
     const userId = req.user.id;
-    
+
     console.log(`🗑️ Deleting Pet ID: ${petId} by User ID: ${userId}`);
-    
+
     // Calls the PetService.remove method which includes owner check and database deletion
     await this.petService.remove(petId, userId);
   }

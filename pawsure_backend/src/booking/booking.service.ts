@@ -1,4 +1,4 @@
-import { Injectable,NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Booking } from './booking.entity';
@@ -12,7 +12,7 @@ export class BookingService {
 
     @InjectRepository(Sitter)
     private sitterRepository: Repository<Sitter>,
-) {}
+  ) {}
 
   async create(bookingData: Partial<Booking>): Promise<Booking> {
     // ✅ CHECK FOR UNPAID BOOKINGS BEFORE ALLOWING NEW BOOKING
@@ -27,21 +27,26 @@ export class BookingService {
       });
 
       if (unpaidBookings.length > 0) {
-        console.log(`❌ Owner ${ownerId} has ${unpaidBookings.length} unpaid booking(s)`);
+        console.log(
+          `❌ Owner ${ownerId} has ${unpaidBookings.length} unpaid booking(s)`,
+        );
         throw new Error(
-          `You have ${unpaidBookings.length} unpaid booking(s). Please complete payment before booking a new sitter.`
+          `You have ${unpaidBookings.length} unpaid booking(s). Please complete payment before booking a new sitter.`,
         );
       }
     }
 
     const booking = this.bookingRepository.create({
       ...bookingData,
-      status: 'pending', 
+      status: 'pending',
     });
     return await this.bookingRepository.save(booking);
   }
 
-  async updateStatus(id: number, status: 'accepted' | 'declined'| 'cancelled',): Promise<Booking> {
+  async updateStatus(
+    id: number,
+    status: 'accepted' | 'declined' | 'cancelled',
+  ): Promise<Booking> {
     const booking = await this.bookingRepository.findOne({ where: { id } });
 
     if (!booking) {
@@ -52,38 +57,38 @@ export class BookingService {
     return await this.bookingRepository.save(booking);
   }
 
-async findAllByUser(userId: any): Promise<Booking[]> {
-  const uid = Number(userId);
-  console.log(`🔍 Searching bookings for User ID: ${uid}`); 
+  async findAllByUser(userId: any): Promise<Booking[]> {
+    const uid = Number(userId);
+    console.log(`🔍 Searching bookings for User ID: ${uid}`);
 
-  const results = await this.bookingRepository.find({
-    where: { 
-      owner: { id: uid } 
-    },
-    relations: ['pets', 'sitter', 'sitter.user'], 
-    order: { created_at: 'DESC' }
-  });
+    const results = await this.bookingRepository.find({
+      where: {
+        owner: { id: uid },
+      },
+      relations: ['pets', 'sitter', 'sitter.user'],
+      order: { created_at: 'DESC' },
+    });
 
-  console.log(`📊 Found ${results.length} bookings for user ${uid}`); // DEBUG LOG
-  return results;
-}
+    console.log(`📊 Found ${results.length} bookings for user ${uid}`); // DEBUG LOG
+    return results;
+  }
 
-async findAllBySitter(sitterId: number): Promise<Booking[]> {
-  console.log(`🔍 Searching bookings for Sitter ID: ${sitterId}`);
+  async findAllBySitter(sitterId: number): Promise<Booking[]> {
+    console.log(`🔍 Searching bookings for Sitter ID: ${sitterId}`);
 
-  const results = await this.bookingRepository.find({
-    where: {
-      sitter: { id: sitterId }
-    },
-    relations: ['pets', 'owner'],
-    order: { created_at: 'DESC' }
-  });
+    const results = await this.bookingRepository.find({
+      where: {
+        sitter: { id: sitterId },
+      },
+      relations: ['pets', 'owner'],
+      order: { created_at: 'DESC' },
+    });
 
-  console.log(`📊 Found ${results.length} bookings for sitter ${sitterId}`);
-  return results;
-}
+    console.log(`📊 Found ${results.length} bookings for sitter ${sitterId}`);
+    return results;
+  }
 
-async findAllBySitterUserId(userId: number): Promise<Booking[]> {
+  async findAllBySitterUserId(userId: number): Promise<Booking[]> {
     console.log(`🔍 Step 1: Finding Sitter profile for User ID: ${userId}`);
 
     // 1. Find which Sitter ID belongs to this User
@@ -92,28 +97,36 @@ async findAllBySitterUserId(userId: number): Promise<Booking[]> {
     });
 
     if (!sitter) {
-      console.warn(`⚠️ No Sitter profile found for User ID ${userId}. Returning empty list.`);
+      console.warn(
+        `⚠️ No Sitter profile found for User ID ${userId}. Returning empty list.`,
+      );
       return [];
     }
 
-    console.log(`✅ Step 2: Found Sitter ID ${sitter.id}. Fetching bookings...`);
+    console.log(
+      `✅ Step 2: Found Sitter ID ${sitter.id}. Fetching bookings...`,
+    );
 
     // 2. Find bookings for that specific Sitter ID
     const bookings = await this.bookingRepository.find({
-      where: { 
-        sitter: { id: sitter.id } 
+      where: {
+        sitter: { id: sitter.id },
       },
       relations: ['pets', 'owner'], // Load Pet and Owner details for the UI
-      order: { created_at: 'DESC' }
+      order: { created_at: 'DESC' },
     });
 
-    console.log(`📊 Found ${bookings.length} bookings for Sitter ID ${sitter.id}`);
+    console.log(
+      `📊 Found ${bookings.length} bookings for Sitter ID ${sitter.id}`,
+    );
     return bookings;
   }
 
   // 🆕 Mark service as completed (sitter marks the job as done)
   async completeService(bookingId: number, userId: number): Promise<Booking> {
-    console.log(`✅ Completing service for booking ${bookingId} by user ${userId}`);
+    console.log(
+      `✅ Completing service for booking ${bookingId} by user ${userId}`,
+    );
 
     // Find booking with sitter relation
     const booking = await this.bookingRepository.findOne({
@@ -127,7 +140,9 @@ async findAllBySitterUserId(userId: number): Promise<Booking[]> {
 
     // Verify that the logged-in user is the sitter for this booking
     if (booking.sitter.user.id !== userId) {
-      throw new NotFoundException('You are not authorized to complete this booking');
+      throw new NotFoundException(
+        'You are not authorized to complete this booking',
+      );
     }
 
     // Update booking status
@@ -139,7 +154,9 @@ async findAllBySitterUserId(userId: number): Promise<Booking[]> {
 
   // 🆕 Process payment (owner pays after service is completed)
   async processPayment(bookingId: number, userId: number): Promise<Booking> {
-    console.log(`💳 Processing payment for booking ${bookingId} by user ${userId}`);
+    console.log(
+      `💳 Processing payment for booking ${bookingId} by user ${userId}`,
+    );
 
     // Find booking with owner relation
     const booking = await this.bookingRepository.findOne({
@@ -153,12 +170,16 @@ async findAllBySitterUserId(userId: number): Promise<Booking[]> {
 
     // Verify that the logged-in user is the owner of this booking
     if (booking.owner.id !== userId) {
-      throw new NotFoundException('You are not authorized to pay for this booking');
+      throw new NotFoundException(
+        'You are not authorized to pay for this booking',
+      );
     }
 
     // Check if service is completed
     if (booking.status !== 'completed') {
-      throw new NotFoundException('Service must be completed before payment can be processed');
+      throw new NotFoundException(
+        'Service must be completed before payment can be processed',
+      );
     }
 
     // Check if already paid

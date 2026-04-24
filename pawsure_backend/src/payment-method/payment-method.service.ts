@@ -1,5 +1,9 @@
 // pawsure_backend/src/payment-method/payment-method.service.ts
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PaymentMethod } from './payment-method.entity';
@@ -12,10 +16,13 @@ export class PaymentMethodService {
     private paymentMethodRepository: Repository<PaymentMethod>,
   ) {}
 
-  async create(userId: number, dto: CreatePaymentMethodDto): Promise<PaymentMethod> {
+  async create(
+    userId: number,
+    dto: CreatePaymentMethodDto,
+  ): Promise<PaymentMethod> {
     // If this is the first card or marked as default, set it as default
     const existingMethods = await this.findAllByUser(userId);
-    
+
     const isDefault = dto.isDefault || existingMethods.length === 0;
 
     // If setting as default, unset other defaults
@@ -58,7 +65,9 @@ export class PaymentMethodService {
     const method = await this.findOne(id);
 
     if (method.userId !== userId) {
-      throw new ForbiddenException('You can only modify your own payment methods');
+      throw new ForbiddenException(
+        'You can only modify your own payment methods',
+      );
     }
 
     // Unset all other defaults for this user
@@ -76,7 +85,9 @@ export class PaymentMethodService {
     const method = await this.findOne(id);
 
     if (method.userId !== userId) {
-      throw new ForbiddenException('You can only delete your own payment methods');
+      throw new ForbiddenException(
+        'You can only delete your own payment methods',
+      );
     }
 
     await this.paymentMethodRepository.remove(method);
@@ -97,4 +108,3 @@ export class PaymentMethodService {
     });
   }
 }
-

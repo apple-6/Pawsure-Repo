@@ -18,7 +18,9 @@ import { PaymentMethod } from '../payment-method/payment-method.entity';
 import { Event } from '../events/entities/event.entity';
 import { PostMedia } from '../posts/post-media.entity';
 
-export const getTypeOrmConfig = (configService: ConfigService): DataSourceOptions => ({
+export const getTypeOrmConfig = (
+  configService: ConfigService,
+): DataSourceOptions => ({
   type: 'postgres',
   url: configService.get<string>('DATABASE_URL'),
   entities: [

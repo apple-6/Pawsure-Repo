@@ -1,4 +1,13 @@
-import { IsNotEmpty, IsString, IsInt, IsOptional, IsNumber, IsDateString, IsArray, ArrayMinSize } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsInt,
+  IsOptional,
+  IsNumber,
+  IsDateString,
+  IsArray,
+  ArrayMinSize,
+} from 'class-validator';
 
 export class CreateActivityLogDto {
   // ✅ NEW: Accept array of pet IDs instead of single petId in route

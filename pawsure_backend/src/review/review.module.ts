@@ -9,6 +9,6 @@ import { Booking } from 'src/booking/booking.entity'; // ✅ Import Booking Enti
   imports: [TypeOrmModule.forFeature([Review, Booking])], // ✅ Add Booking here
   controllers: [ReviewController], // ✅ Add Controller here
   providers: [ReviewService],
-  exports: [ReviewService]
+  exports: [ReviewService],
 })
 export class ReviewModule {}

@@ -9,6 +9,6 @@ import { Pet } from 'src/pet/pet.entity';
   imports: [TypeOrmModule.forFeature([HealthRecord, Pet])],
   controllers: [HealthRecordController],
   providers: [HealthRecordService],
-  exports: [HealthRecordService]
+  exports: [HealthRecordService],
 })
 export class HealthRecordModule {}

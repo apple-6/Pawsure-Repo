@@ -18,4 +18,3 @@ import { PetModule } from '../pet/pet.module';
   exports: [MoodLogService],
 })
 export class MoodLogModule {}
-

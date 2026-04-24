@@ -12,4 +12,3 @@ import { PaymentMethodController } from './payment-method.controller';
   exports: [PaymentMethodService],
 })
 export class PaymentMethodModule {}
-

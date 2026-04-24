@@ -17,7 +17,6 @@ import { Event } from '../events/entities/event.entity';
 import { MoodLog } from '../mood-log/mood-log.entity';
 import { MealLog } from '../meal-log/meal-log.entity';
 
-
 @Entity('pets')
 export class Pet {
   @PrimaryGeneratedColumn()

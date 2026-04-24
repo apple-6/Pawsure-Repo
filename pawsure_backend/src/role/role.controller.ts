@@ -1,4 +1,10 @@
-import { Controller, Post, Body, Get, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  BadRequestException,
+} from '@nestjs/common';
 import { RoleService } from './role.service';
 import { Role } from './role.entity';
 
@@ -7,7 +13,9 @@ export class RoleController {
   constructor(private readonly roleService: RoleService) {}
 
   @Post()
-  async createRole(@Body('role') role: string): Promise<{ message: string; data: Role }> {
+  async createRole(
+    @Body('role') role: string,
+  ): Promise<{ message: string; data: Role }> {
     if (!role) {
       throw new BadRequestException('Role is required');
     }

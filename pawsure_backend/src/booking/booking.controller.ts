@@ -1,4 +1,14 @@
-import { Controller, Post, Body, UseGuards, Request, Patch, Param, ParseIntPipe, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+  Patch,
+  Param,
+  ParseIntPipe,
+  Get,
+} from '@nestjs/common';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -10,70 +20,64 @@ import { Pet } from '../pet/pet.entity';
 export class BookingController {
   constructor(private readonly bookingService: BookingService) {}
 
-@Get()
-@UseGuards(JwtAuthGuard) 
-async findAll(@Request() req) {
-  return this.bookingService.findAllByUser(req.user.id); 
-}
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  async findAll(@Request() req) {
+    return this.bookingService.findAllByUser(req.user.id);
+  }
 
-@Get('owner')
-@UseGuards(JwtAuthGuard)
-async findOwnerBookings(@Request() req) {
-  // Reuses the existing logic since "User" in this context is the Owner
-  return this.bookingService.findAllByUser(req.user.id);
-}
+  @Get('owner')
+  @UseGuards(JwtAuthGuard)
+  async findOwnerBookings(@Request() req) {
+    // Reuses the existing logic since "User" in this context is the Owner
+    return this.bookingService.findAllByUser(req.user.id);
+  }
 
-@Get('sitter')
-@UseGuards(JwtAuthGuard)
-async findAllForSitter(@Request() req) {
-  // Fetch bookings where the sitter's userId matches the logged-in user
-  return this.bookingService.findAllBySitterUserId(req.user.id);
-}
+  @Get('sitter')
+  @UseGuards(JwtAuthGuard)
+  async findAllForSitter(@Request() req) {
+    // Fetch bookings where the sitter's userId matches the logged-in user
+    return this.bookingService.findAllBySitterUserId(req.user.id);
+  }
 
-@Post()
-@UseGuards(JwtAuthGuard)
-async create(@Body() createBookingDto: CreateBookingDto, @Request() req) {
-  return this.bookingService.create({
-    start_date: createBookingDto.start_date,
-    end_date: createBookingDto.end_date,
-    total_amount: createBookingDto.total_amount,
-    drop_off_time: createBookingDto.drop_off_time,
-    pick_up_time: createBookingDto.pick_up_time,
-    message: createBookingDto.message, // Ensure this is mapped here
-    status: 'pending',
-    owner: { id: req.user.id } as User,
-    sitter: { id: createBookingDto.sitterId } as Sitter,
-    //pet: { id: createBookingDto.petId } as Pet,
-    pets: createBookingDto.petIds.map(id => ({ id } as Pet)),
-  });
-}
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  async create(@Body() createBookingDto: CreateBookingDto, @Request() req) {
+    return this.bookingService.create({
+      start_date: createBookingDto.start_date,
+      end_date: createBookingDto.end_date,
+      total_amount: createBookingDto.total_amount,
+      drop_off_time: createBookingDto.drop_off_time,
+      pick_up_time: createBookingDto.pick_up_time,
+      message: createBookingDto.message, // Ensure this is mapped here
+      status: 'pending',
+      owner: { id: req.user.id } as User,
+      sitter: { id: createBookingDto.sitterId } as Sitter,
+      //pet: { id: createBookingDto.petId } as Pet,
+      pets: createBookingDto.petIds.map((id) => ({ id }) as Pet),
+    });
+  }
 
-@Patch(':id/status')
+  @Patch(':id/status')
   @UseGuards(JwtAuthGuard)
   async updateBookingStatus(
     @Param('id', ParseIntPipe) id: number,
-    @Body('status') status: 'accepted' | 'declined'| 'cancelled',
+    @Body('status') status: 'accepted' | 'declined' | 'cancelled',
   ) {
     return this.bookingService.updateStatus(id, status);
   }
 
-// 🆕 Mark service as completed (called by sitter)
-@Patch(':id/complete')
-@UseGuards(JwtAuthGuard)
-async completeService(
-  @Param('id', ParseIntPipe) id: number,
-  @Request() req,
-) {
-  return this.bookingService.completeService(id, req.user.id);
-}
+  // 🆕 Mark service as completed (called by sitter)
+  @Patch(':id/complete')
+  @UseGuards(JwtAuthGuard)
+  async completeService(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.bookingService.completeService(id, req.user.id);
+  }
 
-// 🆕 Process payment (called by owner after service is completed)
-@Post(':id/pay')
-@UseGuards(JwtAuthGuard)
-async processPayment(
-  @Param('id', ParseIntPipe) id: number,
-  @Request() req,
-) {
-  return this.bookingService.processPayment(id, req.user.id);
-}
+  // 🆕 Process payment (called by owner after service is completed)
+  @Post(':id/pay')
+  @UseGuards(JwtAuthGuard)
+  async processPayment(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.bookingService.processPayment(id, req.user.id);
+  }
 }

@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
 // Import your DTO, e.g., CreateUserDto, if you use it in the create method
-// import { CreateUserDto } from './dto/create-user.dto'; 
+// import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class UserService {
@@ -31,10 +31,7 @@ export class UserService {
    */
   async findOneByIdentifier(identifier: string): Promise<User | null> {
     return this.usersRepository.findOne({
-      where: [
-        { email: identifier }, 
-        { phone_number: identifier }
-      ],
+      where: [{ email: identifier }, { phone_number: identifier }],
     });
   }
 
@@ -77,10 +74,10 @@ export class UserService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    
+
     // Merge the new attributes into the existing user entity
     Object.assign(user, attrs);
-    
+
     return this.usersRepository.save(user);
   }
 }

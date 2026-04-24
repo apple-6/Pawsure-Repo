@@ -10,26 +10,12 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Keep this ONE robust configuration
-  app.enableCors({ 
-      origin: '*', // Allows all origins (good for development)
-      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-      allowedHeaders: '*',
-      credentials: true,
+  app.enableCors({
+    origin: '*', // Allows all origins (good for development)
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: '*',
+    credentials: true,
   });
-
-  // 🔧 Serve static files from the 'uploads' directory
-  // UPDATED: Using process.cwd() ensures we look in the project root, not 'dist'
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
-  });
-  
-  // 👇 ADDED DEBUG LOGGING 👇
-  console.log('------------------------------------------------');
-  console.log('📂 STATIC FILE DEBUGGER');
-  console.log('👉 Current Working Directory (CWD):', process.cwd());
-  console.log('👉 Static Assets Path:', join(process.cwd(), 'uploads'));
-  console.log('------------------------------------------------');
-  // 👆 END DEBUG LOGGING 👆
 
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 

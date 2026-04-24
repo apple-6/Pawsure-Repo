@@ -1,5 +1,12 @@
 // src/chat/message.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { User } from '../user/user.entity';
 
 @Entity('messages')
@@ -12,10 +19,10 @@ export class Message {
 
   // The "Room" ID usually acts as the booking ID or a unique string like "user1-user2"
   @Column()
-  room: string; 
+  room: string;
 
   @ManyToOne(() => User, (user) => user.messages)
-  @JoinColumn({ name: 'senderId' }) 
+  @JoinColumn({ name: 'senderId' })
   sender: User;
 
   @CreateDateColumn()

@@ -2,7 +2,12 @@
 import { User } from 'src/user/user.entity';
 import { Post } from 'src/posts/posts.entity';
 import {
-  Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
 } from 'typeorm';
 
 @Entity('comments')
