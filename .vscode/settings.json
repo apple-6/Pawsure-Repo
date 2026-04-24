@@ -1,5 +1,13 @@
 {
     "cmake.sourceDirectory": "C:/project/Pawsure-Repo/pawsure_app/linux",
     "java.configuration.updateBuildConfiguration": "interactive",
-    "postman.settings.dotenv-detection-notification-visibility": false
+    "postman.settings.dotenv-detection-notification-visibility": false,
+    "java.jdt.ls.java.home": "C:\\Program Files\\Java\\jdk-21",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-21",
+            "path": "C:\\Program Files\\Java\\jdk-21",
+            "default": true
+        }
+    ]
 }
