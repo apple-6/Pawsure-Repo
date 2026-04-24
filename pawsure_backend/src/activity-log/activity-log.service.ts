@@ -27,12 +27,7 @@ export class ActivityLogService {
     dto: CreateActivityLogDto,
     userId: number,
   ): Promise<ActivityLog[]> {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📥 Creating activity for multiple pets');
-    console.log('   Pet IDs:', petIds);
-    console.log('   Activity Type:', dto.activity_type);
-    console.log('   User ID:', userId);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    const { activity_type, title, description, duration_minutes, distance_km, calories_burned, route_data } = dto;
 
     // STEP 1: Validate all pets exist
     const pets = await this.petRepository.find({
@@ -59,7 +54,6 @@ export class ActivityLogService {
 
     // STEP 3: Parse activity date as UTC
     const activityDateUtc = new Date(dto.activity_date);
-    console.log('📅 Activity Date (UTC):', activityDateUtc.toISOString());
 
     // STEP 4: Create activity for each pet (parallel execution for performance)
     const activityPromises = petIds.map(async (petId) => {
@@ -79,12 +73,6 @@ export class ActivityLogService {
     });
 
     const savedActivities = await Promise.all(activityPromises);
-
-    console.log('✅ Successfully created activities:');
-    savedActivities.forEach((activity, index) => {
-      console.log(`   [${index + 1}] ID: ${activity.id}, Pet: ${petIds[index]}, Date: ${activity.activity_date.toISOString()}`);
-    });
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
     return savedActivities;
   }
@@ -109,9 +97,6 @@ export class ActivityLogService {
 
     const activityDateUtc = new Date(dto.activity_date);
 
-    console.log('📥 Received activity_date:', dto.activity_date);
-    console.log('📅 Parsed as Date:', activityDateUtc.toISOString());
-
     const activity = this.activityLogRepository.create({
       activity_type: dto.activity_type,
       title: dto.title,
@@ -129,12 +114,6 @@ export class ActivityLogService {
     // Recalculate streak
     await this.petService.calculateAndUpdateStreak(petId);
 
-    console.log('✅ Created activity:', {
-      id: savedActivity.id,
-      title: savedActivity.title,
-      activity_date: savedActivity.activity_date.toISOString(),
-    });
-    
     return savedActivity;
   }
 
@@ -159,7 +138,7 @@ export class ActivityLogService {
       throw new ForbiddenException('Not your pet');
     }
 
-    const query: any = { pet: { id: petId } };
+    const query: Record<string, any> = { pet: { id: petId } };
 
     if (filters?.type) {
       query.activity_type = filters.type;
@@ -228,8 +207,6 @@ export class ActivityLogService {
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     }
 
-    console.log(`📊 Fetching stats for Pet ${petId}, Period: ${period}, Range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
-
     const activities = await this.activityLogRepository.find({
       where: {
         petId: petId,
@@ -293,10 +270,6 @@ export class ActivityLogService {
 
     if (dto.activity_date) {
       const activityDateUtc = new Date(dto.activity_date);
-
-      console.log('📥 Update received activity_date:', dto.activity_date);
-      console.log('📅 Parsed as Date:', activityDateUtc.toISOString());
-
       activity.activity_date = activityDateUtc;
     }
 
@@ -304,11 +277,6 @@ export class ActivityLogService {
     
     // Recalculate streak
     await this.petService.calculateAndUpdateStreak(activity.petId || (activity.pet ? activity.pet.id : 0));
-
-    console.log('✅ Updated activity:', {
-      id: saved.id,
-      activity_date: saved.activity_date.toISOString(),
-    });
 
     return saved;
   }

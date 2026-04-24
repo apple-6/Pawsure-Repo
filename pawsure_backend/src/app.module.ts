@@ -26,12 +26,12 @@ import { CommentsModule } from './comments/comments.module';
 import { LikesModule } from './likes/likes.module';
 import { RoleModule } from './role/role.module';
 import { AuthModule } from './auth/auth.module';
-import { FileService } from './file/file.service';
 import { FileModule } from './file/file.module';
 import { EventsModule } from './events/events.module';
 import { ChatModule } from './chat/chat.module';
 import { MoodLogModule } from './mood-log/mood-log.module';
 import { MealLogModule } from './meal-log/meal-log.module';
+import { getTypeOrmConfig } from './config/typeorm.config';
 
 @Module({
   imports: [
@@ -39,7 +39,7 @@ import { MealLogModule } from './meal-log/meal-log.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
-    
+
     // 👇 2. STATIC FILE CONFIGURATION (The 404 Fix)
     ServeStaticModule.forRoot({
       // "process.cwd()" is safer than "__dirname" here. 
@@ -52,15 +52,7 @@ import { MealLogModule } from './meal-log/meal-log.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        url: configService.get<string>('DATABASE_URL'),
-        autoLoadEntities: true,
-        synchronize: false, // ✅ Manual schema changes for safety
-        ssl: {
-          rejectUnauthorized: false,
-        },
-      }),
+      useFactory: (configService: ConfigService) => getTypeOrmConfig(configService),
     }),
     AiModule,
     UserModule,
@@ -86,6 +78,6 @@ import { MealLogModule } from './meal-log/meal-log.module';
     MealLogModule,
   ],
   controllers: [AppController],
-  providers: [AppService, FileService],
+  providers: [AppService],
 })
 export class AppModule {}
