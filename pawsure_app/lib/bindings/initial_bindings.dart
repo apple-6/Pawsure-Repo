@@ -19,57 +19,27 @@ import 'package:pawsure_app/controllers/calendar_controller.dart';
 class InitialBindings implements Bindings {
   @override
   void dependencies() {
-    debugPrint('🔄 InitialBindings: Starting initialization...');
-
     // 1. Core Services (Must be first)
     Get.put<StorageService>(FileStorageService(), permanent: true);
-    debugPrint('✅ StorageService registered');
-
     Get.put<ApiService>(ApiService(), permanent: true);
-    debugPrint('✅ ApiService registered');
-
     Get.put<AuthService>(AuthService(), permanent: true);
-    debugPrint('✅ AuthService registered');
 
     // 2. Feature Services
     Get.put<ActivityService>(ActivityService(), permanent: true);
-    debugPrint('✅ ActivityService registered');
-
     Get.put<CommunityService>(CommunityService(), permanent: true);
-    debugPrint('✅ CommunityService registered');
 
     // 3. Controllers
-    Get.put<NavigationController>(NavigationController(), permanent: true);
-    debugPrint('✅ NavigationController registered');
+    Get.put(NavigationController(), permanent: true);
+    Get.put(PetController(), permanent: true);
+    Get.put(HomeController(), permanent: true);
+    Get.put(HealthController(), permanent: true);
+    Get.put(ActivityController(), permanent: true);
+    Get.put(CommunityController(), permanent: true);
+    Get.put(ProfileController(), permanent: true);
+    Get.put(SitterController(), permanent: true);
+    Get.put(BookingController(), permanent: true);
+    Get.put(CalendarController(), permanent: true);
 
-    Get.put<PetController>(PetController(), permanent: true);
-    debugPrint('✅ PetController registered');
-
-    Get.put<HomeController>(HomeController(), permanent: true);
-    debugPrint('✅ HomeController registered');
-
-    Get.put<HealthController>(HealthController(), permanent: true);
-    debugPrint('✅ HealthController registered');
-
-    Get.put<ActivityController>(ActivityController(), permanent: true);
-    debugPrint('✅ ActivityController registered');
-
-    Get.put<CommunityController>(CommunityController(), permanent: true);
-    debugPrint('✅ CommunityController registered');
-
-    Get.put<ProfileController>(ProfileController(), permanent: true);
-    debugPrint('✅ ProfileController registered');
-
-    Get.put<SitterController>(SitterController(), permanent: true);
-    debugPrint('✅ SitterController registered');
-
-    Get.put<BookingController>(BookingController(), permanent: true);
-    debugPrint('✅ BookingController registered');
-
-    Get.put<CalendarController>(CalendarController(), permanent: true);
-    debugPrint('✅ CalendarController registered');
-
-    debugPrint('✅ All Controllers Initialized');
-    debugPrint('🎉 InitialBindings: Complete!');
+    debugPrint('🚀 All Core Services & Controllers Initialized');
   }
 }
