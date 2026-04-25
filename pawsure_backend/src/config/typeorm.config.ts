@@ -17,6 +17,11 @@ import { Payment } from '../payment/payment.entity';
 import { PaymentMethod } from '../payment-method/payment-method.entity';
 import { Event } from '../events/entities/event.entity';
 import { PostMedia } from '../posts/post-media.entity';
+import { Message } from '../message/message.entity';
+import { MoodLog } from '../mood-log/mood-log.entity';
+import { MealLog } from '../meal-log/meal-log.entity';
+import { AiScan } from '../ai/ai-scan.entity';
+import { Role } from '../role/role.entity';
 
 export const getTypeOrmConfig = (
   configService: ConfigService,
@@ -39,6 +44,11 @@ export const getTypeOrmConfig = (
     PaymentMethod,
     Event,
     PostMedia,
+    Message,
+    MoodLog,
+    MealLog,
+    AiScan,
+    Role,
   ],
   migrations: [__dirname + '/../migrations/*.ts'],
   synchronize: false, // Always use migrations for safety
