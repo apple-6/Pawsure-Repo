@@ -30,8 +30,8 @@ async function bootstrap() {
 
   const server = await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
   
-  // Set a reasonable timeout for requests (30 seconds)
-  server.setTimeout(30000);
+  // Increase timeout to 60 seconds for Render free tier cold starts
+  server.setTimeout(60000);
 
   console.log(`Application is running on: ${await app.getUrl()}`);
 }

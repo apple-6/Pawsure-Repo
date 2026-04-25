@@ -24,8 +24,7 @@ class ApiConfig {
   // 4. API Base URL Logic
   static String get baseUrl {
     if (_envApiUrl.isNotEmpty) return _envApiUrl;
-    if (kIsWeb) return _localhostUrl;
-    if (Platform.isAndroid) return _emulatorUrl;
-    return _localhostUrl;
+    // REPLACE THIS WITH YOUR ACTUAL RENDER URL
+    return 'https://pawsure-backend.onrender.com'; 
   }
 }

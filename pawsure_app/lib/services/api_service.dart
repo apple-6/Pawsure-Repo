@@ -17,7 +17,7 @@ String get apiBaseUrl => ApiConfig.baseUrl;
 
 class ApiService {
   AuthService get _authService => Get.find<AuthService>();
-  static const _timeout = Duration(seconds: 30);
+  static const _timeout = Duration(seconds: 60);
 
   Future<Map<String, String>> _getHeaders() async {
     final headers = {
