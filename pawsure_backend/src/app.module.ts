@@ -28,12 +28,19 @@ import { ChatModule } from './chat/chat.module';
 import { MoodLogModule } from './mood-log/mood-log.module';
 import { MealLogModule } from './meal-log/meal-log.module';
 import { getTypeOrmConfig } from './config/typeorm.config';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+    }),
+
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
     }),
 
     TypeOrmModule.forRootAsync({

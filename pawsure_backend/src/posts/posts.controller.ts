@@ -61,6 +61,7 @@ export class PostsController {
           'video/mp4',
           'video/quicktime',
           'video/x-msvideo',
+          'application/octet-stream', // Added fallback
         ];
         if (allowedMimes.includes(file.mimetype)) {
           cb(null, true);
@@ -144,6 +145,7 @@ export class PostsController {
           'video/mp4',
           'video/quicktime',
           'video/x-msvideo',
+          'application/octet-stream', // Added fallback
         ];
         if (allowedMimes.includes(file.mimetype)) {
           cb(null, true);

@@ -224,9 +224,11 @@ export class SitterService {
       reviews_count: reviewCount,
 
       reviews: sitter.reviews
-        ? sitter.reviews.sort(
-            (a, b) => b.created_at.getTime() - a.created_at.getTime(),
-          )
+        ? sitter.reviews.sort((a, b) => {
+            const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return dateB - dateA;
+          })
         : [],
     } as any;
   }
@@ -267,9 +269,11 @@ export class SitterService {
       reviews_count: reviewCount,
       // Sort reviews by newest first
       reviews: sitter.reviews
-        ? sitter.reviews.sort(
-            (a, b) => b.created_at.getTime() - a.created_at.getTime(),
-          )
+        ? sitter.reviews.sort((a, b) => {
+            const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return dateB - dateA;
+          })
         : [],
     };
   }

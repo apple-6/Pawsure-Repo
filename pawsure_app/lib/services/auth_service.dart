@@ -74,7 +74,7 @@ class AuthService {
             },
             body: jsonEncode(body),
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 60));
     } on SocketException catch (e) {
       throw Exception('Network error: ${e.message}');
     } on TimeoutException {
@@ -256,7 +256,7 @@ class AuthService {
               'ngrok-skip-browser-warning': 'true', // ✅ ADDED HERE
             },
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 60));
 
       debugPrint('📦 Profile Response: ${resp.statusCode}');
 
@@ -330,7 +330,7 @@ class AuthService {
             },
             body: jsonEncode(body),
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 60));
     } on SocketException catch (e) {
       throw Exception('Network error: ${e.message}');
     } on TimeoutException {

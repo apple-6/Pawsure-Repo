@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pawsure_app/models/pet_model.dart';
 import 'package:pawsure_app/models/health_record_model.dart';
@@ -55,6 +56,27 @@ class ApiService {
     }
   }
 
+  MediaType _getMediaType(String filePath) {
+    final ext = filePath.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return MediaType('image', 'jpeg');
+      case 'png':
+        return MediaType('image', 'png');
+      case 'gif':
+        return MediaType('image', 'gif');
+      case 'webp':
+        return MediaType('image', 'webp');
+      case 'mp4':
+        return MediaType('video', 'mp4');
+      case 'mov':
+        return MediaType('video', 'quicktime');
+      default:
+        return MediaType('application', 'octet-stream');
+    }
+  }
+
   // ========================================================================
   // PETS API
   // ========================================================================
@@ -104,10 +126,15 @@ class ApiService {
       if (lastVetVisit != null) request.fields['last_vet_visit'] = lastVetVisit;
 
       if (photoPath != null && photoPath.isNotEmpty) {
-        request.files.add(await http.MultipartFile.fromPath('photo', photoPath));
+        request.files.add(await http.MultipartFile.fromPath(
+          'photo',
+          photoPath,
+          contentType: _getMediaType(photoPath),
+        ));
       }
 
-      final response = await http.Response.fromStream(await request.send());
+      final response = await http.Response.fromStream(
+          await request.send().timeout(_timeout));
       if (response.statusCode == 201 || response.statusCode == 200) {
         return Pet.fromJson(jsonDecode(response.body));
       }
@@ -159,10 +186,15 @@ class ApiService {
       if (lastVetVisit != null) request.fields['last_vet_visit'] = lastVetVisit;
 
       if (photoPath != null && photoPath.isNotEmpty) {
-        request.files.add(await http.MultipartFile.fromPath('photo', photoPath));
+        request.files.add(await http.MultipartFile.fromPath(
+          'photo',
+          photoPath,
+          contentType: _getMediaType(photoPath),
+        ));
       }
 
-      final response = await http.Response.fromStream(await request.send());
+      final response = await http.Response.fromStream(
+          await request.send().timeout(_timeout));
       if (response.statusCode == 200) {
         return Pet.fromJson(jsonDecode(response.body));
       }
@@ -334,10 +366,15 @@ class ApiService {
     request.fields['is_urgent'] = isUrgent.toString();
     if (mediaPaths != null) {
       for (var path in mediaPaths) {
-        request.files.add(await http.MultipartFile.fromPath('media', path));
+        request.files.add(await http.MultipartFile.fromPath(
+          'media',
+          path,
+          contentType: _getMediaType(path),
+        ));
       }
     }
-    final response = await http.Response.fromStream(await request.send());
+    final response = await http.Response.fromStream(
+        await request.send().timeout(_timeout));
     if (response.statusCode != 201) throw Exception('Failed to create post');
   }
 
@@ -358,10 +395,15 @@ class ApiService {
 
     if (newMediaPaths.isNotEmpty) {
       for (var path in newMediaPaths) {
-        request.files.add(await http.MultipartFile.fromPath('media', path));
+        request.files.add(await http.MultipartFile.fromPath(
+          'media',
+          path,
+          contentType: _getMediaType(path),
+        ));
       }
     }
-    final response = await http.Response.fromStream(await request.send());
+    final response = await http.Response.fromStream(
+        await request.send().timeout(_timeout));
     if (response.statusCode != 200 && response.statusCode != 201) throw Exception('Failed to update post');
   }
 
@@ -389,8 +431,15 @@ class ApiService {
     final request = http.MultipartRequest('PATCH', Uri.parse('$apiBaseUrl/users/profile'));
     request.headers.addAll(headers);
     data.forEach((key, value) => request.fields[key] = value.toString());
-    if (image != null) request.files.add(await http.MultipartFile.fromPath('profile_picture', image.path));
-    final response = await http.Response.fromStream(await request.send());
+    if (image != null) {
+      request.files.add(await http.MultipartFile.fromPath(
+        'profile_picture',
+        image.path,
+        contentType: _getMediaType(image.path),
+      ));
+    }
+    final response = await http.Response.fromStream(
+        await request.send().timeout(_timeout));
     if (response.statusCode == 200) return jsonDecode(response.body);
     throw Exception('Failed to update profile');
   }

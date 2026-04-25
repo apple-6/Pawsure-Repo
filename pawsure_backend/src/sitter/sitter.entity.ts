@@ -44,6 +44,12 @@ export class Sitter {
   @Column({ type: 'simple-array', nullable: true })
   available_dates: string[];
 
+  @Column({ type: 'text', array: true, nullable: true })
+  unavailable_dates: string[];
+
+  @Column({ type: 'text', array: true, nullable: true })
+  unavailable_days: string[];
+
   // --- Sitter Profile Setup Fields ---
   @Column({ nullable: true })
   address: string;

@@ -24,7 +24,7 @@ class ApiConfig {
   // 4. API Base URL Logic
   static String get baseUrl {
     if (_envApiUrl.isNotEmpty) return _envApiUrl;
-    // REPLACE THIS WITH YOUR ACTUAL RENDER URL
-    return 'https://pawsure-backend.onrender.com'; 
+    // ACTUAL RENDER URL FROM YOUR LOGS
+    return 'https://pawsure-repo.onrender.com'; 
   }
 }
