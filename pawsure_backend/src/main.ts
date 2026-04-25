@@ -2,22 +2,36 @@ process.env.TZ = 'UTC';
 
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
-  // Create app with NestExpressApplication type to enable static assets
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Keep this ONE robust configuration
+  // Global Filter
+  app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Enable global validation
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
   app.enableCors({
-    origin: '*', // Allows all origins (good for development)
+    origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: '*',
     credentials: true,
   });
 
-  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+  const server = await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+  
+  // Set a reasonable timeout for requests (30 seconds)
+  server.setTimeout(30000);
 
   console.log(`Application is running on: ${await app.getUrl()}`);
 }

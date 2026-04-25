@@ -1,6 +1,7 @@
 // Pawsure-Repo\pawsure_app\lib\services\api_service.dart
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:pawsure_app/models/pet_model.dart';
@@ -16,6 +17,7 @@ String get apiBaseUrl => ApiConfig.baseUrl;
 
 class ApiService {
   AuthService get _authService => Get.find<AuthService>();
+  static const _timeout = Duration(seconds: 30);
 
   Future<Map<String, String>> _getHeaders() async {
     final headers = {
@@ -34,6 +36,23 @@ class ApiService {
     }
 
     return headers;
+  }
+
+  http.Response _handleResponse(http.Response response) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return response;
+    } else if (response.statusCode == 401) {
+      debugPrint('❌ Unauthorized: Token may be expired');
+      throw Exception('Session expired. Please log in again.');
+    } else {
+      try {
+        final errorBody = jsonDecode(response.body);
+        final message = errorBody['message'] ?? 'Unknown error';
+        throw Exception(message);
+      } catch (e) {
+        throw Exception('Server Error: ${response.statusCode}');
+      }
+    }
   }
 
   // ========================================================================
